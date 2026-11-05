@@ -1,0 +1,10 @@
+.DS_Store
+.env
+.env.*
+.agents/
+.claude/
+.codex/
+work/
+outputs/
+*.log
+__pycache__/
