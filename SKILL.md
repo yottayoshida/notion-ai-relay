@@ -9,7 +9,7 @@ Read the target's settings or instructions from Notion at runtime and have the c
 
 ## Runtime requirements
 
-Use an assistant that can read these instructions and MCP connections that expose the necessary read and execution capabilities. Do not require Computer Use, browser automation, a particular operating system, or a client-specific API or scheduler. Tool names in the references are implementation examples. Map them to the current connection's capabilities and schemas. MCP support alone does not imply access to Agent settings or Skill catalogs.
+Use an assistant that can read these instructions and MCP connections that expose the necessary read and execution capabilities. Do not require Computer Use, browser automation, a particular operating system, or a client-specific API or scheduler. Tool names in the references are examples from the hosted Notion MCP. Their spelling differs by client and layer: the tool list shows `notion-search-agents`, while that server's access map calls it `search_agents`. Map tools by capability and schema, not by spelling. If the connection offers an access-map tool such as `notion-get-tool-access`, check it once per run instead of probing tools one by one. MCP support alone does not imply access to Agent settings or Skill catalogs.
 
 The execution instructions live in this file and `references/`. `agents/openai.yaml` is optional Codex display metadata. Follow each client's conventions for installing, loading, and invoking Skills.
 
@@ -32,7 +32,7 @@ Keep the following information in the current working context. A separate templa
 - Read sources, output destinations, allowed operations, exclusions, and access scope.
 - Required tools, memory or prior state, completion criteria, and stop and resume conditions.
 
-Distinguish unavailable information from absent configuration. If MCP cannot retrieve required settings, request the instruction-page URL or missing settings instead of automatically switching to UI automation. Treat supplied text as a snapshot, not a verified current published version. Hold work affected by unpublished changes, conflicting access, or missing input or state. Continue independent work whose requirements are satisfied.
+Distinguish unavailable information from absent configuration. If MCP cannot retrieve required settings, request the instruction-page URL, the instruction text, or the missing settings instead of automatically switching to UI automation. Treat supplied text as a snapshot, not a verified current published version. Hold work affected by unpublished changes, conflicting access, or missing input or state. Continue independent work whose requirements are satisfied.
 
 ## 3. Map the task to available MCP tools
 
@@ -56,7 +56,7 @@ Report the target, adopted configuration or instruction version, work performed,
 
 ## Execution boundaries
 
-- Do not launch Notion-side agents or AI sessions to perform the task. Do not use execution tools such as `notion_spawn_session` or `notion_send_message_to_session`. When a task delegates to another Agent, read its configuration and have the current assistant interpret it.
+- Do not launch or drive Notion-side agents or AI sessions to perform the task: no tool that starts, messages, waits on, or stops a session, whatever its name. On the hosted Notion MCP these include `notion-spawn-session`, `notion-send-message-to-session`, `notion-wait-session`, and `notion-stop-session`. Reading past session history is not covered by this rule; see [resume state](references/read-configuration.md#resolve-input-and-state). When a task delegates to another Agent, read its configuration and have the current assistant interpret it.
 - Do not change the original Agent's settings, enabled state, sharing permissions, or schedule merely to substitute for it. An explicit request to change them is a separate operation.
 - Discovery or execution does not authorize changes to a Notion Skill's text, personal enabled state, sharing, or registration. Do not use Notion AI execution or page-to-Skill conversion as a prerequisite.
 - A manual invocation performs one run. Investigate scheduling or event monitoring only when requested. Creating or invoking this Skill does not establish a persistent monitor.
