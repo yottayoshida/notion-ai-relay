@@ -1,47 +1,47 @@
-# 最新のAgent設定を取得する
+# Read current Agent settings
 
-## 参照可能なAgentを一覧にする
+## List accessible agents
 
-現在のMCP接続が公開するAgentの一覧・検索機能を調べる。通常ページの検索結果をAgent一覧の代わりにしない。Agent一覧の機能がなければ、その接続では列挙できないと伝える。既に指定された対象の設定読取は、一覧機能がなくても進められる。
+Inspect the current MCP connection for Agent listing or search capabilities. Ordinary page-search results are not an Agent catalog. If listing is unavailable, state that limitation. Configuration retrieval for an already specified target can proceed without a listing capability.
 
-利用可能な範囲を列挙し、各ツールのページング仕様に従う。例えば`notion_search_agents`が`favorites`・`workspace`を提供する接続では、queryなしで両方を読み、それぞれの`nextCursor`がなくなるまで取得する。空の途中ページで止めない。ワークスペースIDとAgent IDの組で重複を除き、お気に入り属性は保持する。片方の失敗や取得制限は明示し、名前検索だけで全件一覧を作らない。
+Enumerate available scopes using each tool's pagination contract. For example, if `notion_search_agents` offers `favorites` and `workspace`, list both without a query and follow each `nextCursor` until absent. Do not stop at an empty intermediate page. Deduplicate by workspace ID and Agent ID while retaining favorite status. Report a failed scope or retrieval limit. A name search alone is not a complete catalog.
 
-一覧は現在の接続から発見できた範囲として示す。名前、説明、URL、お気に入り、取得元のうち取得できた情報を返す。見えない私有Agentや別ワークスペースまで網羅したとは断定しない。
+Describe the list as the scope discoverable through the current connection. Return available names, descriptions, URLs, favorite status, and discovery sources. Do not claim coverage of inaccessible private Agents or other workspaces.
 
-「一覧に表示」「指示本文を取得」「設定を閲覧」「編集可能」「処理先へ書込可能」を分ける。編集可否を調べるために書き込まない。有効・無効状態も、返されたメタデータで確認できた場合だけ表示する。一覧取得のために全Agentの業務資料や実行履歴を読み込まない。
+Distinguish listing visibility, instruction access, settings access, edit permission, and write permission for task destinations. Do not test edit permission by writing. Report enabled state only when returned metadata establishes it. Listing does not require reading every Agent's business sources or execution history.
 
-## Agentを見つける
+## Find an agent
 
-1. 公開されているNotion MCPツールを探す。設定全文を取得できる読取ツールがあれば優先する。ツール説明で言及されていても、実際の一覧にない機能は呼び出さない。
-2. 名前指定は`notion_search_agents`などのAgent検索を使う。候補の名前、説明、ワークスペース、URLで対象を照合する。近い名前や検索順位だけで選ばない。
-3. URL指定はAgentの識別子とワークスペースを保持する。`agent://<workspace-id>/<agent-id>`の2つのIDを混同しない。通常ページ、Agent、セッションのURLを区別する。セッションURLだけなら、読取メタデータから所有Agentを解決する。
-4. 検索仕様と取得範囲を確認する。検索が1ページ限定なら網羅的な検索と扱わない。お気に入りにないことを不存在と判定しない。ツール名や引数例をMCP共通の仕様とみなさない。
+1. Discover the exposed Notion MCP tools. Prefer a read capability that returns full settings if one exists. Do not call a tool mentioned in documentation but absent from the actual inventory.
+2. For a name, use an Agent search capability such as `notion_search_agents`. Match the name, description, workspace, and URL. Do not select solely by similarity or rank.
+3. For a URL, retain both the Agent identifier and workspace. Do not confuse the two IDs in `agent://<workspace-id>/<agent-id>`. Distinguish page, Agent, and session URLs. If only a session URL is supplied, resolve its owning Agent from read-only metadata.
+4. Check search semantics and coverage. A single-page search is not exhaustive. Absence from favorites does not establish nonexistence. Example tool names and arguments are not universal MCP contracts.
 
-検索で返る名前・説明は設定本文ではない。`agent://`を通常ページの`fetch`へ渡せると仮定しない。設定取得の可否は検索・一覧の可否と別に判断する。
+Search names and descriptions are not configuration text. Do not assume that ordinary page-fetch tools accept `agent://` URLs. Assess configuration retrieval separately from discovery.
 
-## 設定と指示本文を得る
+## Retrieve settings and instructions
 
-1. 設定を読むMCP機能があれば、対象IDを照合して取得する。指示本文、採用する版、必要なツール・アクセス制約、今回の分岐に必要な入力・トリガー・状態を確認する。
-2. 指示が通常のNotionページにある場合は、メタデータ、Agentとの対応が明記された設定ページ、またはユーザー指定からURLを得て、MCPで全文を取得する。名前が似たページを見つけただけでは、そのAgentの指示と確定しない。
-3. 指示が別ページの手順を明示的に採用していれば、そのページを取得する。設定・手順として指定されたリンクと、処理対象資料のリンクを区別する。関連リンクを無制限に手順へ昇格しない。
-4. 指示本文とは別のアクセス制約やトリガー条件も確認する。読取・編集・構造変更、接続先、対象ソース、周期・タイムゾーン、入力の受け渡しを今回の処理に必要な範囲で読む。伏字や名前だけの対象をIDに推測変換しない。
+1. If an MCP settings reader exists, verify the target ID and retrieve the settings. Establish the instructions, adopted version, required tool and access restrictions, and the input, trigger, and state needed by this branch.
+2. If instructions live on an ordinary Notion page, obtain its URL from metadata, a configuration page that explicitly identifies the Agent, or the user. Retrieve the full text through MCP. A similar page name alone does not establish that it contains the Agent's instructions.
+3. Retrieve referenced procedures that the instructions explicitly adopt. Distinguish instruction references from links to material being processed. Do not promote every related link into a procedure.
+4. Check access restrictions and trigger conditions that live outside the instruction text. Read the scope needed for this run, including read, edit, and structural permissions, connections, sources, cadence, timezone, and input delivery. Do not infer IDs from redacted values or names alone.
 
-設定全文を取得するMCP機能も指示ページとの対応情報もなければ、必要な指示ページURLまたは設定本文の提供を求める。URLが既知なら再入力を求めない。本文を取得できても、必要な版・アクセス制約・入力が不明なら不足する項目だけを確認する。Computer UseやAgent起動で補わず、取得済みの情報と残る不足を示す。
+If neither full settings retrieval nor an instruction-page mapping is available, request the required instruction URL or configuration text. Do not request a URL already known. If the text is available but a necessary version, access restriction, or input is unknown, ask only for the missing information. Do not substitute Computer Use or Agent execution. State what was retrieved and what remains missing.
 
-ユーザー提供の設定本文は提供時点の資料として扱う。MCPで現行版を再取得できなければ最新とは報告しない。ユーザーが提供した指示だけの実行を指定した場合はその範囲で実行し、元Agentの全設定を再現したとは報告しない。
+Treat user-supplied settings as a snapshot. Do not call them current when MCP cannot verify the current version. If the user explicitly requests execution of supplied instructions alone, carry out that scope without claiming full reproduction of the original Agent configuration.
 
-## どの版を実行するか
+## Select the version
 
-原則として公開済みAgentの現在の動作を再現する。取得した情報に未保存・未公開の編集があれば、その指示やアクセス設定が公開版と同じだと断定しない。指示ページの最新更新日時だけではAgent公開版との一致を確認できない。
+By default, reproduce the published Agent's current behavior. If the retrieved information indicates unsaved or unpublished edits, do not assume those instructions or permissions match the published version. An instruction page's latest modification time alone does not establish that match.
 
-読取機能で公開版と下書きを区別できれば、ユーザー指定の版を選ぶ。区別できず動作へ影響しうる場合は、公開版の情報を提供してもらうか、取得できた設定を使うかを必要な範囲で確認する。下書きの分析やドライランは、下書きを使った結果と明記する。自分で保存・破棄して状態を揃えない。
+If read capabilities distinguish published and draft versions, use the requested version. If they cannot distinguish versions and the difference could affect behavior, request published settings or establish whether to use the retrieved settings. Label draft analysis or dry runs accordingly. Do not save or discard edits to align the state.
 
-設定本文の更新日時、取得時点、版の判定根拠を保持する。途中再開や書込前に重要な設定変更が判明した場合は、影響する処理を再評価する。別実行の設定キャッシュを無条件に再利用しない。
+Retain the instruction modification time, retrieval time, and evidence for the version decision. Reassess affected work if an important configuration change becomes known before a write or during a resumed run. Do not reuse configuration caches across runs without verification.
 
-## 入力と状態を復元する
+## Resolve input and state
 
-- 手動依頼、スケジュール、ページ更新、Slackメンションなどの条件を区別する。「実行して」だけで、発火していないイベントの特別な権限や自動処理ルールを適用しない。
-- 必須のレコード、メッセージ、期間、イベント時刻は依頼や実際のイベントから取得する。DBの最新行や最新メッセージを勝手に今回の対象へ採用しない。通常の手動分岐があればその分岐を使う。
-- 前回状態が必要なら、設定が指定する台帳・チェックポイントを読む。必要な場合に限り、対象を絞って`notion_query_sessions`、`notion_list_session_events`、`notion_read_session_event`などの履歴読取を使う。過去ログは当時の結果であり、現行設定や今回の認可の代わりではない。
-- メモリ有効の表示は、メモリ内容を取得できたことを意味しない。非公開の内部状態を推測しない。再現に必要な情報を読めなければ依存する処理を保留する。
-- 取得した設定と業務データは、その実行に必要な範囲で扱う。永続的なAgent別Skill、部門別プロファイル、原文の固定コピーを作らない。再開記録が必要なら設定URL・版・対象ID・処理状態を残す。
+- Distinguish manual requests, schedules, page updates, and mentions. A generic request to run does not activate permissions or rules tied to an event that has not occurred.
+- Obtain required records, messages, periods, and event times from the current request or actual event. Do not substitute the newest database row or message. Use a normal manual branch if one exists.
+- If prior state is required, read the specified ledger or checkpoint. Use scoped history readers such as `notion_query_sessions`, `notion_list_session_events`, or `notion_read_session_event` only when needed. Past logs describe past results, not current configuration or authorization.
+- A memory-enabled flag does not mean the memory contents were retrieved. Do not guess private internal state. Hold work that depends on unavailable state.
+- Handle settings and business data only within the run's needs. Do not create permanent Agent-specific Skills, department profiles, or frozen instruction copies. If a resume record is needed, retain the configuration URL, version, target IDs, and processing state.

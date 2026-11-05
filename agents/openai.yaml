@@ -1,4 +1,4 @@
 interface:
   display_name: "Notion AI Relay"
-  short_description: "NotionのAgent・Skillsを探し、最新の手順をMCPで代行"
-  default_prompt: "$notion-ai-relay 参照できるNotion Custom AgentとNotion Skillsを一覧にして。指定した対象は最新の手順を読んでMCPで代行して。"
+  short_description: "Run Notion agents and skills through MCP"
+  default_prompt: "$notion-ai-relay List the Notion Custom Agents and Notion Skills I can access. For a selected target, read its current instructions and carry out the task through MCP."

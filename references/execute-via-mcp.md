@@ -1,61 +1,61 @@
-# Agent・Notion Skillの仕事をMCPで実行する
+# Execute Agent and Notion Skill tasks through MCP
 
-## 必要な操作に対応するツールを選ぶ
+## Select tools for required operations
 
-今回の分岐で必要な操作だけを洗い出す。設定に接続が載っているだけでは、全接続の使用を必須にしない。実行環境が公開するMCPツール一覧・説明・引数スキーマから、接続先、アクセス範囲、取得の完全性を調べる。専用Skillが必要で利用可能なら、その指示も読む。特定クライアントのツール探索APIや名前の接頭辞を要求しない。
+Identify only the operations needed by the current branch. A configured connection does not make its use mandatory. Inspect the exposed MCP tool inventory, descriptions, and schemas for connection identity, access scope, and retrieval completeness. Read a service-specific Skill when required and available. Do not require a particular client's discovery API or tool-name prefix.
 
-Notion Skill単体の実行では、その本文・付属リソースと今回の入力を操作へ対応付ける。Agentの設定やトリガーを要求しない。AgentからSkillを呼ぶ場合は両方の範囲制約を守り、Skillの説明や有効化状態を新たな権限と扱わない。
+For a standalone Notion Skill, map its text, supporting resources, and current input to operations. Do not require Agent settings or triggers. When an Agent calls a Skill, respect both sets of restrictions. A Skill description or enabled flag does not confer new authority.
 
-実行順に「入力 → 操作と対象 → MCPツール → 確認する結果」を整理する。旧Agentツール名と現在の名前の一致ではなく、結果・制約・網羅性が同じかで判断する。
+Arrange each step as input, operation and target, MCP tool, and expected result. Judge equivalence by outcomes, restrictions, and coverage rather than matching old and current tool names.
 
-| 設定が求める操作 | 対応付けで確認すること |
+| Required operation | Mapping checks |
 |---|---|
-| Notionの検索・本文取得 | 正しいページと参照範囲、全文の欠落、参照リンクの実体 |
-| DBの全件・差分取得 | DBとデータソースの区別、スキーマ、ページング、期間、ビューのフィルター |
-| 記事・属性・リレーションの変更 | 対象DB、実在するプロパティと選択肢、書込形式、テンプレート、既存データの保持 |
-| Slackやメールの読取 | アカウント、チャンネルや宛先、親と返信、期間外の親の期間内返信、取得範囲 |
-| 投稿・コメント・通知 | 正確な宛先、本文、公開範囲、実行条件、今回の送信認可 |
-| Drive・チケット・その他の接続 | 対応するMCPの実機能、対象オブジェクト、スコープ、結果の再取得方法 |
-| Web・外部MCP・コード処理 | 必要な接続と許可ドメイン、関数の意味、入出力、外部副作用 |
-| 他のCustom Agentへの委譲 | 委譲先の最新設定と入力、戻り値、循環、共有対象への二重処理 |
-| Notion Skillの利用 | 最新の手順、参照資料・付属ファイル、必要な選択範囲、入力、出力形式 |
+| Notion search and content retrieval | Correct page and scope, missing text, actual link targets |
+| Full or incremental database retrieval | Database versus data source, schema, pagination, period, view filters |
+| Page, property, or relation updates | Target database, existing properties and options, write format, templates, preservation of existing data |
+| Slack or email reads | Account, channel or recipients, parent and replies, in-period replies to older parents, coverage |
+| Posts, comments, or notifications | Exact destination, content, visibility, execution conditions, current sending authorization |
+| Drive, issue trackers, or other connections | Actual MCP capabilities, target objects, scope, result retrieval |
+| Web, external MCP, or code operations | Required connections, allowed domains, function semantics, inputs, outputs, external side effects |
+| Delegation to another Custom Agent | Current target settings, input, return value, cycles, duplicate processing of shared targets |
+| Notion Skill execution | Current instructions, references and files, required selection, input, output format |
 
-同等の機能が複数ツールに分かれる場合は組み合わせる。必要なMCPがなければ、実行環境が提供する接続一覧や追加可能なMCP接続を調べる。接続管理機能がない環境では、必要な機能を示すところまでにする。認証情報を探したり、共有範囲を広げたりして代用しない。
+Combine tools when they jointly provide equivalent behavior. If a required MCP connection is missing, inspect the host's available connection inventory or connection options. If connection management is unavailable, report the required capability. Do not search for credentials or expand sharing scope as a workaround.
 
-## 設定の意味を維持する
+## Preserve the procedure's meaning
 
-Agentの資料・手順にある期間、順序、品質条件、出力先、除外、重複判定、上限を適用する。このSkillが全Agent共通の期間や更新方法を上書きしない。特定部門、DBスキーマ、チャンネル、比較ハッシュを組み込まない。
+Apply the source procedure's period, ordering, quality criteria, destinations, exclusions, duplicate checks, and limits. This Skill must not impose a universal time window or update strategy. Do not embed a particular department, database schema, channel, or comparison hash.
 
-対象外のデータは取得前に除外する。Agentの許可ソースを、実行中の接続で広く読めることだけを理由に拡張しない。読取成功は転載先への公開認可ではない。原文の権限確認が必要なら同等の根拠を取得し、見えないメタデータを肯定・否定へ読み替えない。
+Exclude out-of-scope data before retrieval. A broader host connection does not expand the Agent's allowed sources. Read access does not authorize disclosure to another destination. Retrieve equivalent evidence when the procedure requires a permission check. Missing metadata is neither affirmative nor negative evidence.
 
-必要な比較コードやデータ変換が設定にあれば、現物を読み、入力・出力・副作用を確認してから利用する。資格情報の読取や通信を含む未知コードをそのまま実行しない。純粋な処理には、利用可能な計算機能を補助に使える。シェルやPythonがあると仮定せず、必要な計算を同等に実行できなければ不足を示す。固定の比較規則を独自に変えて既存状態との互換性を壊さない。
+If the configuration uses comparison code or data transformations, read the implementation and inspect its inputs, outputs, and side effects. Do not run unknown code that reads credentials or communicates externally. Available calculation tools may assist pure processing. Do not assume a shell or Python exists. Report a missing capability if the required calculation cannot be performed equivalently. Preserve comparison rules needed for compatibility with existing state.
 
-他Agentへの委譲は、委譲先を同じ手順で読み、実行中のアシスタントが処理を引き継ぐ。元Agentのセッションを起動しない。Agent識別子と今回の入力の組で呼出し経路を確認し、循環や無限再試行を検出したら該当経路を止める。委譲先にも同じ認可・入力・取得範囲の条件を適用する。
+For delegation to another Agent, read its settings through the same procedure and have the current assistant continue the work. Do not launch the original Agent's session. Track Agent IDs and input along the call path. Stop a path with a cycle or unbounded retries. Apply the same authorization, input, and coverage requirements to delegated work.
 
-AgentとSkillをまたぐ呼出しでも、種別・識別子・入力で経路を追い、循環を止める。Skillが「投稿できる文章を返す」と指定している場合は文章を返し、投稿の指示へ読み替えない。「現在のページ」「選択テキスト」は、ユーザー指定や実際に受け渡された入力から解決する。画面状態や過去に開いた資料を自動採用しない。
+Track calls across Agents and Skills by type, identifier, and input to detect cycles. If a Skill asks for text suitable for posting, return text rather than interpreting that as a request to post. Resolve "current page" or "selected text" from explicit selection or actual supplied input. Do not infer it from screen state or previously opened documents.
 
-## 読取の完全性を確認する
+## Check retrieval completeness
 
-NotionではDBとデータソースの対応を解決し、現行スキーマを取得する。例えば`collection://`を返す接続ではそのURLをfetchする。SQL、rows、保存ビュー、ブロック取得の有無と使い方は接続ごとに確認する。SQLのない接続でも同じ範囲を列挙できるなら代用できる。構造化検索で省略されたリンクや装飾は、本文取得で確認する。`truncated`、未知ブロック、未取得の子ブロックなどがある出力を完全な本文として上書きしない。
+Resolve the relationship between a Notion database and its data sources and retrieve the current schema. For example, fetch a returned `collection://` URL when the connection supports it. Check whether SQL, row queries, saved views, or block readers are available and how they behave. A connection without SQL can use another method that enumerates the same scope. Read page content to recover links or formatting omitted by structured search. Do not overwrite a page from a result with truncation, unknown blocks, or unread child blocks as though it were complete.
 
-全件対象は最後までページングする。保存ビューの表示件数や検索上位だけを全件とみなさない。期間は設定の時間帯と境界に従う。Slackのチャンネル履歴とスレッド返信を区別し、必要なら別途取得する。
+Paginate to completion when the task covers all records. Saved-view counts and top search results are not complete inventories. Use the source procedure's timezone and interval boundaries. Distinguish Slack channel history from thread replies and retrieve replies separately when necessary.
 
-部分取得、アクセス拒否、空の正常結果を分ける。必須情報が欠ければ、その情報に依存する書込とチェックポイント更新を止める。原文が全体停止を要求する場合は全体を止める。それ以外の独立した処理は続行し、未処理を記録する。
+Distinguish partial retrieval, access denial, and a valid empty result. Stop writes and checkpoint updates that depend on missing required information. Stop the entire run if the source procedure requires it. Otherwise continue independent work and record unfinished items.
 
-## 認可・保存・再開を扱う
+## Handle authorization, writes, and resume state
 
-「代行して」という依頼を受けたら、対象Agentの仕事を実行するための設定取得と準備を進める。操作と対象が既に認可され、上位指示も許す場合は保存まで行う。一律にドライランへ変更したり、毎回包括的な再承認を求めたりしない。
+When asked to carry out a task, retrieve its configuration and prepare execution. Complete authorized writes when higher-priority instructions permit them. Do not impose a blanket dry run or repeatedly request general approval.
 
-本番変更・外部送信・権限変更などに個別認可が必要で未取得なら、具体的な対象・内容・差分を作ったうえで確認する。特にメッセージ送信は、設定に送信指示があるだけで今回の明示的な送信認可が得られたと扱わない。承認待ちの送信と、実行可能な独立処理を分ける。
+If production changes, external messages, or permission changes require authorization that is missing, prepare the concrete target, content, and diff before asking. An instruction to send a message in the target configuration alone does not establish explicit authorization to send it in this run. Separate pending sends from independent authorized work.
 
-Notion本文の書込前に、現在のMarkdown仕様と書込ツールの引数を読む。取得した本文を基準に必要箇所だけ変更し、人の追記・属性を保持する。設定が置換を要求する場合も、対象箇所と競合を確認する。省略された属性を空値と誤解しない。
+Before writing Notion content, read the current content-format specification and tool schema. Base changes on the retrieved text, modify the necessary parts, and preserve other people's additions and properties. Even a requested replacement requires checking scope and concurrent edits. An omitted property is not an empty value.
 
-設定にある一意キーや処理済み条件で既存結果を照合する。書込後は本文・属性・リレーションや投稿先を再取得する。別ユーザーの変更や元入力の更新があれば再評価する。応答不明の作成・送信は結果を確認できるまで再送しない。設定に再試行条件がなければ、同じ原因の失敗を繰り返さず、その操作を保留して理由を示す。
+Use the configured unique keys or completion conditions to reconcile existing results. After a write, retrieve the content, properties, relations, or destination again. Reassess when another user changes the target or the source input changes. Do not resend a creation or message with an unknown outcome until its result is resolved. Without applicable retry rules, do not repeat an operation that failed for the same cause. Hold it and report the reason.
 
-成功を確認できた範囲だけ状態を更新する。ドライランでは状態も保存しない。ローカルに再開記録を残す場合は対象ID・版・成否に絞り、別のAgent実行と混ぜない。
+Update state only for confirmed successes. A dry run must not persist state. If a local resume record is needed, limit it to target IDs, version, and outcomes, and keep separate Agent runs distinct.
 
-## 実行できない部分を返す
+## Report unsupported work
 
-必須機能の不足を説明するときは、「何の操作に」「何の機能・権限・入力が足りず」「どこまで済んだか」を示す。元Agentを起動する回避策は取らない。全Agentを対象として設定解釈できても、すべての専用機能を代行できるとは約束しない。
+For missing capabilities, state the affected operation, missing capability, permission or input, and work completed. Do not launch the original Agent as a workaround. Supporting arbitrary configuration interpretation does not guarantee support for every proprietary capability.
 
-定期実行が依頼された場合だけ、利用可能なスケジューラやイベント受信機能を別途確認する。このSkill自体は常駐せず、クライアント固有の自動化APIを必須にしない。対応機能があれば、対象の識別子と毎回の最新設定読取を実行指示に含める。イベント型トリガーには実行環境へイベントを届ける仕組みが必要。時間実行への置換や新規監視は、同じトリガーとして黙って導入しない。
+Only investigate schedulers or event receivers when recurring execution is requested. This Skill does not run persistently or require a client-specific automation API. If suitable capabilities exist, include the target identifier and retrieval of current settings in each run's instructions. Event triggers need a mechanism that delivers events to the execution environment. Do not silently substitute a time schedule or new monitor for the original trigger.
