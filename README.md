@@ -2,7 +2,7 @@
 
 Run Notion agents and skills through MCP.
 
-Notion AI Relay is an Agent Skill that reads Notion Custom Agent settings or Notion Skill instructions and lets your current AI assistant carry out the work through MCP. It reads each target at runtime instead of storing its workflow in this repository.
+Notion AI Relay is an Agent Skill that reads the instructions of a Notion Custom Agent or Notion Skill and lets your current AI assistant carry out the work through MCP. It reads each target at runtime instead of storing its workflow in this repository.
 
 ## Install
 
@@ -20,11 +20,14 @@ Connect Notion MCP in your AI assistant separately. If a workflow uses another s
 
 After your assistant loads the Skill, specify the target and the input for this run.
 
+For a Custom Agent, also supply its instructions as a page URL or pasted text. In the connection checked on 2026-11-05 (the hosted Notion MCP), Agent search returned only names, descriptions, and `agent://` URLs, no tool returned an Agent's instructions, and the page reader rejected `agent://` URLs.
+
 ```text
 List the Notion Custom Agents and Notion Skills I can access.
 
 Carry out this Custom Agent's task.
 Agent URL: <target agent URL>
+Instructions: <instruction page URL or pasted text>
 Input: <target page, time period, and other required input>
 
 Use this Notion Skill to process the supplied material.
@@ -33,6 +36,7 @@ Material: <document URL or text>
 
 Dry-run this agent's task without writing to external services.
 Agent URL: <target agent URL>
+Instructions: <instruction page URL or pasted text>
 Input: <items to process>
 ```
 
@@ -43,13 +47,14 @@ The Skill maps each operation to the MCP tools and argument schemas exposed by y
 | Operation | Required information or capability |
 |---|---|
 | List Custom Agents | An MCP agent-listing capability. Results cover the scope exposed by the connection |
+| List Notion Skills | An MCP Skill-listing capability, or a known Skill page or database. The hosted Notion MCP lists only Skills enabled for external MCP clients |
 | Carry out a Custom Agent's task | Its instructions, a verified link to the target, required settings and input, and the necessary MCP operations |
 | Carry out a Notion Skill's task | Its instruction page, required references and attachments, current input, and the necessary MCP operations |
 | Run on a schedule | A separately configured scheduler or event receiver |
 
-Some MCP connections cannot retrieve full Agent settings or list native Notion Skills. In those cases, provide an instruction-page URL or the missing settings. Supplied settings are not treated as a verified current published version. Missing registration or enabled-state metadata does not prevent execution of an explicitly selected procedure when its instructions and required input are available.
+Some MCP connections cannot retrieve full Agent settings. In those cases, provide an instruction-page URL, the instruction text, or the missing settings. Supplied settings are not treated as a verified current published version. Missing registration or enabled-state metadata does not prevent execution of an explicitly selected procedure when its instructions and required input are available.
 
-The Skill does not launch Notion-side agents or AI sessions. External writes and messages remain subject to your request and the host's authorization requirements. A dry run does not update completion state.
+The Skill does not launch or drive Notion-side agents or AI sessions. External writes and messages remain subject to your request and the host's authorization requirements. A dry run does not update completion state.
 
 This repository distributes instructions. It does not include an MCP server or a persistent background process. Skill loading and available MCP capabilities depend on the client; compatibility has not been verified across all clients.
 
