@@ -1,12 +1,12 @@
 # Execute Agent and Notion Skill tasks through MCP
 
+The [execution boundaries](../SKILL.md#execution-boundaries) apply throughout.
+
 ## Select tools for required operations
 
-Identify only the operations needed by the current branch. A configured connection does not make its use mandatory. Inspect the exposed MCP tool inventory, descriptions, and schemas for connection identity, access scope, and retrieval completeness. Read a service-specific Skill when required and available. Do not require a particular client's discovery API or tool-name prefix.
+Identify only the operations needed by the current branch. A configured connection does not make its use mandatory. Inspect the exposed MCP tool inventory, descriptions, and schemas for connection identity, access scope, and retrieval completeness. Read a service-specific Skill when required and available.
 
-For a standalone Notion Skill, map its text, supporting resources, and current input to operations. Do not require Agent settings or triggers. When an Agent calls a Skill, respect both sets of restrictions. A Skill description or enabled flag does not confer new authority.
-
-Arrange each step as input, operation and target, MCP tool, and expected result. Judge equivalence by outcomes, restrictions, and coverage rather than matching old and current tool names.
+For a standalone Notion Skill, map its text, supporting resources, and current input to operations. When an Agent calls a Skill, respect both sets of restrictions. Arrange each step as input, operation and target, MCP tool, and expected result.
 
 | Required operation | Mapping checks |
 |---|---|
@@ -24,15 +24,15 @@ Combine tools when they jointly provide equivalent behavior. If a required MCP c
 
 ## Preserve the procedure's meaning
 
-Apply the source procedure's period, ordering, quality criteria, destinations, exclusions, duplicate checks, and limits. This Skill must not impose a universal time window or update strategy. Do not embed a particular department, database schema, channel, or comparison hash.
+Apply the source procedure's period, ordering, quality criteria, destinations, exclusions, duplicate checks, and limits. This Skill must not impose a universal time window or update strategy.
 
 Exclude out-of-scope data before retrieval. A broader host connection does not expand the Agent's allowed sources. Read access does not authorize disclosure to another destination. Retrieve equivalent evidence when the procedure requires a permission check. Missing metadata is neither affirmative nor negative evidence.
 
 If the configuration uses comparison code or data transformations, read the implementation and inspect its inputs, outputs, and side effects. Do not run unknown code that reads credentials or communicates externally. Available calculation tools may assist pure processing. Do not assume a shell or Python exists. Report a missing capability if the required calculation cannot be performed equivalently. Preserve comparison rules needed for compatibility with existing state.
 
-For delegation to another Agent, read its settings through the same procedure and have the current assistant continue the work. Do not launch the original Agent's session. Track Agent IDs and input along the call path. Stop a path with a cycle or unbounded retries. Apply the same authorization, input, and coverage requirements to delegated work.
+Track calls across Agents and Skills by type, identifier, and input to detect cycles. Stop a call path with a cycle or unbounded retries. Apply the same authorization, input, and coverage requirements to delegated work.
 
-Track calls across Agents and Skills by type, identifier, and input to detect cycles. If a Skill asks for text suitable for posting, return text rather than interpreting that as a request to post. Resolve "current page" or "selected text" from explicit selection or actual supplied input. Do not infer it from screen state or previously opened documents.
+If a Skill asks for text suitable for posting, return text rather than interpreting that as a request to post. Resolve "current page", "selected text", or "attachment" from explicit selection or actual supplied input. Do not infer it from screen state or previously opened documents.
 
 ## Check retrieval completeness
 
@@ -44,18 +44,16 @@ Distinguish partial retrieval, access denial, and a valid empty result. Stop wri
 
 ## Handle authorization, writes, and resume state
 
-When asked to carry out a task, retrieve its configuration and prepare execution. Complete authorized writes when higher-priority instructions permit them. Do not impose a blanket dry run or repeatedly request general approval.
-
-If production changes, external messages, or permission changes require authorization that is missing, prepare the concrete target, content, and diff before asking. An instruction to send a message in the target configuration alone does not establish explicit authorization to send it in this run. Separate pending sends from independent authorized work.
+Do not impose a blanket dry run. Separate sends that await authorization from independent authorized work.
 
 Before writing Notion content, read the current content-format specification and tool schema. Base changes on the retrieved text, modify the necessary parts, and preserve other people's additions and properties. Even a requested replacement requires checking scope and concurrent edits. An omitted property is not an empty value.
 
 Use the configured unique keys or completion conditions to reconcile existing results. After a write, retrieve the content, properties, relations, or destination again. Reassess when another user changes the target or the source input changes. Do not resend a creation or message with an unknown outcome until its result is resolved. Without applicable retry rules, do not repeat an operation that failed for the same cause. Hold it and report the reason.
 
-Update state only for confirmed successes. A dry run must not persist state. If a local resume record is needed, limit it to target IDs, version, and outcomes, and keep separate Agent runs distinct.
+If this Skill needs its own local resume record, record target IDs, the configuration URL, version, and processing state and outcome, keep nothing else, and keep separate runs distinct.
 
 ## Report unsupported work
 
-For missing capabilities, state the affected operation, missing capability, permission or input, and work completed. Do not launch the original Agent as a workaround. Supporting arbitrary configuration interpretation does not guarantee support for every proprietary capability.
+For missing capabilities, state the affected operation, missing capability, permission or input, and work completed. Supporting arbitrary configuration interpretation does not guarantee support for every proprietary capability.
 
-Only investigate schedulers or event receivers when recurring execution is requested. This Skill does not run persistently or require a client-specific automation API. If suitable capabilities exist, include the target identifier and retrieval of current settings in each run's instructions. Event triggers need a mechanism that delivers events to the execution environment. Do not silently substitute a time schedule or new monitor for the original trigger.
+If recurring execution is requested and suitable capabilities exist, include the target identifier and retrieval of current settings in each run's instructions. Event triggers need a mechanism that delivers events to the execution environment. Do not silently substitute a time schedule or new monitor for the original trigger.

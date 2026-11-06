@@ -1,5 +1,7 @@
 # Read current Agent settings
 
+The [execution boundaries](../SKILL.md#execution-boundaries) apply throughout.
+
 ## List accessible agents
 
 Inspect the current MCP connection for Agent listing or search capabilities. Ordinary page-search results are not an Agent catalog. If listing is unavailable, state that limitation. Configuration retrieval for an already specified target can proceed without a listing capability.
@@ -17,7 +19,7 @@ Distinguish listing visibility, instruction access, settings access, edit permis
 3. For a URL, retain both the Agent identifier and workspace. Do not confuse the two IDs in `agent://<workspace-id>/<agent-id>`. Distinguish page, Agent, and session URLs. If only a session URL is supplied, resolve its owning Agent from read-only metadata.
 4. Check search semantics and coverage. A single-page search is not exhaustive. Absence from favorites does not establish nonexistence. Example tool names and arguments are not universal MCP contracts.
 
-Search names and descriptions are not configuration text. Do not assume that ordinary page-fetch tools accept `agent://` URLs. Assess configuration retrieval separately from discovery.
+Do not assume that ordinary page-fetch tools accept `agent://` URLs.
 
 In the connection checked on 2026-11-05 (the hosted Notion MCP), `notion-search-agents` returned only `url`, `name`, `description`, and `icon`; no tool returned an Agent's settings or instructions; and `notion-fetch` rejected `agent://` URLs. When the tool inventory has no settings reader, go to the instruction page or supplied text described below.
 
@@ -28,9 +30,9 @@ In the connection checked on 2026-11-05 (the hosted Notion MCP), `notion-search-
 3. Retrieve referenced procedures that the instructions explicitly adopt. Distinguish instruction references from links to material being processed. Do not promote every related link into a procedure.
 4. Check access restrictions and trigger conditions that live outside the instruction text. Read the scope needed for this run, including read, edit, and structural permissions, connections, sources, cadence, timezone, and input delivery. Do not infer IDs from redacted values or names alone.
 
-If neither full settings retrieval nor an instruction-page mapping is available, request the required instruction URL or configuration text. Do not request a URL already known. If the text is available but a necessary version, access restriction, or input is unknown, ask only for the missing information. Do not substitute Computer Use or Agent execution. State what was retrieved and what remains missing.
+If neither full settings retrieval nor an instruction-page mapping is available, request the required instruction URL or configuration text. Do not request a URL already known. If the text is available but a necessary version, access restriction, or input is unknown, ask only for the missing information. State what was retrieved and what remains missing.
 
-Treat user-supplied settings as a snapshot. Do not call them current when MCP cannot verify the current version. If the user explicitly requests execution of supplied instructions alone, carry out that scope without claiming full reproduction of the original Agent configuration.
+If the user explicitly requests execution of supplied instructions alone, carry out that scope without claiming full reproduction of the original Agent configuration.
 
 ## Select the version
 
@@ -45,5 +47,4 @@ Retain the instruction modification time, retrieval time, and evidence for the v
 - Distinguish manual requests, schedules, page updates, and mentions. A generic request to run does not activate permissions or rules tied to an event that has not occurred.
 - Obtain required records, messages, periods, and event times from the current request or actual event. Do not substitute the newest database row or message. Use a normal manual branch if one exists.
 - If prior state is required, read the specified ledger or checkpoint. Use scoped history readers such as `notion-query-sessions`, `notion-list-session-events`, or `notion-read-session-event` only when needed. Past logs describe past results, not current configuration or authorization.
-- A memory-enabled flag does not mean the memory contents were retrieved. Do not guess private internal state. Hold work that depends on unavailable state.
-- Handle settings and business data only within the run's needs. Do not create permanent Agent-specific Skills, department profiles, or frozen instruction copies. If a resume record is needed, retain the configuration URL, version, target IDs, and processing state.
+- A memory-enabled flag does not mean the memory contents were retrieved. Do not guess private internal state.
