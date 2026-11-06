@@ -21,12 +21,12 @@ Distinguish listing visibility, instruction access, settings access, edit permis
 
 Do not assume that ordinary page-fetch tools accept `agent://` URLs.
 
-In the connection checked on 2026-11-05 (the hosted Notion MCP), `notion-search-agents` returned only `url`, `name`, `description`, and `icon`; no tool returned an Agent's settings or instructions; and `notion-fetch` rejected `agent://` URLs. When the tool inventory has no settings reader, go to the instruction page or supplied text described below.
+In the connection checked on 2026-11-05 (the hosted Notion MCP), `notion-search-agents` returned only `url`, `name`, `description`, and `icon`; no tool returned an Agent's settings or instructions from its URL; and `notion-fetch` rejected `agent://` URLs. When the tool inventory has no settings reader, go to the instruction page or supplied text described below.
 
 ## Retrieve settings and instructions
 
 1. If an MCP settings reader exists, verify the target ID and retrieve the settings. Establish the instructions, adopted version, required tool and access restrictions, and the input, trigger, and state needed by this branch.
-2. If instructions live on an ordinary Notion page, obtain its URL from metadata, a configuration page that explicitly identifies the Agent, or the user. Retrieve the full text through MCP. A similar page name alone does not establish that it contains the Agent's instructions.
+2. If instructions live on an ordinary Notion page, obtain its URL from metadata, a configuration page that explicitly identifies the Agent, or the user. A Custom Agent's own Instructions page qualifies. It may have no parent link back to its Agent (the one checked had none); then which Agent it belongs to rests on what the user supplied, and the result says so. Retrieve the full text through MCP on every run. A similar page name alone does not establish that it contains the Agent's instructions.
 3. Retrieve referenced procedures that the instructions explicitly adopt. Distinguish instruction references from links to material being processed. Do not promote every related link into a procedure.
 4. Check access restrictions and trigger conditions that live outside the instruction text. Read the scope needed for this run, including read, edit, and structural permissions, connections, sources, cadence, timezone, and input delivery. Do not infer IDs from redacted values or names alone.
 
@@ -37,6 +37,8 @@ If the user explicitly requests execution of supplied instructions alone, carry 
 ## Select the version
 
 By default, reproduce the published Agent's current behavior. If the retrieved information indicates unsaved or unpublished edits, do not assume those instructions or permissions match the published version. An instruction page's latest modification time alone does not establish that match.
+
+In the workspace checked on 2026-11-06, saving a Custom Agent published it with no separate draft, so its Instructions page showed the version the Agent runs. For that page, apply the rule above only when retrieved information shows a draft or unsaved state.
 
 If read capabilities distinguish published and draft versions, use the requested version. If they cannot distinguish versions and the difference could affect behavior, request published settings or establish whether to use the retrieved settings. Label draft analysis or dry runs accordingly. Do not save or discard edits to align the state.
 
