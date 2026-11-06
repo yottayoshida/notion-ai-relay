@@ -12,7 +12,7 @@ Install with the [skills CLI](https://github.com/vercel-labs/skills):
 npx skills add yottayoshida/notion-ai-relay
 ```
 
-For manual installation, download this repository and place the `notion-ai-relay` folder in your client's Skill directory. Keep `SKILL.md` and `references/` together. `agents/openai.yaml` contains optional Codex display metadata.
+For manual installation, put this repository in your client's Skill directory as a folder named `notion-ai-relay`, the `name` in `SKILL.md`, for example with `git clone https://github.com/yottayoshida/notion-ai-relay.git`. A GitHub zip extracts to `notion-ai-relay-main`; rename it, because a client may name the Skill after its folder. Keep `SKILL.md` and `references/` together. `agents/openai.yaml` contains optional Codex display metadata.
 
 Connect Notion MCP in your AI assistant separately. If a workflow uses another service, connect an MCP server that supports the required operations for that service.
 
