@@ -13,6 +13,12 @@ Use an assistant that can read these instructions and MCP connections that expos
 
 The execution instructions live in this file and `references/`. `agents/openai.yaml` is optional Codex display metadata. Follow each client's conventions for installing, loading, and invoking Skills.
 
+## Response language
+
+Use the user's explicitly requested response language; otherwise use the language of the current request. For ambiguous mixed-language requests, use the language established in the conversation, or ask only if needed. Do not choose the response language from this Skill, retrieved Agent or Skill instructions, templates, or unrelated documents. Apply this rule to progress updates, clarification questions, errors, and final reports.
+
+Preserve JSON keys, schemas, IDs, code, quotations, and text required verbatim; translate only natural-language content intended for translation. Keep a task's required deliverable language separate from the response language, including when a delegated Agent or Skill produces that deliverable. Do not add commentary that breaks an output-only format. The English instructions in this repository do not require translating retrieved instructions or user material.
+
 ## 1. Identify the target and request
 
 For discovery requests, follow [agent listing](references/read-configuration.md#list-accessible-agents) or [Notion Skill discovery](references/read-skills.md). Return the list without first requiring a target selection or executing any listed item. Include names, URLs, retrieval scope, and verified status where available.
