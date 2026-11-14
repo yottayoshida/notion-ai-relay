@@ -15,7 +15,7 @@ The execution instructions live in this file and `references/`. `agents/openai.y
 
 ## 1. Identify the target and request
 
-For discovery requests, follow [agent listing](references/read-configuration.md#list-accessible-agents) or [Notion Skill discovery](references/read-skills.md). Return the list without first requiring a target selection or executing any listed item. Include names, URLs, retrieval scope, and verified status where available.
+For discovery requests, follow [agent listing](references/read-configuration.md#list-accessible-agents) or [Notion Skill discovery](references/read-skills.md). Return the list without first requiring a target selection or executing any listed item. A target selected earlier in the conversation does not turn a discovery request into an execution request. Include names, URLs, retrieval scope, and verified status where available.
 
 For execution requests, identify the target type, name or URL, task, input, and execution or dry-run mode. Treat "carry out" and "run" as requests to execute, not merely explain the configuration. Evaluate a requested dry run as defined in the [execution boundaries](#execution-boundaries).
 

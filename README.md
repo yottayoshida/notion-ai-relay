@@ -18,13 +18,17 @@ Connect Notion MCP in your AI assistant separately. If a workflow uses another s
 
 ## Use
 
-After your assistant loads the Skill, specify the target and the input for this run.
+The Codex default prompt requests discovery only. To execute a task, make a separate explicit request with the target and input for this run.
 
 For a Custom Agent, also supply its instructions. If they live on the Agent's Instructions page, give that page's URL (copy the link from the Agent's settings): the Skill reads the page through MCP on every run, so it follows the instructions the Agent currently runs rather than a copy. Otherwise paste the instruction text. The hosted Notion MCP cannot read an Agent's settings from its `agent://` URL; [Agent retrieval](docs/agent-retrieval.md) compares the routes.
 
 ```text
 List the Notion Custom Agents and Notion Skills I can access.
+```
 
+Execution and dry-run examples:
+
+```text
 Carry out this Custom Agent's task.
 Agent URL: <target agent URL>
 Instructions: <Instructions page URL, or pasted text>
