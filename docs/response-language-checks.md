@@ -2,7 +2,7 @@
 
 ## Scope
 
-The primary implementer manually traced the cases below against the [response-language rules](../SKILL.md#response-language). Each row records the result of that instruction walkthrough, not observed client or model behavior. No additional model, Codex session, or Notion MCP run was launched. These checks do not establish runtime language compliance or client compatibility.
+The primary implementer first manually traced the cases below against the [response-language rules](../SKILL.md#response-language). Those walkthroughs are not model executions. A subsequent, explicitly authorized evaluation executed four cases once each with a real model through Pi CLI; its results are recorded separately below. Neither check establishes general client compatibility.
 
 The fixtures are synthetic. The repository-owned runtime instructions (`SKILL.md`, `references/`, and `agents/openai.yaml`) remain in English; retrieved third-party instructions and user material need not be translated.
 
@@ -30,4 +30,41 @@ git diff --check
 
 `tests/test_response_language.py` checks the presence of the language-precedence, message-scope, format-preservation, and deliverable-language contracts. It does not implement a language classifier or pretend to execute the Skill. Before the new section was added, all three tests failed (seven failed assertions, including subtests); with it, all three pass, with no skips. Diff whitespace checks also pass.
 
-Actual client behavior for these cases remains unverified. A future behavioral evaluation must record the client, model, Relay revision, inputs, outputs, and tool trace separately rather than reusing these static results.
+## Executed model checks
+
+On 2026-11-14, the four [synthetic fixtures](../tests/fixtures/response-language.json) were each executed once in fresh Pi CLI 1.5.2 processes, inheriting the parent session's provider (`openai-codex`), model (`gpt-6.1-sol`), and thinking level (`xhigh`). The fixtures and expected language, format, and total were written before execution. No implementation or design work was delegated.
+
+| Fixture | Observed final output | Verdict |
+|---|---|---|
+| Japanese request, English Skill | `合計は10です。` | PASS |
+| Explicit English override | `The total is 10.` | PASS |
+| JSON-only output | `{"status":"ok","source_id":"fixture-03","total":10,"summary":"合計は10です。"}` | PASS |
+| English Agent, French delegated Skill | `合計は10です。` | PASS |
+
+The primary implementer inspected the actual language and meaning; JSON parsing checked the keys, enum, ID, and total. All four processes exited 0, settled without abort, and produced one completed assistant message each. There were zero skips, timeouts, tool calls, retries, or compactions. The [execution record](response-language-results.json) includes exact outputs, timestamps, runtime revision and digest, fixture digest, token usage, and raw-trace digests. The catalog-based cost estimate is USD 0.04783, not a provider billing receipt.
+
+Raw JSONL event traces and the local runner remain outside the distribution in workspace `artifacts/notion-ai-relay-14-behavior/`. Only final outputs and execution metadata are included here, not reasoning traces or local configuration paths.
+
+### Reproduction setup
+
+Each process used an isolated working directory with this process-local `.pi/settings.json`:
+
+```json
+{"retry":{"enabled":false,"provider":{"maxRetries":0}},"compaction":{"enabled":false}}
+```
+
+`runtime.md` concatenated the recorded revision's `SKILL.md`, `references/read-configuration.md`, `references/read-skills.md`, and `references/execute-via-mcp.md` in that order, separated by two newlines and with `<!-- relative/path -->` followed by a newline before each file. The full instructions, not just the language section, were appended to Pi's default system prompt. For each fixture, `prompt.txt` contained its exact `prompt` value. The invocation was:
+
+```bash
+pi --mode json --no-session --offline \
+  --no-extensions --no-mcp --no-tools --no-skills \
+  --no-prompt-templates --no-themes --no-context-files --approve \
+  --provider "$PI_PROVIDER" --model "$PI_MODEL" --thinking "$PI_REASONING_LEVEL" \
+  --append-system-prompt runtime.md < prompt.txt > events.jsonl 2> stderr.log
+```
+
+The model options were frozen from the parent session before starting, not selected per result; normal Pi settings and credential stores were not edited. Reproduction makes four new model invocations and needs its own authorization. The local runner imposed a 240-second limit per case and did not retry failed cases.
+
+### Remaining limits
+
+This is a four-sample, single-model instruction-following check using supplied snapshots. It does not test Notion MCP retrieval, Codex CLI Skill loading, delegated tool calls, or the other four walkthrough scenarios. Tools and MCP were disabled, so zero calls are not evidence of the model refusing unsafe operations. There was no pre-change model run: the results do not prove that the new section caused an improvement. They are not an independent review or a guarantee of consistent future behavior.

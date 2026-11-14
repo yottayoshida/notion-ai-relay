@@ -1,0 +1,166 @@
+{
+  "client": "Pi CLI 1.5.2",
+  "provider": "openai-codex",
+  "model": "gpt-6.1-sol",
+  "thinking": "xhigh",
+  "runtime_revision": "3c5db339b9e551c4e91a48854d8afb3ca8a17943",
+  "runtime_files": [
+    "SKILL.md",
+    "references/read-configuration.md",
+    "references/read-skills.md",
+    "references/execute-via-mcp.md"
+  ],
+  "runtime_sha256": "36cef643a28a7f2ed6cc2ee479f7dea6bb46cd819cce783eab650397247171fb",
+  "fixtures_sha256": "1a114e663dabc1700b34b82ca3681cceb950c9b79b03a4a514e512ab7f0ac047",
+  "attempts_per_case": 1,
+  "tool_inventory": [],
+  "settings": {
+    "retry": {
+      "enabled": false,
+      "provider": {
+        "maxRetries": 0
+      }
+    },
+    "compaction": {
+      "enabled": false
+    }
+  },
+  "assessment": "Primary-agent inspection of language and format against expectations recorded before execution; JSON parsed and keys, status, source_id and total checked. Not an independent review.",
+  "scope": "Synthetic user-supplied snapshots; no MCP connection, no client discovery or Skill autoload test, no before/after behavioral comparison.",
+  "estimated_catalog_cost_usd": 0.04783,
+  "cost_is_provider_billing": false,
+  "cases": [
+    {
+      "id": "japanese-request",
+      "started_at": "2026-11-14T07:15:10.945530+00:00",
+      "finished_at": "2026-11-14T07:15:20.077570+00:00",
+      "exit_code": 0,
+      "timeout": false,
+      "assistant_message_count": 1,
+      "tool_execution_count": 0,
+      "tool_call_count": 0,
+      "retry_event_count": 0,
+      "compaction_event_count": 0,
+      "settled_without_abort": true,
+      "stop_reason": "stop",
+      "output": "合計は10です。",
+      "usage": {
+        "input": 5545,
+        "output": 67,
+        "cacheRead": 0,
+        "cacheWrite": 0,
+        "reasoning": 55,
+        "totalTokens": 5612,
+        "cost": {
+          "input": 0.01109,
+          "output": 0.00067,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "total": 0.01176,
+          "totalFromProvider": false
+        }
+      },
+      "raw_trace_sha256": "9f18a7dd76901ef1cec8e7ec56eac03621192a8a0586e59b5def3911e9bc8a31",
+      "verdict": "PASS"
+    },
+    {
+      "id": "explicit-english",
+      "started_at": "2026-11-14T07:15:20.085315+00:00",
+      "finished_at": "2026-11-14T07:15:28.369610+00:00",
+      "exit_code": 0,
+      "timeout": false,
+      "assistant_message_count": 1,
+      "tool_execution_count": 0,
+      "tool_call_count": 0,
+      "retry_event_count": 0,
+      "compaction_event_count": 0,
+      "settled_without_abort": true,
+      "stop_reason": "stop",
+      "output": "The total is 10.",
+      "usage": {
+        "input": 5549,
+        "output": 56,
+        "cacheRead": 0,
+        "cacheWrite": 0,
+        "reasoning": 44,
+        "totalTokens": 5605,
+        "cost": {
+          "input": 0.011098,
+          "output": 0.0005600000000000001,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "total": 0.011658,
+          "totalFromProvider": false
+        }
+      },
+      "raw_trace_sha256": "48cfbacff7c878dd8b221b35a305c7c3ce1a5294675e430c4a48cffb11d1c436",
+      "verdict": "PASS"
+    },
+    {
+      "id": "json-only",
+      "started_at": "2026-11-14T07:15:28.374157+00:00",
+      "finished_at": "2026-11-14T07:15:35.682454+00:00",
+      "exit_code": 0,
+      "timeout": false,
+      "assistant_message_count": 1,
+      "tool_execution_count": 0,
+      "tool_call_count": 0,
+      "retry_event_count": 0,
+      "compaction_event_count": 0,
+      "settled_without_abort": true,
+      "stop_reason": "stop",
+      "output": "{\"status\":\"ok\",\"source_id\":\"fixture-03\",\"total\":10,\"summary\":\"合計は10です。\"}",
+      "usage": {
+        "input": 5602,
+        "output": 105,
+        "cacheRead": 0,
+        "cacheWrite": 0,
+        "reasoning": 74,
+        "totalTokens": 5707,
+        "cost": {
+          "input": 0.011203999999999999,
+          "output": 0.0010500000000000002,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "total": 0.012254,
+          "totalFromProvider": false
+        }
+      },
+      "raw_trace_sha256": "96f9535b5383171e3418c8abb362fc3ca897ffb479aa45fa9ade69f5c424d8dd",
+      "verdict": "PASS"
+    },
+    {
+      "id": "delegated-french",
+      "started_at": "2026-11-14T07:15:35.700068+00:00",
+      "finished_at": "2026-11-14T07:15:43.630365+00:00",
+      "exit_code": 0,
+      "timeout": false,
+      "assistant_message_count": 1,
+      "tool_execution_count": 0,
+      "tool_call_count": 0,
+      "retry_event_count": 0,
+      "compaction_event_count": 0,
+      "settled_without_abort": true,
+      "stop_reason": "stop",
+      "output": "合計は10です。",
+      "usage": {
+        "input": 5614,
+        "output": 93,
+        "cacheRead": 0,
+        "cacheWrite": 0,
+        "reasoning": 81,
+        "totalTokens": 5707,
+        "cost": {
+          "input": 0.011228,
+          "output": 0.00093,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "total": 0.012158,
+          "totalFromProvider": false
+        }
+      },
+      "raw_trace_sha256": "b8c8f6ef28763e70e0b70dec95d42a9d52987bfbce425da87f4609e7ca1bcc5c",
+      "verdict": "PASS"
+    }
+  ]
+}
