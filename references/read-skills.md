@@ -10,7 +10,7 @@ The [execution boundaries](../SKILL.md#execution-boundaries) apply throughout.
 4. If the management location is unknown, search for candidates using the supplied name or context. Search snippets, top results, and generic keywords do not establish a complete catalog. State the scope obtained and request a management page, database, or target Skill URL when needed.
 5. Follow the listing or database tool's pagination contract and record coverage and limits. Do not merge distinct pages solely by name. Treat registration, personal enabled state, and read access as separate facts. Mark missing status metadata as unverified. Successful page retrieval does not establish enabled state.
 
-Return names, descriptions, URLs, verified status, and coverage. If only catalog metadata was read, say so. Do not classify a document as a native Notion Skill merely because its name contains "SKILL". A user-selected ordinary procedure page can be read and executed with that distinction stated.
+Return names, descriptions, URLs, verified status, and coverage. If only catalog metadata was read, say so. Do not classify a document as a native Notion Skill merely because its name contains "SKILL". In an execution request, a user-selected ordinary procedure page can be read and executed with that distinction stated.
 
 ## Read instructions and supporting resources
 
