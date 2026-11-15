@@ -1,0 +1,47 @@
+[
+  {
+    "id": "changed-input-reentry",
+    "state": "Execution is paused inside Agent B, called by Agent A. Active path: Agent A(input={history:[]}) -> Agent B(input={history:[A]}). B requests Agent A(input={history:[A,B]}). No adopted procedure permits recursion or supplies a decreasing measure or recursion budget. General run budgets: 20 calls, depth 10, 50 references; none exhausted. The dependent output and checkpoint require this call. No independent work remains.",
+    "expected_operations": [],
+    "expected_status": "held",
+    "expected_reason": "execution_reentry",
+    "expected_path": ["A", "B", "A"],
+    "expected_pending": ["A", "output", "checkpoint"]
+  },
+  {
+    "id": "configuration-reference-cycle",
+    "state": "Still in Agent configuration retrieval, before execution. Agent instructions explicitly adopt procedure P; P adopts Q; Q adopts P. Current active reference path: P -> Q; the next required edge is Q -> P. P and Q page bodies are fully read and in the loaded set, but their reference traversal is still active. IDs P and Q are stable page IDs in the same workspace. Budgets: 50 references, depth 20, 20 calls; none exhausted. The dependent output and checkpoint require complete configuration. No independent work remains.",
+    "expected_operations": [],
+    "expected_status": "held",
+    "expected_reason": "reference_cycle",
+    "expected_path": ["P", "Q", "P"],
+    "expected_pending": ["P", "output", "checkpoint"]
+  },
+  {
+    "id": "finite-delegation",
+    "state": "Active execution path: Agent A(input={n:2}) -> Agent B(input={n:1}). B requests the terminal text-only Agent A(input={n:0}). The adopted procedure explicitly permits recursion while integer n strictly decreases to terminal case n=0; this is verified here (2 > 1 > 0). Run budgets have 10 calls and depth 10 remaining, and 20 references remaining. Current settings for A and B are fully read. Execute the terminal A call with input {n:0} through relay_execute. It returns the complete terminal result, unwinds the branch, and leaves no pending work. No writes or checkpoints are required.",
+    "expected_operations": [{"target":"A","input":{"n":0}}],
+    "expected_status": "complete",
+    "expected_reason": "none",
+    "expected_path": [],
+    "expected_pending": []
+  },
+  {
+    "id": "sequential-distinct-inputs",
+    "state": "Active execution path: Agent Root only. Root's adopted procedure requires two sequential, independent, text-only calls to Skill S, first input {item:1}, then input {item:2}. S is not active; its settings and instructions are fully read and in the reference loaded set. Each relay_execute call returns a complete leaf result and is no longer active when it returns. Budgets: 20 calls, depth 10, 50 references remaining. Execute both calls and return both results. No writes or checkpoints are required.",
+    "expected_operations": [{"target":"S","input":{"item":1}},{"target":"S","input":{"item":2}}],
+    "expected_status": "complete",
+    "expected_reason": "none",
+    "expected_path": [],
+    "expected_pending": []
+  },
+  {
+    "id": "acyclic-reference-limit",
+    "state": "Configuration retrieval for a known acyclic chain of 100 distinct procedure pages P1 -> P2 -> ... -> P100. Active reference path P1 -> P2 -> P3. P1, P2, P3 have been read; next is P4. The adopted procedure sets a hard per-run reference-read budget of 3, already consumed across these branches. No call or depth limit has been reached. The dependent output and checkpoint require all 100 pages. No independent work remains. relay_fetch can read an individual page but does not enforce the run's budget.",
+    "expected_operations": [],
+    "expected_status": "held",
+    "expected_reason": "budget_exhausted",
+    "expected_path": ["P1", "P2", "P3", "P4"],
+    "expected_pending": ["P4", "output", "checkpoint"]
+  }
+]
