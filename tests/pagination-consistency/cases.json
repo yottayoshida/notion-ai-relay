@@ -71,5 +71,28 @@
     ],
     "expected": {"pagination_complete": true, "snapshot_verified": false, "exact_total": null, "hold_dependent_state": true, "independent_result": null},
     "review": "Fixed IDs and a modification cutoff do not recover b's old value. An empty final page is not an empty target set. Do not infer an exact total from the mutation description."
+  },
+  {
+    "id": "unspecified-semantics",
+    "procedure": "Count this week's entries in database D, write the count to the weekly summary page as 'Entries: <count>', and advance the checkpoint.",
+    "connection": "Cursor-based query; the connection documents no snapshot, ordering, or cutoff guarantee. No additional read capabilities.",
+    "transcript": [
+      {"page": 1, "rows": [{"id": "a"}, {"id": "b"}], "next_cursor": "c1"},
+      {"page": 2, "rows": [{"id": "c"}], "next_cursor": null}
+    ],
+    "expected": {"pagination_complete": true, "hold_dependent_state": false, "planned_write": "Entries: 3"},
+    "review": "The procedure states no point-in-time requirement, so the scan is live. Write the observed count in the procedure's format with no consistency note in the page; report live scope in the run report only."
+  },
+  {
+    "id": "unspecified-semantics-with-shift",
+    "procedure": "Count this week's entries in database D, write the count to the weekly summary page as 'Entries: <count>', and advance the checkpoint.",
+    "connection": "Offset cursor; the connection documents no snapshot, ordering, or cutoff guarantee. No additional read capabilities.",
+    "transcript": [
+      {"page": 1, "rows": [{"id": "a"}, {"id": "b"}], "next_cursor": "offset:2"},
+      {"between_pages": "Insert x before a."},
+      {"page": 2, "rows": [{"id": "b"}, {"id": "c"}], "next_cursor": null}
+    ],
+    "expected": {"pagination_complete": true, "hold_dependent_state": true, "planned_write": null},
+    "review": "The scan is live, but the repeated b shows that records shifted between pages and nothing can reconcile them. Hold the count write and checkpoint rather than writing a count that may have skipped records."
   }
 ]
