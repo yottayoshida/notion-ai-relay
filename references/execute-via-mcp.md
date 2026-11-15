@@ -30,9 +30,18 @@ Exclude out-of-scope data before retrieval. A broader host connection does not e
 
 If the configuration uses comparison code or data transformations, read the implementation and inspect its inputs, outputs, and side effects. Do not run unknown code that reads credentials or communicates externally. Available calculation tools may assist pure processing. Do not assume a shell or Python exists. Report a missing capability if the required calculation cannot be performed equivalently. Preserve comparison rules needed for compatibility with existing state.
 
-Track calls across Agents and Skills by type, identifier, and input to detect cycles. Stop a call path with a cycle or unbounded retries. Apply the same authorization, input, and coverage requirements to delegated work.
+Apply the [traversal and delegation limits](#bound-reference-traversal-and-delegation) when loading adopted procedures and calling Agents or Skills. Apply the same authorization, input, and coverage requirements to delegated work.
 
 If a Skill asks for text suitable for posting, return text rather than interpreting that as a request to post. Resolve "current page", "selected text", or "attachment" from explicit selection or actual supplied input. Do not infer it from screen state or previously opened documents.
+
+## Bound reference traversal and delegation
+
+Keep separate per-run records for reference loading and execution. Identify targets by type and stable identifier, including workspace or source scope where needed; names and changed input alone do not establish a new target.
+
+- **Reference loading:** share a loaded set and an active reference path across Agent settings, Skill instructions, and adopted procedures. Read each target once per run: when a reference leads back to a target that is on the active path or already fully read, such as P → Q → P or a link within the same page, record the edge and do not read the target again. Such a cycle leaves nothing unread and does not stop the run. Do not skip required content or reuse an incomplete read as complete.
+- **Execution:** track the active call path by target identity, retaining each call's input. A → B → A is re-entry even when the input changes. Remove completed calls from the active path so sequential calls to the same target with different inputs remain valid. Do not use the reference loaded set to suppress execution.
+- **Termination:** honor reference, call-count, and depth limits set by the source procedure or the connection, and share what remains across branches rather than resetting it in a child. Do not invent such limits. A run that can no longer retain its loaded set and active paths, for example because of context or connection limits, stops as described under Stopping. Permit active-path execution re-entry only when the adopted procedure allows recursion and supplies either a verifiable strictly decreasing measure with a terminal case or a finite recursion depth/call budget. Check the measure or remaining budget before each call; changed input or a claim of progress is not proof of termination. Without such a contract, hold the re-entering call. Do not retry indefinitely.
+- **Stopping:** distinguish unsupported execution re-entry, a failed decrease, an exhausted limit, and lost run state. A large acyclic graph reaching a limit has exhausted the limit; it is not re-entry. Return the relevant reference/call path, the limit or termination condition, and the unread or unexecuted work. Do not claim complete retrieval or execution; hold dependent writes and checkpoints, and continue independent authorized work within remaining limits.
 
 ## Check retrieval completeness
 
