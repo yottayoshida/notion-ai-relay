@@ -18,7 +18,7 @@ Connect Notion MCP in your AI assistant separately. If a workflow uses another s
 
 ## Use
 
-The Codex default prompt requests discovery only. To execute a task, make a separate explicit request with the target and input for this run.
+After your assistant loads the Skill, specify the target and the input for this run.
 
 For a Custom Agent, its name or URL is enough when your connection can read the recorded settings of a chat you had with it or one of its scheduled runs, among its latest 60 runs: the Skill reads the Instructions page set in the Agent's settings if your chat recorded it, or else the newest published page recorded, and reports which page and run it used. Notion can cut a run's recorded settings short; the Skill then reports the missing settings as unknown, or asks for the page URL if the cut hides the page link. Otherwise give the Instructions page URL (the link in the Agent's settings) or paste the text. When instructions or settings come from a recorded run, the Skill lists the write destinations, except those you name in the request, and waits for your go-ahead before the first write. [Agent retrieval](docs/agent-retrieval.md) compares the routes.
 

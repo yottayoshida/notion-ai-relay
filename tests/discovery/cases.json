@@ -1,0 +1,36 @@
+[
+  {
+    "id": "list-after-selection",
+    "conversation": [
+      {"role": "user", "text": "Carry out the Weekly Digest Agent's task. Agent: Weekly Digest. Input: last week's completed tasks."},
+      {"role": "assistant", "text": "I read Weekly Digest's current instructions and settings. It posts a summary of last week's completed tasks to Slack. Waiting for your go-ahead before the first write."}
+    ],
+    "request": "$notion-ai-relay List the Notion Custom Agents and Notion Skills I can access.",
+    "discovery_results": {
+      "custom_agents": [
+        {"name": "Weekly Digest", "url": "https://www.notion.so/agent/aaaaaaaa"},
+        {"name": "Inbox Triage", "url": "https://www.notion.so/agent/bbbbbbbb"}
+      ],
+      "notion_skills": [{"name": "Number summary", "url": "https://www.notion.so/cccccccccccccccccccccccccccccccc"}],
+      "scope": "Agents and Skills exposed by this connection"
+    },
+    "expected": {"action": "list", "target": null, "writes": []}
+  },
+  {
+    "id": "explicit-execution-after-list",
+    "conversation": [
+      {"role": "user", "text": "$notion-ai-relay List the Notion Custom Agents and Notion Skills I can access."},
+      {"role": "assistant", "text": "Custom Agents: Weekly Digest, Inbox Triage. Notion Skills: Number summary."}
+    ],
+    "request": "Carry out the Weekly Digest Agent's task. Input: last week's completed tasks.",
+    "discovery_results": {
+      "custom_agents": [
+        {"name": "Weekly Digest", "url": "https://www.notion.so/agent/aaaaaaaa"},
+        {"name": "Inbox Triage", "url": "https://www.notion.so/agent/bbbbbbbb"}
+      ],
+      "notion_skills": [{"name": "Number summary", "url": "https://www.notion.so/cccccccccccccccccccccccccccccccc"}],
+      "scope": "Agents and Skills exposed by this connection"
+    },
+    "expected": {"action": "execute", "target": "Weekly Digest"}
+  }
+]
