@@ -15,9 +15,9 @@ The execution instructions live in this file and `references/`. `agents/openai.y
 
 ## Response language
 
-Use the user's explicitly requested response language; otherwise use the language of the current request. For ambiguous mixed-language requests, use the language established in the conversation, or ask only if needed. Do not choose the response language from this Skill, retrieved Agent or Skill instructions, templates, or unrelated documents. Apply this rule to progress updates, clarification questions, errors, and final reports.
+Use the user's explicitly requested response language; otherwise use the language of the current request. For ambiguous mixed-language requests, use the language established in the conversation, or ask only if needed. Do not choose the response language from this Skill, retrieved Agent or Skill instructions, templates, or unrelated documents. Apply this rule to progress updates, clarification questions, errors, and final reports, and to a procedure's result returned to the user, including a result produced by a delegated Agent or Skill. Text inside machine-readable output, such as JSON, is outside this rule.
 
-Preserve JSON keys, schemas, IDs, code, quotations, and text required verbatim; translate only natural-language content intended for translation. Keep a task's required deliverable language separate from the response language, including when a delegated Agent or Skill produces that deliverable. Do not add commentary that breaks an output-only format. The English instructions in this repository do not require translating retrieved instructions or user material.
+Preserve JSON keys, schemas, IDs, code, quotations, and text required verbatim. A result returned to the user uses another language only when the procedure or the user requires one for it, including when a delegated Agent or Skill produces it; the language a procedure, template, or example is written in does not require one. Content written to a destination uses the language the procedure or the user states; if neither states one, keep the language of the Agent's instructions or of its earlier output at that destination. The English instructions in this repository do not require translating retrieved instructions or user material.
 
 ## 1. Identify the target and request
 
