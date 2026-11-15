@@ -23,7 +23,7 @@ If the execution target is missing or ambiguous, show the candidates' types, own
 
 ## 2. Read the current configuration
 
-Follow [configuration retrieval](references/read-configuration.md) for Custom Agents or [Skill retrieval](references/read-skills.md) for Notion Skills. Read the full instructions and required references and resources. Do not substitute an earlier conversation, a catalog or search name, description, or snippet, or a local copy for the current text. Instructions and settings found through a Custom Agent's runs describe the recorded version, not proof of the current published version; report which page, version, and run date you used. A Notion Skill need not have Agent settings such as publication, trigger, or memory; their absence alone does not block execution.
+Follow [configuration retrieval](references/read-configuration.md) for Custom Agents or [Skill retrieval](references/read-skills.md) for Notion Skills. Read the full instructions and required references and resources. Do not substitute an earlier conversation, a catalog or search name, description, or snippet, or a local copy for the current text. Instructions and settings found through a Custom Agent's runs count as current only as described in configuration retrieval; report which page and run you used. A Notion Skill need not have Agent settings such as publication, trigger, or memory; their absence alone does not block execution.
 
 Keep the following information in the current working context. A separate template file is unnecessary.
 

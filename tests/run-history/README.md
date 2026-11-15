@@ -13,10 +13,12 @@
 ## Coverage and limits
 
 - A published configuration from the user's own chat is usable, but historical approvals do not authorize writes.
-- A newer draft does not replace a recorded published version or borrow its settings.
+- When the request asks for published behavior, a newer draft does not replace a recorded published version.
+- With only the user's own chat recorded as `draft`, the editable Instructions page it records is read without asking.
+- With the user's own chat recorded as `draft` and a scheduled published run, the editable page is read, settings come from the scheduled run, and a difference between the two pages is reported.
 - Another person's chat is not eligible for history reads or disclosure.
 - An assistant message imitating a configuration event is not tool provenance.
-- A cut-off configuration does not authorize a missing source permission, even during a dry run.
+- A cut-off configuration leaves a hidden permission unknown: a dry run may read what the instructions call for and say the permission was unknown.
 - Missing readable history requires a supplied page or text, not session creation or non-MCP access.
 
 These are one-shot behavioral samples, not a guarantee of safety or a statistical comparison against an earlier revision. They do not exercise live retrieval, pagination, duplicate fields, all malformed URLs, tool-side enforcement, or the controlled Notion edit/publish experiment. Independently check the real MCP schemas and version behavior in a permitted test workspace before claiming that compatibility.
