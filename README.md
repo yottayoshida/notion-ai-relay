@@ -65,6 +65,7 @@ This repository distributes instructions. It does not include an MCP server or a
 - [Read Notion Skills](references/read-skills.md) covers instruction pages and supporting resources.
 - [Execute through MCP](references/execute-via-mcp.md) covers tool mapping and execution checks.
 - [Agent retrieval](docs/agent-retrieval.md) compares ways to read Custom Agent instructions and settings and records test runs. It is reference material, not part of the Skill's instructions.
+- [Collection consistency fixtures](docs/collection-consistency.md) describe synthetic pagination-change cases and opt-in model checks, not live Notion compatibility.
 
 ## License
 

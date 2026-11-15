@@ -40,7 +40,15 @@ Resolve the relationship between a Notion database and its data sources and retr
 
 Paginate to completion when the task covers all records. Saved-view counts and top search results are not complete inventories. Use the source procedure's timezone and interval boundaries. Distinguish Slack channel history from thread replies and retrieve replies separately when necessary.
 
-Distinguish partial retrieval, access denial, and a valid empty result. Stop writes and checkpoint updates that depend on missing required information. Stop the entire run if the source procedure requires it. Otherwise continue independent work and record unfinished items.
+### Check collection consistency
+
+Finishing every cursor does not by itself establish a point-in-time collection or exact aggregate. Establish whether the source procedure requires a snapshot or an intentionally live scan; do not silently replace one with the other. Inspect the connection's guarantees for snapshots, cursors, ordering, cutoffs, and modification times, including deletions and changes to values used in calculations. Do not infer guarantees from a cursor, timestamp, or unchanged page count alone.
+
+When required and supported, pin a snapshot covering both membership and required values, or fix target IDs and a stable boundary with sufficient version or change evidence. Fixed IDs alone do not freeze values, and a cutoff alone may not recover deleted records or earlier values. Detect duplicate IDs and source changes across pages and reconcile affected records within the procedure's retry limits. Deduplication removes repeats but does not recover omissions; another live scan alone is not proof of consistency. Preserve the procedure's own observation and duplicate rules for an intentionally live scan and label its coverage accordingly.
+
+If required consistency cannot be established, mark the affected collection and aggregate unverified, state the missing guarantee or observed change, and hold dependent writes and checkpoint updates. Do not claim complete point-in-time coverage merely because pagination ended.
+
+Distinguish partial retrieval, access denial, a valid empty result, and unverified consistency. Stop writes and checkpoint updates that depend on missing required information. Stop the entire run if the source procedure requires it. Otherwise continue independent work and record unfinished items.
 
 ## Handle authorization, writes, and resume state
 

@@ -1,0 +1,60 @@
+{
+  "description": "Synthetic MCP collection scans. Expected results are scorer-only and must not be included in the model prompt.",
+  "cases": [
+    {
+      "id": "insertion",
+      "semantics": "snapshot",
+      "mutation": "After page 1, X (amount 7) is inserted before the cursor. The terminal page omits X.",
+      "contract": {"snapshot": false, "cursor": "live keyset cursor", "order": "position ascending", "cutoff_filter": false, "membership_manifest": false, "deletion_history": false, "updated_at": "not exposed", "revision": "collection revision changes on membership or value edits"},
+      "pages": [
+        {"rows": [{"id": "A", "amount": 10}, {"id": "B", "amount": 20}], "next_cursor": "p2", "revision": "r1"},
+        {"rows": [{"id": "C", "amount": 30}, {"id": "D", "amount": 40}], "next_cursor": null, "revision": "r2"}
+      ],
+      "expected": {"status": "unverified", "total": null, "writes": ["receipt"]}
+    },
+    {
+      "id": "deletion",
+      "semantics": "snapshot",
+      "mutation": "After page 1, B is deleted. The live offset shifts and C is skipped.",
+      "contract": {"snapshot": false, "cursor": "live offset cursor", "order": "position ascending", "cutoff_filter": false, "membership_manifest": false, "deletion_history": false, "updated_at": "not exposed", "revision": "collection revision changes on membership or value edits"},
+      "pages": [
+        {"rows": [{"id": "A", "amount": 10}, {"id": "B", "amount": 20}], "next_cursor": "p2", "revision": "r1"},
+        {"rows": [{"id": "D", "amount": 40}], "next_cursor": null, "revision": "r2"}
+      ],
+      "expected": {"status": "unverified", "total": null, "writes": ["receipt"]}
+    },
+    {
+      "id": "sort-reorder",
+      "semantics": "snapshot",
+      "mutation": "Between pages, sort values move B forward and C behind the cursor. B repeats and C is missing; deduplication cannot recover C.",
+      "contract": {"snapshot": false, "cursor": "live cursor, no stable membership or values", "order": "mutable position ascending", "cutoff_filter": false, "membership_manifest": false, "deletion_history": false, "updated_at": "not exposed", "revision": "collection revision changes on membership or value edits"},
+      "pages": [
+        {"rows": [{"id": "A", "amount": 10}, {"id": "B", "amount": 20}], "next_cursor": "p2", "revision": "r1"},
+        {"rows": [{"id": "B", "amount": 20}, {"id": "D", "amount": 40}], "next_cursor": null, "revision": "r2"}
+      ],
+      "expected": {"status": "unverified", "total": null, "writes": ["receipt"]}
+    },
+    {
+      "id": "pinned-snapshot",
+      "semantics": "snapshot",
+      "mutation": "The live collection changes during pagination, but snapshot s1 retains both membership and values from r1.",
+      "contract": {"snapshot": true, "cursor": "pins snapshot s1 automatically across every page", "snapshot_scope": "all matching IDs and amount values at revision r1", "order": "immutable within snapshot", "cutoff_filter": false, "membership_manifest": false, "deletion_history": false, "updated_at": "not needed for the pinned snapshot"},
+      "pages": [
+        {"rows": [{"id": "A", "amount": 10}, {"id": "B", "amount": 20}], "next_cursor": "p2", "snapshot": "s1", "revision": "r1", "live_revision": "r1"},
+        {"rows": [{"id": "C", "amount": 30}, {"id": "D", "amount": 40}], "next_cursor": null, "snapshot": "s1", "revision": "r1", "live_revision": "r2"}
+      ],
+      "expected": {"status": "verified", "total": 100, "writes": ["aggregate", "checkpoint", "receipt"]}
+    },
+    {
+      "id": "intentional-live",
+      "semantics": "live",
+      "mutation": "B changes from 20 to 25 and appears again. The procedure deliberately uses each ID's first observation, not a point-in-time collection total.",
+      "contract": {"snapshot": false, "cursor": "finite live scan; IDs may repeat; no point-in-time coverage guarantee", "order": "mutable position ascending", "cutoff_filter": false, "membership_manifest": false, "deletion_history": false, "updated_at": "not exposed", "revision": "collection revision changes on membership or value edits"},
+      "pages": [
+        {"rows": [{"id": "A", "amount": 10}, {"id": "B", "amount": 20}], "next_cursor": "p2", "revision": "r1"},
+        {"rows": [{"id": "B", "amount": 25}, {"id": "C", "amount": 30}, {"id": "D", "amount": 40}], "next_cursor": null, "revision": "r2"}
+      ],
+      "expected": {"status": "verified", "total": 100, "writes": ["aggregate", "checkpoint", "receipt"]}
+    }
+  ]
+}
