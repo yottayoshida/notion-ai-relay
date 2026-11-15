@@ -67,6 +67,7 @@ This repository distributes instructions. It does not include an MCP server or a
 - [Read Notion Skills](references/read-skills.md) covers instruction pages and supporting resources.
 - [Execute through MCP](references/execute-via-mcp.md) covers tool mapping and execution checks.
 - [Agent retrieval](docs/agent-retrieval.md) compares ways to read Custom Agent instructions and settings and records test runs. It is reference material, not part of the Skill's instructions.
+- [Structural checks](docs/structural-checks.md) covers the CI check.
 - `tests/` holds synthetic decision cases, one folder per topic with its own replay steps. They are evaluation material, not runtime instructions.
 
 ## License

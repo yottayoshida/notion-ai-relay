@@ -8,3 +8,4 @@ work/
 outputs/
 *.log
 __pycache__/
+.venv/
