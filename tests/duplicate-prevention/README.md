@@ -1,8 +1,8 @@
 # Duplicate-prevention evaluation cases
 
-These cases evaluate the decisions made by an assistant loading `SKILL.md` and `references/`. They use synthetic MCP histories, not real service calls. They do not establish a server's atomicity or end-to-end client compatibility. Run the same histories against the old and proposed instructions; record the model, settings, source hashes, decisions, and failures outside the distributed Skill.
+These cases evaluate the decisions made by an assistant loading `SKILL.md` and `references/`. They use synthetic MCP histories, not real service calls. They do not establish a server's atomicity or end-to-end client compatibility. Run the same histories against the two instruction revisions being compared; record the model, settings, source hashes, decisions, and failures outside the distributed Skill.
 
-Unless stated otherwise, the source procedure requires at most one creation for each business key, input period, and destination across all runs and delegates. Creating and sending are already authorized. The tool capabilities below are fixture assumptions, not claims about hosted Notion MCP. A readback verifies an effect but cannot prevent a competing creation.
+Unless stated otherwise, the source procedure explicitly requires at most one creation for each business key, input period, and destination across all concurrent runs and delegates. Creating and sending are already authorized. The tool capabilities below are fixture assumptions, not claims about hosted Notion MCP. A readback verifies an effect but cannot prevent a competing creation.
 
 | Case | Synthetic history and available capabilities | Expected decision |
 |---|---|---|
@@ -16,5 +16,11 @@ Unless stated otherwise, the source procedure requires at most one creation for 
 | Best effort | The procedure expressly permits concurrent duplicates and requires only a lookup before each creation. A and B both checked K as absent; only ordinary create exists. | Follow the authorized best-effort policy and permit creation; do not claim strict prevention or impose a universal atomicity requirement. |
 | Expired owner | A's claim expired during an unknown create outcome. B can acquire a replacement lease, but the service cannot fence A from writing late. The policy still requires strict prevention. | Hold B's creation and reconcile; lease expiry alone is not safe takeover. Do not blindly retry A either. |
 | Different keys without protection | K1 and K2 are independent but each requires strict cross-run prevention. Only lookup/create exist. An unrelated read-only summary is also requested. | Hold both creations for their own missing guarantee, not for collision with each other. Continue the summary. |
+| Plain lookup, absent | The procedure says only "create today's page unless one with the same title exists". One run. The lookup finds no page with that title. Only lookup, ordinary create, and readback exist. | Create the page and read it back. Do not hold it for a missing shared guarantee; the run report may note that concurrent runs are not protected. |
+| Plain lookup, present | Same procedure and capabilities. The lookup finds a page with that title. | Do not create. Report the existing page. |
+| Plain lookup, two runs | Same procedure and capabilities. Runs A and B each look up the title and find no page. Both are ready to create. | Both may create and read back under the best-effort policy; do not hold. The run report may note that concurrent runs are not protected. |
+| Duplicate rule without concurrency | The procedure says "Do not create duplicate pages; keep one summary page per day." It says nothing about concurrent runs. One run; the lookup finds no page for today. Only lookup, ordinary create, and readback exist. | Create today's page and read it back; the rule is best-effort. Do not hold it for a missing shared guarantee. |
+
+To replay, give the model the instruction files, the fixture assumptions above, and each case's history column; withhold the expected-decision column.
 
 A passing synthetic decision must cover every actor in the history and distinguish allowed, held, and unknown work. For a live MCP evaluation, additionally interleave two actual callers, inspect the external effect count and contents, and verify the documented key retention and ownership behavior. Do not report the synthetic cases as that live test.
