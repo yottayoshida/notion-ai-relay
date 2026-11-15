@@ -176,6 +176,32 @@ class StructureTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "duplicate YAML key"):
             load_yaml("interface: {}\ninterface: {}")
 
+    def test_staged_distribution_is_every_file_git_would_ship(self):
+        source = Path(self.temp.name) / "source"
+        (source / "tests/topic").mkdir(parents=True)
+        (source / ".venv").mkdir()
+        for name, text in {
+            "SKILL.md": "x", "tests/topic/README.md": "x", "gone.md": "x",
+            ".gitignore": ".venv/\n", ".venv/ignored.md": "x", "new.md": "x",
+            "tests/topic/metadata.json": "{}",
+        }.items():
+            (source / name).write_text(text, encoding="utf-8")
+        git = ["git", "-C", str(source)]
+        subprocess.run(git + ["init", "-q"], check=True)
+        subprocess.run(git + ["add", "SKILL.md", "tests/topic/README.md", "gone.md", ".gitignore", "tests/topic/metadata.json"], check=True)
+        (source / "gone.md").unlink()
+        destination = Path(self.temp.name) / "staged"
+        destination.mkdir()
+        stage(source, destination)
+        staged = {str(path.relative_to(destination)) for path in destination.rglob("*") if path.is_file()}
+        self.assertEqual(staged, {"SKILL.md", "tests/topic/README.md", ".gitignore", "new.md"})
+
+    def test_staging_outside_git_fails(self):
+        source = Path(self.temp.name) / "not-a-repository"
+        source.mkdir()
+        with self.assertRaises(ValueError):
+            stage(source, self.root)
+
     def test_cli_staging_success_and_installed_fixture_failure(self):
         script = REPOSITORY / "scripts/check_structure.py"
         result = subprocess.run([sys.executable, str(script)], capture_output=True, text=True)

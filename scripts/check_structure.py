@@ -2,9 +2,11 @@
 
 import argparse
 from html.parser import HTMLParser
+import os
 from pathlib import Path
 import re
 import shutil
+import subprocess
 import tempfile
 import unicodedata
 from urllib.parse import unquote, urlsplit
@@ -19,7 +21,6 @@ REQUIRED = (
     "references/read-configuration.md", "references/read-skills.md",
     "references/execute-via-mcp.md", "docs/agent-retrieval.md",
 )
-PACKAGE_ENTRIES = ("SKILL.md", "README.md", "LICENSE", "references", "agents", "docs", "assets")
 FRONTMATTER_FIELDS = {"name", "description", "license", "compatibility", "metadata", "allowed-tools"}
 MARKDOWN = MarkdownIt("commonmark")
 
@@ -202,13 +203,30 @@ def validate(root):
     return len(markdowns), len(yamls), link_count
 
 
+def repository_files(source):
+    # Not a fixed list of folders: `npx skills add` installs the whole checkout,
+    # so any folder left off a list would ship without being checked.
+    try:
+        listing = subprocess.run(
+            ["git", "-C", str(source), "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+            capture_output=True, check=True,
+        ).stdout
+    except (OSError, subprocess.CalledProcessError) as error:
+        raise ValueError(f"cannot list repository files with git in {source}") from error
+    return [os.fsdecode(name) for name in listing.split(b"\0") if name]
+
+
 def stage(source, destination):
-    for entry in PACKAGE_ENTRIES:
-        path = source / entry
-        if path.is_dir():
-            shutil.copytree(path, destination / entry)
-        elif path.is_file():
-            shutil.copy2(path, destination / entry)
+    for name in repository_files(source):
+        path = source / name
+        # Skip what is not a regular file in the working tree (a deletion not yet
+        # committed, a submodule); copying it would fail. Skip metadata.json too:
+        # the skills CLI drops it, so a link to it would pass here and break once installed.
+        if not path.is_file() or path.name == "metadata.json":
+            continue
+        target = destination / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, target)
 
 
 def main():
