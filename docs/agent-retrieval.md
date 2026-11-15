@@ -2,7 +2,7 @@
 
 Notion AI Relay needs a Custom Agent's instructions before it can carry out the Agent's task. This page compares the ways to get them and records test runs. It is for maintainers; the Skill does not load it.
 
-Scope of the checks: one Notion workspace, three Custom Agents, read by a user who can edit the first two (edit access to the third was not checked), using Claude Code with the hosted Notion MCP. Other plans, roles, and clients may differ.
+Scope of the inherited 2026-11-06 records below: one Notion workspace, three Custom Agents, read by a user who can edit the first two (edit access to the third was not checked), using Claude Code with the hosted Notion MCP. Those records were retained from the prior work, not rerun during the 2026-11-15 handover. Other plans, roles, and clients may differ.
 
 ## Four separate questions
 
@@ -32,13 +32,13 @@ Notes on the rows:
 
 ## Recommendation
 
-Give the Agent's name, as described under Use in the [README](../README.md#use). The Skill reads the editable Instructions page, which holds the instructions currently set, when a chat you had with the Agent recorded it, and takes settings from its latest scheduled run, with no token. Otherwise it uses the newest published page recorded for your chat or a scheduled run, which may predate later saves. If no run is usable, give the Instructions page URL or the text. Settings cut from a record are reported as unknown. Other people's runs are never opened. When the instructions or settings come from a recorded run, the Skill lists every write destination the user did not name in the request, with the run date, and waits for the user's go-ahead before the first write, because the Agent's permissions may have changed since that run.
+Give the Agent's name, as described under Use in the [README](../README.md#use). Without a separate API token, the Skill uses the newest usable published configuration recorded for your chat or a scheduled run and reports its version and run date. It may predate later saves. A draft can locate an editable page, but does not verify publication; execution from a draft needs the user's version choice. Instructions and settings come from the same recorded configuration. If no run is usable, give the Instructions page URL or the text; a copied URL does not guarantee tracking future edits. Settings cut from a record are reported as unknown and affected operations are held, even during a dry run. Other people's runs are never opened. When the instructions or settings come from a recorded run, the Skill lists every write destination the user did not name in the request, with the run date, and waits for the user's go-ahead before the first write, because the Agent's permissions may have changed since that run.
 
 ## Not tested
 
 - Whether a user who can run an Agent but cannot edit it can read the Agent's runs or Instructions page.
 - Whether every Custom Agent has an Instructions page. The Agent API also has an inline `instructions` field.
-- When an edit on the editable page becomes a new published version. The owner observed that saving publishes at once; the next scheduled run's version number and page will confirm it.
+- A controlled edit-and-publish test comparing the previously copied URL, editable page, and next run's version-specific page. The inherited records describe different pages and versions, not a controlled test of when saving publishes.
 - What makes a chat run record `draft` or `published`.
 - When Notion cuts the configuration output short.
 - Runs started by mentions or page events, and whether their configuration event has the same form.
