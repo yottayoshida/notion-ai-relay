@@ -20,14 +20,13 @@ Connect Notion MCP in your AI assistant separately. If a workflow uses another s
 
 After your assistant loads the Skill, specify the target and the input for this run.
 
-For a Custom Agent, also supply its instructions. If they live on the Agent's Instructions page, give that page's URL (copy the link from the Agent's settings): the Skill reads the page through MCP on every run, so it follows the instructions the Agent currently runs rather than a copy. Otherwise paste the instruction text. The hosted Notion MCP cannot read an Agent's settings from its `agent://` URL; [Agent retrieval](docs/agent-retrieval.md) compares the routes.
+For a Custom Agent, its name or URL is enough when your connection can read the recorded settings of a chat you had with it or one of its scheduled runs, among its latest 60 runs: the Skill reads the Instructions page set in the Agent's settings if your chat recorded it, or else the newest published page recorded, and reports which page and run it used. Notion can cut a run's recorded settings short; the Skill then reports the missing settings as unknown, or asks for the page URL if the cut hides the page link. Otherwise give the Instructions page URL (the link in the Agent's settings) or paste the text. When instructions or settings come from a recorded run, the Skill lists the write destinations, except those you name in the request, and waits for your go-ahead before the first write. [Agent retrieval](docs/agent-retrieval.md) compares the routes.
 
 ```text
 List the Notion Custom Agents and Notion Skills I can access.
 
 Carry out this Custom Agent's task.
-Agent URL: <target agent URL>
-Instructions: <Instructions page URL, or pasted text>
+Agent: <name or URL>
 Input: <target page, time period, and other required input>
 
 Use this Notion Skill to process the supplied material.
@@ -35,8 +34,7 @@ Skill URL: <instruction page URL>
 Material: <document URL or text>
 
 Dry-run this agent's task without writing to external services.
-Agent URL: <target agent URL>
-Instructions: <Instructions page URL, or pasted text>
+Agent: <name or URL>
 Input: <items to process>
 ```
 
@@ -52,7 +50,7 @@ The Skill maps each operation to the MCP tools and argument schemas exposed by y
 | Carry out a Notion Skill's task | Its instruction page, required references and attachments, current input, and the necessary MCP operations |
 | Run on a schedule | A separately configured scheduler or event receiver |
 
-Some MCP connections cannot retrieve full Agent settings. In those cases, provide an instruction-page URL, the instruction text, or the missing settings. Pasted text, and pages other than the Agent's own Instructions page, are not treated as a verified current published version. Missing registration or enabled-state metadata does not prevent execution of an explicitly selected procedure when its instructions and required input are available.
+Some MCP connections cannot retrieve full Agent settings. The Skill then uses the Agent's runs as described under Use; failing that, provide an instruction-page URL, the instruction text, or the missing settings. Pasted text and the editable Instructions page are not treated as a verified current published version. Missing registration or enabled-state metadata does not prevent execution of an explicitly selected procedure when its instructions and required input are available.
 
 The Skill does not launch or drive Notion-side agents or AI sessions. External writes and messages remain subject to your request and the host's authorization requirements. A dry run does not update completion state.
 
