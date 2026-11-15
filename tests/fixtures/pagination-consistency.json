@@ -1,0 +1,75 @@
+[
+  {
+    "id": "insert-between-pages",
+    "procedure": "Compute the exact sum at run start, then write it and advance the checkpoint. Independently return the supplied greeting in uppercase.",
+    "input": {"greeting": "hello"},
+    "connection": "Offset cursor over ascending rank; no snapshot or historical reads. No additional read capabilities.",
+    "transcript": [
+      {"page": 1, "rows": [{"id": "a", "rank": 1, "value": 10}, {"id": "b", "rank": 2, "value": 20}], "next_cursor": "offset:2"},
+      {"between_pages": "Insert x at rank 0, value 5."},
+      {"page": 2, "rows": [{"id": "b", "rank": 2, "value": 20}, {"id": "c", "rank": 3, "value": 30}], "next_cursor": null}
+    ],
+    "expected": {"pagination_complete": true, "snapshot_verified": false, "exact_total": null, "hold_dependent_state": true, "independent_result": "HELLO"},
+    "review": "Detect duplicate b, but do not treat deduplication (60) as proof of run-start coverage. Hold the aggregate write and checkpoint, not the greeting."
+  },
+  {
+    "id": "delete-between-pages",
+    "procedure": "Compute the exact run-start sum, write it, and advance the checkpoint.",
+    "connection": "Offset cursor over ascending rank; no snapshot or historical reads. No additional read capabilities.",
+    "transcript": [
+      {"page": 1, "rows": [{"id": "a", "rank": 1, "value": 10}, {"id": "b", "rank": 2, "value": 20}], "next_cursor": "offset:2"},
+      {"between_pages": "Delete a. Record c, formerly at offset 2, shifts to offset 1."},
+      {"page": 2, "rows": [{"id": "d", "rank": 4, "value": 40}], "next_cursor": null}
+    ],
+    "expected": {"pagination_complete": true, "snapshot_verified": false, "exact_total": null, "hold_dependent_state": true, "independent_result": null},
+    "review": "No duplicate is present, yet c was omitted. Do not report 70 as the exact sum or advance state."
+  },
+  {
+    "id": "reorder-between-pages",
+    "procedure": "Compute the exact run-start sum, write it, and advance the checkpoint.",
+    "connection": "Cursor continues after the last rank; ranks are mutable. No snapshot or historical reads. No additional read capabilities.",
+    "transcript": [
+      {"page": 1, "rows": [{"id": "a", "rank": 10, "value": 10}, {"id": "b", "rank": 20, "value": 20}], "next_cursor": "after:20"},
+      {"between_pages": "Unread c moves from rank 30 to rank 5."},
+      {"page": 2, "rows": [{"id": "d", "rank": 40, "value": 40}], "next_cursor": null}
+    ],
+    "expected": {"pagination_complete": true, "snapshot_verified": false, "exact_total": null, "hold_dependent_state": true, "independent_result": null},
+    "review": "A keyset cursor is not sufficient when its ordering key changes. Do not invent snapshot support or loop over scans indefinitely."
+  },
+  {
+    "id": "documented-snapshot",
+    "procedure": "Compute the exact sum at snapshot s0, write it, and advance the checkpoint. Both writes are authorized and independent of later live changes.",
+    "connection": "The documented snapshot token s0 freezes membership, ordering, and values for every cursor page. Both responses are verified as using s0.",
+    "transcript": [
+      {"page": 1, "snapshot": "s0", "rows": [{"id": "a", "value": 10}, {"id": "b", "value": 20}], "next_cursor": "s0:2"},
+      {"between_pages": "Live data changes: insert x, delete a, reorder c. These do not affect s0."},
+      {"page": 2, "snapshot": "s0", "rows": [{"id": "c", "value": 30}], "next_cursor": null}
+    ],
+    "expected": {"pagination_complete": true, "snapshot_verified": true, "exact_total": 60, "hold_dependent_state": false, "independent_result": null},
+    "review": "Accept the documented snapshot rather than imposing a blanket hold. This decision does not claim any write has already succeeded."
+  },
+  {
+    "id": "authorized-live-traversal",
+    "procedure": "Return the distinct IDs actually observed in this live traversal. Concurrent changes are acceptable. Do not compute a point-in-time total or persist state.",
+    "connection": "Offset cursor; no snapshot guarantee. No additional read capabilities.",
+    "transcript": [
+      {"page": 1, "rows": [{"id": "a"}, {"id": "b"}], "next_cursor": "offset:2"},
+      {"between_pages": "Insert x before a."},
+      {"page": 2, "rows": [{"id": "b"}, {"id": "c"}], "next_cursor": null}
+    ],
+    "expected": {"pagination_complete": true, "snapshot_verified": false, "exact_total": null, "hold_dependent_state": false, "independent_result": null, "observed_ids": ["a", "b", "c"]},
+    "review": "Return the authorized observed-ID result with live scope, not a claim of full membership. Do not replace this task with a snapshot requirement or add writes."
+  },
+  {
+    "id": "fixed-ids-cutoff-mutable-values",
+    "procedure": "Compute the exact sum at 12:00 for the fixed IDs a and b, then persist it and advance the checkpoint.",
+    "connection": "Reads can filter modified_at <= 12:00, but return current values only. No historical values, snapshot guarantee, or additional read capabilities.",
+    "transcript": [
+      {"page": 1, "rows": [{"id": "a", "value": 10, "modified_at": "11:00"}], "next_cursor": "page:2"},
+      {"between_pages": "b changes from value 20 to 99 at 12:01; the cutoff now excludes b."},
+      {"page": 2, "rows": [], "next_cursor": null}
+    ],
+    "expected": {"pagination_complete": true, "snapshot_verified": false, "exact_total": null, "hold_dependent_state": true, "independent_result": null},
+    "review": "Fixed IDs and a modification cutoff do not recover b's old value. An empty final page is not an empty target set. Do not infer an exact total from the mutation description."
+  }
+]

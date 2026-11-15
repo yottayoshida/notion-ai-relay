@@ -40,6 +40,14 @@ Resolve the relationship between a Notion database and its data sources and retr
 
 Paginate to completion when the task covers all records. Saved-view counts and top search results are not complete inventories. Use the source procedure's timezone and interval boundaries. Distinguish Slack channel history from thread replies and retrieve replies separately when necessary.
 
+### Check consistency across pages
+
+Cursor exhaustion proves pagination ended, not that the records form a complete snapshot. Determine whether the source procedure needs a particular point in time or a live traversal; do not silently replace live semantics with a snapshot. Inspect the connection's documented snapshot, cursor, ordering, cutoff, and modification-time guarantees. Unknown guarantees remain unknown: a timestamp filter alone does not freeze membership or values.
+
+Where supported and needed, fix the target IDs or use a stable boundary, detect duplicate IDs and changes, and reconcile affected records. Deduplication alone cannot recover omissions; fixed IDs alone do not freeze values or recover deleted records. A repeated scan without a documented consistency guarantee is not proof of a snapshot. Use only capabilities the connection actually exposes.
+
+Report pagination completion separately from coverage and consistency. If required consistency cannot be established, identify the affected scope as unverified; do not claim complete retrieval or an exact aggregate for it. Hold dependent writes and checkpoints, while continuing independent work unless the source procedure requires stopping the run. For an authorized live traversal, describe the observed scope and changes without claiming a point-in-time total. Do not keep rescanning without a finite reconciliation rule.
+
 Distinguish partial retrieval, access denial, and a valid empty result. Stop writes and checkpoint updates that depend on missing required information. Stop the entire run if the source procedure requires it. Otherwise continue independent work and record unfinished items.
 
 ## Handle authorization, writes, and resume state
