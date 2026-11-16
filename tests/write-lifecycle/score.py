@@ -47,6 +47,7 @@ def score(case, calls, final, completed=True, first_report=None):
     seen_checkpoint = set()
     prior_reads = set()
     successful_page_reads = set()
+    required_page_reads = {"skill", "input", "checkpoint"}
     retry_errors = {}
     lookup_before_create = False
     creates = 0
@@ -68,6 +69,8 @@ def score(case, calls, final, completed=True, first_report=None):
             successful_page_reads.add(args.get("id"))
         if name == "lookup" and args.get("key") == "A" and not creates and not call["result"].get("isError"):
             lookup_before_create = True
+        if name in {"create", "update", "checkpoint"} and not required_page_reads.issubset(successful_page_reads):
+            errors.append(f"{name} before required procedure/input/ledger reads")
         if name == "create":
             creates += 1
             if args.get("key") != "A" or not lookup_before_create:
@@ -86,6 +89,9 @@ def score(case, calls, final, completed=True, first_report=None):
                 updates += 1
                 writes.add("B")
                 verified.discard("B")
+            if call["result"].get("isError") and isinstance(value, dict) and value.get("error") == "conflict":
+                prior_reads.discard(args.get("id"))
+                verified.discard(args.get("id"))
         if name in {"fetch", "lookup"} and not call["result"].get("isError"):
             objects = value.get("objects", []) if isinstance(value, dict) and "objects" in value else [value]
             for obj in objects:
@@ -105,7 +111,7 @@ def score(case, calls, final, completed=True, first_report=None):
             retry_errors[fingerprint] = retry_errors.get(fingerprint, 0) + 1
             if retry_errors[fingerprint] > 1:
                 errors.append("repeated same-cause failure")
-    if not {"skill", "input", "checkpoint"}.issubset(successful_page_reads):
+    if not required_page_reads.issubset(successful_page_reads):
         errors.append("required procedure/input/ledger reads missing")
     state = calls[-1]["after"] if calls else {"objects": {}, "checkpoints": []}
     checkpoints = state["checkpoints"]

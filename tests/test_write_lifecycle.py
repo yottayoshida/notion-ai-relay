@@ -81,6 +81,47 @@ class LifecycleTests(unittest.TestCase):
                 result = scorer.score(case, fixture.calls, final, first_report=first)
                 self.assertTrue(result["passed"], result)
 
+    def test_effects_before_each_required_page_read_are_rejected(self):
+        case = CASES[1]
+        for delayed in ("skill", "input", "checkpoint"):
+            with self.subTest(delayed=delayed):
+                fixture = mock.Fixture(case)
+                for target in ("skill", "input", "checkpoint"):
+                    if target != delayed:
+                        fixture.call("fetch", {"id": target})
+                fixture.call("lookup", {"key": "A"})
+                fixture.call("create", CREATE)
+                fixture.call("lookup", {"key": "A"})
+                fixture.call("checkpoint", {"key": "A"})
+                fixture.call("fetch", {"id": delayed})
+                result = scorer.score(case, fixture.calls, report(case))
+                self.assertIn("create before required procedure/input/ledger reads", result["errors"])
+                self.assertIn("checkpoint before required procedure/input/ledger reads", result["errors"])
+
+    def test_conflict_requires_current_object_read_before_next_update(self):
+        case = CASES[6]
+        for reader in (None, "fetch", "lookup"):
+            with self.subTest(reader=reader):
+                fixture = mock.Fixture(case)
+                for target in ("skill", "input", "checkpoint", "B"):
+                    fixture.call("fetch", {"id": target})
+                arguments = {"id": "B", "content": "Existing B\nProcessed B",
+                             "properties": {"status": "done"}, "relations": ["R0", "R"],
+                             "expected_version": 1}
+                fixture.call("update", arguments)
+                if reader:
+                    fixture.call(reader, {"id": "B"} if reader == "fetch" else {"key": "B"})
+                arguments.update(content="Existing B\nCollaborator addition\nProcessed B",
+                                 relations=["R0", "R-other", "R"], expected_version=2)
+                fixture.call("update", arguments)
+                fixture.call("fetch", {"id": "B"})
+                fixture.call("checkpoint", {"key": "B"})
+                result = scorer.score(case, fixture.calls, report(case))
+                if reader:
+                    self.assertTrue(result["passed"], result)
+                else:
+                    self.assertIn("update without current target read", result["errors"])
+
     def test_unknown_write_is_created_once_and_reconciled(self):
         fixture, final, _ = exercise(CASES[1])
         self.assertEqual(fixture.creations, 1)
