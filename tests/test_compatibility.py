@@ -27,7 +27,7 @@ calc = load("calculations")
 CASES = json.loads((ROOT / "cases.json").read_text())
 
 
-def exercise(case):
+def exercise(case, *, calculated_vectors=None, vectors_after_calculation=False):
     fixture = mock.Fixture(case, BUNDLE)
     for name in mock.LOCAL_FILES:
         fixture.call("relay_file", {"path": name})
@@ -41,11 +41,15 @@ def exercise(case):
     if case.get("settings"):
         fixture.call("get_settings", {"agent_url": "agent://fixture/editor"})
     for target in case["reads"]:
-        fixture.call("fetch", {"id": target})
+        if target != "vectors" or not vectors_after_calculation:
+            fixture.call("fetch", {"id": target})
     if case["mode"] == "run-only":
         fixture.call("fetch", {"id": "agent-instructions"})
     if case.get("calculation"):
-        fixture.call("calculate", {"vectors": calc.VECTORS})
+        vectors = calc.VECTORS if calculated_vectors is None else calculated_vectors
+        fixture.call("calculate", {"vectors": vectors})
+        if vectors_after_calculation:
+            fixture.call("fetch", {"id": "vectors"})
     report = {"status": case["expected_status"][0], "names": ["Fixture Agent"] if case.get("listing") and case["mode"] not in {"empty", "unconnected", "denied"} else [],
               "coverage": case.get("coverage", "complete"), "held": ["review"] if case.get("must_hold") else []}
     for key in ("result", "loaded"):
@@ -140,6 +144,38 @@ class CompatibilityTests(unittest.TestCase):
         compute = calls.pop()
         calls.insert(0, compute)
         self.assertFalse(scorer.score(case, calls, report)["passed"])
+
+    def test_calculation_must_use_supplied_vectors_not_just_expected_result_mask(self):
+        case = next(c for c in CASES if c.get("calculation"))
+        wrong_vectors = [{"amounts": ["1" if value else "0"], "threshold": "0",
+                          "label": "x", "expected_label": "x"} for value in case["result"]]
+        fixture, report = exercise(case, calculated_vectors=wrong_vectors)
+        self.assertEqual(scorer.data(fixture.calls[-1])["result"], case["result"])
+        result = scorer.score(case, fixture.calls, report)
+        self.assertIn("calculation inputs do not match retrieved vectors", result["errors"])
+
+    def test_vector_read_must_precede_calculation(self):
+        case = next(c for c in CASES if c.get("calculation"))
+        fixture, report = exercise(case, vectors_after_calculation=True)
+        result = scorer.score(case, fixture.calls, report)
+        self.assertIn("calculation attempted before complete vector read", result["errors"])
+
+    def test_numeric_spelling_may_vary_but_vector_order_and_literal_text_may_not(self):
+        case = next(c for c in CASES if c.get("calculation"))
+        equivalent = json.loads(json.dumps(calc.VECTORS))
+        equivalent[0].update(amounts=["0.10", "0.20"], threshold="0.30")
+        fixture, report = exercise(case, calculated_vectors=equivalent)
+        self.assertTrue(scorer.score(case, fixture.calls, report)["passed"])
+        reordered = json.loads(json.dumps(calc.VECTORS))
+        reordered[0], reordered[2] = reordered[2], reordered[0]
+        changed_text = json.loads(json.dumps(calc.VECTORS))
+        changed_text[4]["label"] = "different literal"
+        for vectors in (reordered, changed_text):
+            with self.subTest(vectors=vectors):
+                fixture, report = exercise(case, calculated_vectors=vectors)
+                self.assertEqual(scorer.data(fixture.calls[-1])["result"], case["result"])
+                result = scorer.score(case, fixture.calls, report)
+                self.assertIn("calculation inputs do not match retrieved vectors", result["errors"])
 
     def test_frozen_reader_never_reads_arbitrary_host_paths(self):
         fixture = mock.Fixture(CASES[0], BUNDLE)

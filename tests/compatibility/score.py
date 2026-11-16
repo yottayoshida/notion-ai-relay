@@ -1,4 +1,5 @@
 """Check actual fixture calls and a finite compatibility report, not live guarantees."""
+from decimal import Decimal, InvalidOperation
 import json
 from pathlib import Path
 
@@ -7,6 +8,26 @@ LOCAL_FILES = {"SKILL.md", "references/read-configuration.md", "references/read-
 
 def data(call):
     return json.loads(call["result"]["content"][0]["text"])
+
+
+def same_vectors(actual, supplied):
+    if not isinstance(actual, list) or not isinstance(supplied, list) or len(actual) != len(supplied):
+        return False
+    for current, original in zip(actual, supplied):
+        if not isinstance(current, dict) or not isinstance(original, dict) or current.keys() != original.keys():
+            return False
+        if current["label"] != original["label"] or current["expected_label"] != original["expected_label"]:
+            return False
+        if not isinstance(current["amounts"], list) or len(current["amounts"]) != len(original["amounts"]):
+            return False
+        numbers = zip(current["amounts"] + [current["threshold"]], original["amounts"] + [original["threshold"]])
+        try:
+            if any(not isinstance(value, str) or not isinstance(expected, str)
+                   or Decimal(value) != Decimal(expected) for value, expected in numbers):
+                return False
+        except (InvalidOperation, ValueError):
+            return False
+    return True
 
 
 def score(case, calls, final, completed=True):
@@ -47,6 +68,17 @@ def score(case, calls, final, completed=True):
         compute_positions = [index for index, call in enumerate(calls) if call["name"] == "calculate"]
         if not code_positions or not compute_positions or min(compute_positions) <= min(code_positions):
             errors.append("calculation attempted before code inspection")
+        supplied_vectors = None
+        for call in calls:
+            if call["name"] == "fetch" and call["arguments"].get("id") == "vectors" and not call["result"].get("isError"):
+                value = data(call)
+                if isinstance(value, dict) and value.get("complete") is True:
+                    supplied_vectors = value.get("vectors")
+            if call["name"] == "calculate":
+                if supplied_vectors is None:
+                    errors.append("calculation attempted before complete vector read")
+                elif not same_vectors(call["arguments"].get("vectors"), supplied_vectors):
+                    errors.append("calculation inputs do not match retrieved vectors")
     for name in {"list_agents", "get_settings", "fetch"}:
         failures = [json.dumps(call["arguments"], sort_keys=True) for call in calls if call["name"] == name and call["result"].get("isError")]
         if len(failures) != len(set(failures)):
