@@ -72,6 +72,7 @@ This repository distributes instructions. It does not include an MCP server or a
 - [Structural checks](docs/structural-checks.md) covers the CI check.
 - `tests/` holds synthetic decision cases, one folder per topic with its own replay steps. They are evaluation material, not runtime instructions.
 - [Security-boundary execution cases](tests/security/README.md) provide a synthetic MCP fixture, attempted-call scoring, and separate host-denial tests.
+- [Write lifecycle execution cases](tests/write-lifecycle/README.md) exercise synthetic writes, unknown outcomes, verification, stop, and resume through a fault-injecting MCP fixture.
 
 ## License
 
