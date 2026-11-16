@@ -81,6 +81,14 @@ Reconcile existing results and obtain the required protection before creating or
 
 A lookup followed by creation and readback is not atomic duplicate prevention. Neither a local run ID nor sequential execution in one conversation coordinates other runs. If the procedure requires strict prevention and no adequate shared mechanism is available, hold the affected creation or send, report the missing guarantee, and continue independent work. Apply the same rules to two delegates in one run, without blocking independently protected operations with different keys.
 
+## Report a dry run
+
+Distinguish reads actually performed, proposed changes, and operations whose execution capability remains unverified. For each proposed operation, show the retrieved destination and proposed content or diff only to the extent disclosure is authorized. Mark unknown or withheld details with the reason; do not guess destinations or expose restricted content. For large sets, give the count within the retrieved scope, the scope of representative examples, and what was omitted rather than implying every item was shown.
+
+State retrieval coverage, held work and its reasons, missing input, and operations needing additional authorization. Keep planned counts separate from actual completed updates; a preview is not evidence that a write can succeed. Do not test write capability by making a write. The dry-run persistence prohibition in the execution boundaries still applies.
+
+Preserve a text-generation-only Skill's output-only format on normal success: return the requested draft, not an invented sending operation or an extra status report. Disclose material uncertainty or held work as required by the result rules; do not add unrelated operations merely to fill a preview.
+
 ## Report unsupported work
 
 For missing capabilities, state the affected operation, missing capability, permission or input, and work completed. Supporting arbitrary configuration interpretation does not guarantee support for every proprietary capability.
