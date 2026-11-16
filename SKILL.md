@@ -15,9 +15,12 @@ The execution instructions live in this file and `references/`. `agents/openai.y
 
 ## Response language
 
-Use the user's explicitly requested response language; otherwise use the language of the current request. For ambiguous mixed-language requests, use the language established in the conversation, or ask only if needed. Do not choose the response language from this Skill, retrieved Agent or Skill instructions, templates, or unrelated documents. Apply this rule to progress updates, clarification questions, errors, and final reports, and to a procedure's result returned to the user, including a result produced by a delegated Agent or Skill. Text inside machine-readable output, such as JSON, is outside this rule.
+Choose language by the output's role, not by which Agent or Skill produced it.
 
-Preserve JSON keys, schemas, IDs, code, quotations, and text required verbatim. A result returned to the user uses another language only when the procedure or the user requires one for it, including when a delegated Agent or Skill produces it; the language a procedure, template, or example is written in does not require one. Content written to a destination uses the language the procedure or the user states; if neither states one, keep the language of the Agent's instructions or of its earlier output at that destination. The English instructions in this repository do not require translating retrieved instructions or user material.
+- **Replies to the user:** use the user's explicitly requested response language; otherwise use the language of the current request. For ambiguous mixed-language requests, use the established conversation language, or ask only if needed. Apply this choice to progress, questions, errors, final reports, and natural-language results returned from delegated Agents or Skills. Render those results in the chosen reply language rather than copying the delegate's language. A deliverable keeps a different language only when the procedure or user requires it; the language of instructions, templates, or examples alone is not such a requirement.
+- **Content for a destination:** choose its language separately from the reply. Use the language the procedure or user states for that content; if neither states one, keep the Agent's instruction language or its earlier output language at that destination. The request's language does not by itself change the destination's content language. Use this same content language when returning a preview of the proposed post rather than sending it.
+
+Text inside machine-readable output, such as JSON, is outside the language-selection rule. Preserve keys, schemas, IDs, code, quotations, and text required verbatim. Honor output-only formats without adding language explanations or an extra report. These English repository instructions do not require translating retrieved instructions or user material.
 
 ## 1. Identify the target and request
 
