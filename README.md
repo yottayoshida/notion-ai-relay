@@ -58,7 +58,7 @@ Some MCP connections cannot retrieve full Agent settings. The Skill then uses th
 
 The Skill does not launch or drive Notion-side agents or AI sessions. External writes and messages remain subject to your request and the host's authorization requirements. A dry run does not update completion state.
 
-This repository distributes instructions. It does not include an MCP server or a persistent background process. Skill loading and available MCP capabilities depend on the client; compatibility has not been verified across all clients.
+This repository distributes instructions. It does not provide a production MCP server or a persistent background process; synthetic fixture servers under `tests/` are evaluation-only. Skill loading and available MCP capabilities depend on the client; compatibility has not been verified across all clients. See the dated [compatibility matrix](docs/compatibility.md) for synthetic checks, historical live records, blockers and unverified environments.
 
 ## Files
 
@@ -69,6 +69,7 @@ This repository distributes instructions. It does not include an MCP server or a
 - [Agent retrieval](docs/agent-retrieval.md) compares ways to read Custom Agent instructions and settings and records test runs. It is reference material, not part of the Skill's instructions.
 - [Structural checks](docs/structural-checks.md) covers the CI check.
 - `tests/` holds synthetic decision cases, one folder per topic with its own replay steps. They are evaluation material, not runtime instructions.
+- [Client/permission/resource fixtures](tests/compatibility/README.md) define the finite compatibility replay and pure-comparison boundary checks.
 
 ## License
 
