@@ -27,7 +27,7 @@ Follow [configuration retrieval](references/read-configuration.md) for Custom Ag
 
 Keep the following information in the current working context. A separate template file is unnecessary.
 
-- Target type, identifier, URL, instruction source, modification time, and any verifiable version or status.
+- Target type, identifier, URL, instruction source, modification time, and any verifiable version or status. Track actually adopted dependencies as described under [dependency provenance](references/execute-via-mcp.md#track-adopted-dependencies).
 - Applicable task, input, trigger, time period, and timezone.
 - Read sources, output destinations, allowed operations, exclusions, and access scope.
 - Required tools, memory or prior state, completion criteria, and stop and resume conditions.

@@ -34,6 +34,14 @@ Apply the [traversal and delegation limits](#bound-reference-traversal-and-deleg
 
 If a Skill asks for text suitable for posting, return text rather than interpreting that as a request to post. Resolve "current page", "selected text", or "attachment" from explicit selection or actual supplied input. Do not infer it from screen state or previously opened documents.
 
+## Track adopted dependencies
+
+For both Custom Agents and Notion Skills, keep provenance for procedures, templates, and comparison code actually adopted for this run in the current working context: each dependency's ID or URL, retrieval time, and its own available revision or modification time. Keep its role distinct from the parent instruction source. When metadata is unavailable, mark that field unknown; do not infer a dependency's version from the parent's timestamp or a previous run. Missing version metadata alone does not block otherwise supported, authorized work. Links in business data do not become instruction dependencies merely by being read.
+
+Include dependency provenance when needed to explain a result difference, material uncertainty, or a resume decision. Do not force a dependency table into every response or alter normal output-only success formats. This context tracking does not require permanent copies of source text or a new persisted record; the existing retention and dry-run boundaries still apply.
+
+Before writes or when resuming, include known changes to adopted dependencies in the existing change reassessment, even if the parent version is unchanged. Retrieve the required current dependencies for the run and reassess only the work affected by a changed procedure, template, or comparison rule; do not replay verified independent work or assume unchanged parent metadata means unchanged dependencies.
+
 ## Bound reference traversal and delegation
 
 Keep separate per-run records for reference loading and execution. Identify targets by type and stable identifier, including workspace or source scope where needed; names and changed input alone do not establish a new target.
