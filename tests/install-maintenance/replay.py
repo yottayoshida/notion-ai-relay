@@ -13,6 +13,45 @@ NEW = "687e9dfd1d9ebfd7d18af6912e5a521bd7603c81"
 REPO = "https://github.com/yottayoshida/notion-ai-relay.git"
 
 
+def isolated_environment(home):
+    home = home.resolve()
+    env = dict(os.environ, HOME=str(home), DISABLE_TELEMETRY="1",
+               DO_NOT_TRACK="1", GIT_CONFIG_GLOBAL=os.devnull,
+               GIT_CONFIG_NOSYSTEM="1", GIT_TERMINAL_PROMPT="0",
+               CLAUDE_CONFIG_DIR=str(home / ".claude"),
+               XDG_CONFIG_HOME=str(home / ".config"),
+               XDG_DATA_HOME=str(home / ".local/share"),
+               XDG_STATE_HOME=str(home / ".local/state"))
+    for name in ("GITHUB_TOKEN", "GH_TOKEN", "GIT_DIR", "GIT_WORK_TREE", "AGENTS_HOME"):
+        env.pop(name, None)
+    return env
+
+
+def validate_cli_destinations(root, cwd, env):
+    root = root.resolve()
+    paths = [cwd, cwd / ".claude/skills", cwd / ".agents/skills",
+             *(Path(env[name]) for name in ("HOME", "CLAUDE_CONFIG_DIR",
+                                            "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME")),
+             Path(env["CLAUDE_CONFIG_DIR"]) / "skills",
+             Path(env["XDG_STATE_HOME"]) / "skills"]
+    for path in paths:
+        if not path.is_absolute() or not path.resolve().is_relative_to(root):
+            raise ValueError(f"CLI destination outside temporary root: {path}")
+
+
+def run_command(command, *, cwd, env, root):
+    if str(command[0]) == "node":
+        validate_cli_destinations(root, cwd, env)
+    print("+", " ".join(map(str, command)), flush=True)
+    result = subprocess.run(list(map(str, command)), cwd=cwd, env=env,
+                            text=True, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE, timeout=120)
+    print(result.stdout, end="", flush=True)
+    print(result.stderr, end="", flush=True)
+    result.check_returncode()
+    return result.stdout
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cli", type=Path, required=True,
@@ -26,24 +65,10 @@ def main():
         root = Path(tmp)
         home = root / "home"
         home.mkdir()
-        env = dict(os.environ, HOME=str(home), DISABLE_TELEMETRY="1",
-                   DO_NOT_TRACK="1", GIT_CONFIG_GLOBAL=os.devnull,
-                   GIT_CONFIG_NOSYSTEM="1", GIT_TERMINAL_PROMPT="0")
-        for name in ("GITHUB_TOKEN", "GH_TOKEN", "GIT_DIR", "GIT_WORK_TREE",
-                     "XDG_CONFIG_HOME", "XDG_DATA_HOME", "AGENTS_HOME"):
-            env.pop(name, None)
-        env["XDG_CONFIG_HOME"] = str(home / ".config")
-        env["XDG_DATA_HOME"] = str(home / ".local/share")
+        env = isolated_environment(home)
 
         def run(*command, cwd=root):
-            print("+", " ".join(map(str, command)), flush=True)
-            result = subprocess.run(list(map(str, command)), cwd=cwd, env=env,
-                                    text=True, stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE, timeout=120)
-            print(result.stdout, end="", flush=True)
-            print(result.stderr, end="", flush=True)
-            result.check_returncode()
-            return result.stdout
+            return run_command(command, cwd=cwd, env=env, root=root)
 
         def files(path):
             return {str(p.relative_to(path)): p.read_bytes()

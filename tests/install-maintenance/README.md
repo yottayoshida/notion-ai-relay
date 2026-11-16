@@ -2,6 +2,8 @@
 
 This opt-in, networked test accompanies the [maintenance guide](../../docs/install-maintenance.md). It does not run in the offline structural suite. It installs only into temporary project and HOME directories and removes them on exit. No client session, model, MCP server, or real Notion data is used.
 
+The replay overrides `CLAUDE_CONFIG_DIR` and the XDG config/data/state paths, including the skills CLI's global lock location, instead of inheriting custom client locations from the calling environment. Before every CLI process starts, it checks that the selected client directories, working directory, and state paths resolve inside its temporary root; an escaping path, including a symlink target, stops the process before replacement. This is a safeguard for the selected CLI's known destinations, not an OS sandbox for an arbitrary `--cli` executable.
+
 ## Prerequisites and invocation
 
 Use Python 3.10+, Node.js 22.20+, npm, Git, curl, unzip, cp, mv, and diff. The commands target a POSIX environment; Windows shell behavior is unverified. Network access is required to npm and the public GitHub repository. Git operations disable system/global Git configuration and use anonymous public access. Run outside any active maintenance operation.
@@ -17,6 +19,16 @@ python3 -B tests/install-maintenance/replay.py \
 ```
 
 The installed CLI entrypoint runs through Node, equivalent to the guide's pinned `npx skills@1.8.1` commands without repeatedly invoking npm. The replay prints commands and assertions; redirect output to a private log if needed. A nonzero exit, timeout, missing dependency, or unavailable network is **not** a PASS. Assertions must remain enabled (do not use Python `-O` or `PYTHONOPTIMIZE`). The CLI download itself is an explicit network dependency, not a model execution or billing path.
+
+## Offline isolation controls
+
+The ordinary suite includes [isolation regression tests](../test_install_maintenance.py). Run them without network or Node:
+
+```bash
+python3 -B -m unittest discover -s tests -p test_install_maintenance.py -v
+```
+
+Controls verify that inherited client/state paths are replaced without modifying the parent environment, escaping paths and symlinked destinations prevent process launch, and normal project/global commands retain the isolated environment. The network replay separately exercises the real installer; supply synthetic external override paths and preserve their canary files to check that they remain untouched.
 
 ## Fixed fixtures and expected outcomes
 
