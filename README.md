@@ -69,6 +69,7 @@ This repository distributes instructions. It does not include an MCP server or a
 - [Agent retrieval](docs/agent-retrieval.md) compares ways to read Custom Agent instructions and settings and records test runs. It is reference material, not part of the Skill's instructions.
 - [Structural checks](docs/structural-checks.md) covers the CI check.
 - `tests/` holds synthetic decision cases, one folder per topic with its own replay steps. They are evaluation material, not runtime instructions.
+- [Security-boundary execution cases](tests/security/README.md) provide a synthetic MCP fixture, attempted-call scoring, and separate host-denial tests.
 
 ## License
 
