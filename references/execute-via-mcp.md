@@ -97,6 +97,16 @@ State retrieval coverage, held work and its reasons, missing input, and operatio
 
 Preserve a text-generation-only Skill's output-only format on normal success: return the requested draft, not an invented sending operation or an extra status report. Disclose material uncertainty or held work as required by the result rules; do not add unrelated operations merely to fill a preview.
 
+## Return a resumable handoff
+
+When execution is interrupted or only partly complete, return the minimum references needed to distinguish this run and locate its remaining work, using the current context. Include an actual execution run ID or existing resume-record reference if available, the Agent or Skill target, and input identifiers or the applicable period and timezone. Do not invent an ID or assume a timezone; identify missing information only where it is needed for resumption. A configuration-source session is not an execution run ID, and this handoff does not permit disclosing otherwise excluded run-history details.
+
+Separate verified success, not executed, unknown outcomes, and held work. Identify the relevant targets/result links and the checkpoint or remaining-item references actually known. A checkpoint covers only verified work under the source procedure; it does not turn an unknown result into a failed or completed operation. State what must be reconciled or supplied before affected work can resume. Preserve independent verified progress rather than instructing a fresh run to repeat everything.
+
+Use references and processing status, not business content, secrets, or copied instructions. Returning a handoff does not require a new persistent record or authorize any record write. The local resume-record constraints above still apply. After a user stop, stop further operations, including extra reads or record writes just to enrich the handoff; report what is already known and its limits. Do not treat stop as rollback permission.
+
+A dry-run handoff describes plans and missing prerequisites, not executed effects or an advanced checkpoint. Any pre-existing verified execution checkpoint stays explicitly separate from the plan, with no persisted-state changes. On normal success, keep the source's output-only format; do not add a mandatory handoff or run ID to every result. On resumption, resolve the run as described in [input and state](read-configuration.md#resolve-input-and-state), then apply the existing configuration, authorization, reconciliation, and duplicate rules; the handoff itself grants no authority.
+
 ## Report unsupported work
 
 For missing capabilities, state the affected operation, missing capability, permission or input, and work completed. Supporting arbitrary configuration interpretation does not guarantee support for every proprietary capability.
