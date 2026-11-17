@@ -135,6 +135,21 @@ class ResponseLanguageScoringTests(unittest.TestCase):
                 self.assertFalse(result["automated_checks_passed"])
                 self.assertFalse(result["passed"])
 
+    def test_json_total_comparison_preserves_exact_numeric_values(self):
+        for literal, expected_pass in (
+            ("10", True), ("10.0", True), ("1e1", True),
+            ("10.0000000000000001", False),
+            ("9.9999999999999999", False),
+            ("1.00000000000000001e1", False),
+            ("1e999999999999999999999999", False),
+        ):
+            with self.subTest(total=literal):
+                output = ('{"status":"ok","source_id":"fixture-03","total":'
+                          + literal + ',"summary":"The total is 10."}')
+                result = grade("json-only", output)
+                self.assertEqual(result["automated_checks_passed"], expected_pass, result)
+                self.assertEqual(result["passed"], expected_pass, result)
+
     def test_format_checks_alone_or_stale_judgment_cannot_pass_a_case(self):
         output = "合計は10です。"
         result = scorer.score(CASES["japanese-request"], output)
@@ -169,6 +184,8 @@ class ResponseLanguageScoringTests(unittest.TestCase):
                 ("delegated-french", "Le total est de 10.", {"reply": "French"}, True, 1),
                 ("japanese-request", "合計は10です。", {}, False, 1),
                 ("json-only", '{"status":', {}, True, 1),
+                ("json-only", '{"status":"ok","source_id":"fixture-03","total":10.0000000000000001,"summary":"Total 10"}', {}, True, 1),
+                ("json-only", '{"status":"ok","source_id":"fixture-03","total":1e1,"summary":"Total 10"}', {}, True, 0),
                 ("destination-language-unstated",
                  "投稿案と返信案です。\nPOST\nShipped onboarding email v2; fixed login timeout.\nREPLY\n投稿内容を確認しました。",
                  {"preamble": "Japanese", "post": "English", "reply": "Japanese"}, True, 0),

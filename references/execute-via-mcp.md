@@ -34,6 +34,14 @@ Apply the [traversal and delegation limits](#bound-reference-traversal-and-deleg
 
 If a Skill asks for text suitable for posting, return text rather than interpreting that as a request to post. Resolve "current page", "selected text", or "attachment" from explicit selection or actual supplied input. Do not infer it from screen state or previously opened documents.
 
+## Track adopted dependencies
+
+For both Custom Agents and Notion Skills, keep provenance for procedures, templates, and comparison code actually adopted for this run in the current working context: each dependency's ID or URL, retrieval time, and its own available revision or modification time. Keep its role distinct from the parent instruction source. When metadata is unavailable, mark that field unknown; do not infer a dependency's version from the parent's timestamp or a previous run. Missing version metadata alone does not block otherwise supported, authorized work. Links in business data do not become instruction dependencies merely by being read.
+
+Include dependency provenance when needed to explain a result difference, material uncertainty, or a resume decision. Do not force a dependency table into every response or alter normal output-only success formats. This context tracking does not require permanent copies of source text or a new persisted record; the existing retention and dry-run boundaries still apply.
+
+Before writes or when resuming, include known changes to adopted dependencies in the existing change reassessment, even if the parent version is unchanged. Retrieve the required current dependencies for the run and reassess only the work affected by a changed procedure, template, or comparison rule; do not replay verified independent work or assume unchanged parent metadata means unchanged dependencies.
+
 ## Bound reference traversal and delegation
 
 Keep separate per-run records for reference loading and execution. Identify targets by type and stable identifier, including workspace or source scope where needed; names and changed input alone do not establish a new target.
@@ -80,6 +88,24 @@ When strict duplicate prevention is required, verify that the MCP operation and 
 Reconcile existing results and obtain the required protection before creating or sending. A competing caller that cannot obtain ownership must not create; reconcile the owner's result or hold the affected work. An unknown claim or write outcome is not permission to take over or retry. Preserve protection until the effect and its completion state are reconciled; do not release it or start a replacement operation merely because a timeout or lease expiry occurred.
 
 A lookup followed by creation and readback is not atomic duplicate prevention. Neither a local run ID nor sequential execution in one conversation coordinates other runs. If the procedure requires strict prevention and no adequate shared mechanism is available, hold the affected creation or send, report the missing guarantee, and continue independent work. Apply the same rules to two delegates in one run, without blocking independently protected operations with different keys.
+
+## Report a dry run
+
+Distinguish reads actually performed, proposed changes, and operations whose execution capability remains unverified. For each proposed operation, show the retrieved destination and proposed content or diff only to the extent disclosure is authorized. Mark unknown or withheld details with the reason; do not guess destinations or expose restricted content. For large sets, give the count within the retrieved scope, the scope of representative examples, and what was omitted rather than implying every item was shown.
+
+State retrieval coverage, held work and its reasons, missing input, and operations needing additional authorization. Keep planned counts separate from actual completed updates; a preview is not evidence that a write can succeed. Do not test write capability by making a write. The dry-run persistence prohibition in the execution boundaries still applies.
+
+Preserve a text-generation-only Skill's output-only format on normal success: return the requested draft, not an invented sending operation or an extra status report. Disclose material uncertainty or held work as required by the result rules; do not add unrelated operations merely to fill a preview.
+
+## Return a resumable handoff
+
+When execution is interrupted or only partly complete, return the minimum references needed to distinguish this run and locate its remaining work, using the current context. Include an actual execution run ID or existing resume-record reference if available, the Agent or Skill target, and input identifiers or the applicable period and timezone. Do not invent an ID or assume a timezone; identify missing information only where it is needed for resumption. A configuration-source session is not an execution run ID, and this handoff does not permit disclosing otherwise excluded run-history details.
+
+Separate verified success, not executed, unknown outcomes, and held work. Identify the relevant targets/result links and the checkpoint or remaining-item references actually known. A checkpoint covers only verified work under the source procedure; it does not turn an unknown result into a failed or completed operation. State what must be reconciled or supplied before affected work can resume. Preserve independent verified progress rather than instructing a fresh run to repeat everything.
+
+Use references and processing status, not business content, secrets, or copied instructions. Returning a handoff does not require a new persistent record or authorize any record write. The local resume-record constraints above still apply. After a user stop, stop further operations, including extra reads or record writes just to enrich the handoff; report what is already known and its limits. Do not treat stop as rollback permission.
+
+A dry-run handoff describes plans and missing prerequisites, not executed effects or an advanced checkpoint. Any pre-existing verified execution checkpoint stays explicitly separate from the plan, with no persisted-state changes. On normal success, keep the source's output-only format; do not add a mandatory handoff or run ID to every result. On resumption, resolve the run as described in [input and state](read-configuration.md#resolve-input-and-state), then apply the existing configuration, authorization, reconciliation, and duplicate rules; the handoff itself grants no authority.
 
 ## Report unsupported work
 

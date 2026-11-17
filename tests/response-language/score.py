@@ -1,5 +1,6 @@
 """Fixture format checks plus explicit, output-bound semantic judgments; no model calls."""
 import argparse
+from decimal import Decimal, InvalidOperation
 import hashlib
 import json
 from pathlib import Path
@@ -52,7 +53,7 @@ def score(case, output, assessment=None, completed=True):
     languages = {}
     if "keys" in expected:
         try:
-            value = json.loads(output, object_pairs_hook=unique_object)
+            value = json.loads(output, object_pairs_hook=unique_object, parse_float=Decimal)
             if not isinstance(value, dict) or set(value) != set(expected["keys"]):
                 raise ValueError("incorrect JSON keys")
             for key in ("status", "source_id", "total"):
@@ -60,7 +61,7 @@ def score(case, output, assessment=None, completed=True):
                     raise ValueError(f"incorrect JSON value: {key}")
             if not isinstance(value["summary"], str) or not value["summary"].strip():
                 raise ValueError("summary must be nonempty text")
-        except ValueError as error:
+        except (ValueError, InvalidOperation) as error:
             errors.append(str(error))
     elif "post_language" in expected or "draft_language" in expected:
         try:
