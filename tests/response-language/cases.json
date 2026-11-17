@@ -1,0 +1,37 @@
+[
+  {
+    "id": "japanese-request",
+    "prompt": "このNotion Skillの手順を、今回提供した本文だけを対象に実行してください。必要な指示と入力は以下のスナップショットです。外部の読取りや書込みは不要です。\n\n<supplied-skill-snapshot>\nName: Number summary\nTask: Sum all numbers in the supplied input. Return one short sentence describing the total.\n</supplied-skill-snapshot>\n<input>\nNumbers: [2, 3, 5]\n</input>",
+    "expected": {"response_language": "Japanese", "total": 10, "format": "one short sentence"}
+  },
+  {
+    "id": "explicit-english",
+    "prompt": "このNotion Skillの手順を、今回提供した本文だけを対象に実行してください。必要な指示と入力は以下のスナップショットです。外部の読取りや書込みは不要です。Reply in English.\n\n<supplied-skill-snapshot>\nName: Number summary\nTask: Sum all numbers in the supplied input. Return one short sentence describing the total.\n</supplied-skill-snapshot>\n<input>\nNumbers: [2, 3, 5]\n</input>",
+    "expected": {"response_language": "English", "total": 10, "format": "one short sentence"}
+  },
+  {
+    "id": "json-only",
+    "prompt": "このNotion Skillの手順を、今回提供した本文だけを対象に実行してください。必要な指示と入力は以下のスナップショットです。外部の読取りや書込みは不要です。結果をJSONだけで返してください。\n\n<supplied-skill-snapshot>\nName: Structured number summary\nTask: Sum the input numbers. Return exactly one JSON object with these four keys: status (the literal enum value ok), source_id (the input source_id unchanged), total (the computed integer), and summary (one short natural-language sentence describing the total). No Markdown fences or other text.\n</supplied-skill-snapshot>\n<input>\nsource_id: fixture-03\nNumbers: [2, 3, 5]\n</input>",
+    "expected": {"keys":["status", "source_id", "total", "summary"], "status": "ok", "source_id": "fixture-03", "total": 10, "format": "JSON object only"}
+  },
+  {
+    "id": "delegated-french",
+    "prompt": "このCustom Agentの手順を、今回提供した本文だけを対象に実行してください。Agentと参照先Skillの指示、入力はすべて以下のスナップショットです。外部の読取りや書込みは不要です。\n\n<supplied-agent-snapshot>\nName: Number report coordinator\nTask: Interpret the supporting Number summary Skill below to sum the input numbers and return its result as one short sentence.\n</supplied-agent-snapshot>\n<supplied-supporting-skill-snapshot>\nNom: Number summary\nProcédure: Additionner tous les nombres fournis et donner une phrase courte décrivant le total.\nExemple de présentation: Le total est de 6.\n</supplied-supporting-skill-snapshot>\n<input>\nNumbers: [2, 3, 5]\n</input>",
+    "expected": {"response_language": "Japanese", "total": 10, "format": "one short sentence", "must_not": "copy the French example or its total of 6"}
+  },
+  {
+    "id": "destination-language-required",
+    "prompt": "Weekly Team Digest エージェントを実行して。Slack への投稿は承認済み。\n\n<supplied-agent-snapshot>\nName: Weekly Team Digest\nInstructions: Every Monday, read the Tasks database and post a short summary of last week's completed tasks to the Slack channel #team-updates. Post in English. Keep it under five bullet points.\nPermissions: Notion read on Tasks; Slack post to #team-updates.\n</supplied-agent-snapshot>\n<tasks-read-result complete=\"true\" period=\"2026-11-09 to 2026-11-15\">\n[{\"title\": \"Ship onboarding email v2\", \"done\": \"2026-11-10\"}, {\"title\": \"Fix login timeout\", \"done\": \"2026-11-12\"}]\n</tasks-read-result>\n\nこの再生ではツールは使えません。投稿する文面を「POST」という行の下に、投稿後に私に伝える内容を「REPLY」という行の下に書いてください。",
+    "expected": {"reply_language": "Japanese", "post_language": "English"}
+  },
+  {
+    "id": "destination-language-unstated",
+    "prompt": "Weekly Team Digest エージェントを実行して。Slack への投稿は承認済み。\n\n<supplied-agent-snapshot>\nName: Weekly Team Digest\nInstructions: Every Monday, read the Tasks database and post a short summary of last week's completed tasks to the Slack channel #team-updates. Keep it under five bullet points.\nPermissions: Notion read on Tasks; Slack post to #team-updates.\n</supplied-agent-snapshot>\n<tasks-read-result complete=\"true\" period=\"2026-11-09 to 2026-11-15\">\n[{\"title\": \"Ship onboarding email v2\", \"done\": \"2026-11-10\"}, {\"title\": \"Fix login timeout\", \"done\": \"2026-11-12\"}]\n</tasks-read-result>\n\nこの再生ではツールは使えません。投稿する文面を「POST」という行の下に、投稿後に私に伝える内容を「REPLY」という行の下に書いてください。",
+    "expected": {"reply_language": "Japanese", "post_language": "English"}
+  },
+  {
+    "id": "returned-required-language",
+    "prompt": "この Notion Skill で下書きを作って。送信はしないで、下書きを返すだけでいいです。\n\n<supplied-skill-snapshot>\nName: Vendor confirmation\nTask: Draft a short email in English to the vendor confirming the delivery date given in the input. Return the draft only; do not send it.\n</supplied-skill-snapshot>\n<input>\nVendor: Acme Paper\nDelivery date: 2026-11-20\n</input>\n\nこの再生ではツールは使えません。下書きを「DRAFT」という行の下に、私への補足があれば「NOTE」という行の下に書いてください。",
+    "expected": {"draft_language": "English", "note_language": "Japanese if present"}
+  }
+]

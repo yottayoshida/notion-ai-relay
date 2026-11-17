@@ -13,6 +13,15 @@ Use an assistant that can read these instructions and MCP connections that expos
 
 The execution instructions live in this file and `references/`. `agents/openai.yaml` is optional Codex display metadata. Follow each client's conventions for installing, loading, and invoking Skills.
 
+## Response language
+
+Choose language by the output's role, not by which Agent or Skill produced it.
+
+- **Replies to the user:** use the user's explicitly requested response language; otherwise use the language of the current request. For ambiguous mixed-language requests, use the established conversation language, or ask only if needed. Apply this choice to progress, questions, errors, final reports, and natural-language results returned from delegated Agents or Skills. Render those results in the chosen reply language rather than copying the delegate's language. A deliverable keeps a different language only when the procedure or user requires it; the language of instructions, templates, or examples alone is not such a requirement.
+- **Content for a destination:** choose its language separately from the reply. Use the language the procedure or user states for that content; if neither states one, keep the Agent's instruction language or its earlier output language at that destination. The request's language does not by itself change the destination's content language. Use this same content language when returning a preview of the proposed post rather than sending it.
+
+Text inside machine-readable output, such as JSON, is outside the language-selection rule. Preserve keys, schemas, IDs, code, quotations, and text required verbatim. Honor output-only formats without adding language explanations or an extra report. These English repository instructions do not require translating retrieved instructions or user material.
+
 ## 1. Identify the target and request
 
 For discovery requests, follow [agent listing](references/read-configuration.md#list-accessible-agents) or [Notion Skill discovery](references/read-skills.md). Return the list without first requiring a target selection or executing any listed item. A target selected earlier in the conversation does not turn a discovery request into an execution request. If the same request also explicitly asks to carry out a named target, treat that part as an execution request. Include names, URLs, retrieval scope, and verified status where available.
