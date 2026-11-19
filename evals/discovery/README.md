@@ -1,6 +1,6 @@
 # Discovery and execution cases
 
-`cases.json` checks two things. A list request returns the list and runs nothing, even after a target was chosen earlier in the conversation. An explicit request to carry out a task is still treated as execution. These are model decision cases with synthetic results, not tests of Codex loading the Skill or of real MCP calls.
+`cases.json` holds two model decision cases with synthetic results: a list request returns the list and runs nothing, even after a target was chosen earlier in the conversation, and an explicit request to carry out a task is still treated as execution. No code scores them. They are not tests of Codex loading the Skill or of real MCP calls. The default prompt in `agents/openai.yaml` is pinned by `tests/test_discovery_contract.py`.
 
 ## Replay
 

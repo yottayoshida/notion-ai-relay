@@ -19,4 +19,4 @@ Before model execution, check that a correct metadata object is accepted and tha
 - `unknown-and-data`: missing revision/time metadata stays unknown, dry-run text output still completes, business-data links remain data, and no persistent state is written.
 - `resume-changed-code`: unchanged parent with changed dependency causes only affected pending work to be recomputed; independent verified work is preserved.
 
-Replay instructions are client-neutral. A Pi-specific execution adapter is not a dependency of this distributed Skill. Passing these cases does not establish client autoload, live Notion metadata availability, or repeatability. Executed results, when available, are recorded separately.
+Replay instructions are client-neutral. A Pi-specific execution adapter is not a dependency of this distributed Skill. Passing these cases does not establish client autoload, live Notion metadata availability, or repeatability. Executed results are linked from the [compatibility notes](../../docs/compatibility.md#current-finite-fixtures).

@@ -46,7 +46,7 @@ Input: <items to process>
 
 ## Requirements and limits
 
-The Skill maps each operation to the MCP tools and argument schemas exposed by your environment. It does not require Computer Use, browser automation, a particular operating system, or a client-specific automation API.
+The Skill maps each operation to the MCP tools and argument schemas exposed by your environment. It does not require Computer Use, browser automation, a particular operating system, or a client-specific automation API. When Notion MCP returns a download URL for a file in the same run, such as a file uploaded to a page, the Skill downloads it instead of asking you to paste it, in a client that can download it and, for an archive, extract it; no other URL is downloaded outside MCP.
 
 | Operation | Required information or capability |
 |---|---|
@@ -64,16 +64,7 @@ This repository distributes instructions. It does not provide a production MCP s
 
 ## Files
 
-- [SKILL.md](SKILL.md) defines target selection, configuration retrieval, MCP execution, and result verification.
-- [Read Custom Agent settings](references/read-configuration.md) covers discovery, configuration versions, and resume state.
-- [Read Notion Skills](references/read-skills.md) covers instruction pages and supporting resources.
-- [Execute through MCP](references/execute-via-mcp.md) covers tool mapping and execution checks.
-- [Agent retrieval](docs/agent-retrieval.md) compares ways to read Custom Agent instructions and settings and records test runs. It is reference material, not part of the Skill's instructions.
-- [Structural checks](docs/structural-checks.md) covers the CI check.
-- `tests/` holds synthetic decision cases, one folder per topic with its own replay steps. They are evaluation material, not runtime instructions.
-- [Security-boundary execution cases](tests/security/README.md) provide a synthetic MCP fixture, attempted-call scoring, and separate host-denial tests.
-- [Write lifecycle execution cases](tests/write-lifecycle/README.md) exercise synthetic writes, unknown outcomes, verification, stop, and resume through a fault-injecting MCP fixture.
-- [Client/permission/resource fixtures](tests/compatibility/README.md) define the finite compatibility replay and pure-comparison boundary checks.
+See the [file guide](docs/files.md).
 
 ## License
 

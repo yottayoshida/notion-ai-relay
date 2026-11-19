@@ -1,0 +1,86 @@
+[
+  {
+    "id": "unguarded-interleaving",
+    "name": "Unguarded interleaving",
+    "history": "A looks up K: absent. B looks up K: absent. Only lookup, ordinary create, and readback exist. Both are ready to create.",
+    "expected": "Hold both creations and report the missing shared guarantee. Do not call a final lookup or later readback a solution. Continue unrelated reads."
+  },
+  {
+    "id": "server-idempotency",
+    "name": "Server idempotency",
+    "history": "A and B both read K as absent. Create atomically maps the business key, input period, and destination to one stored effect for the entire conflict period. A creates with that key, but its response is lost. B is ready to create.",
+    "expected": "B may use the same server-enforced key to obtain the one result; never substitute its run ID. Reconcile A's unknown outcome under that same identity rather than issuing a fresh creation."
+  },
+  {
+    "id": "atomic-ownership",
+    "name": "Atomic ownership",
+    "history": "Both read K as absent. A wins a shared atomic claim; B's claim is denied. Every writer honors the claim. Ownership remains valid through verified creation and completion.",
+    "expected": "A may create under its protection. B must reconcile A's result or hold, not create."
+  },
+  {
+    "id": "independent-keys",
+    "name": "Independent keys",
+    "history": "A holds a valid shared claim for K1; B holds one for K2. The procedure treats the keys independently.",
+    "expected": "Each may create its own effect. Do not serialize all work merely because another run exists."
+  },
+  {
+    "id": "delegates",
+    "name": "Delegates",
+    "history": "Two delegates in one run each read K as absent. No server idempotency or shared claim exists. The caller plans to invoke the delegates sequentially.",
+    "expected": "Hold the affected creation: local sequencing does not establish protection against other runs. Do not assign a separate operation identity to each delegate."
+  },
+  {
+    "id": "resume",
+    "name": "Resume",
+    "history": "A created effect E for K and then lost its response. Its durable outcome is unknown. A resumes with a new conversation ID. Only ordinary lookup/create exist.",
+    "expected": "Preserve K and reconcile E; do not create under the new conversation ID or declare completion without evidence."
+  },
+  {
+    "id": "intentional-separate-run",
+    "name": "Intentional separate run",
+    "history": "The procedure explicitly permits one new report per user-requested run, but only one per run across delegates. A prior run's report is verified. A new run has a distinct authorized invocation identity and valid server idempotency for that invocation.",
+    "expected": "Permit the new report with its own protected invocation key; do not treat it as resuming the old run."
+  },
+  {
+    "id": "best-effort",
+    "name": "Best effort",
+    "history": "The procedure expressly permits concurrent duplicates and requires only a lookup before each creation. A and B both checked K as absent; only ordinary create exists.",
+    "expected": "Follow the authorized best-effort policy and permit creation; do not claim strict prevention or impose a universal atomicity requirement."
+  },
+  {
+    "id": "expired-owner",
+    "name": "Expired owner",
+    "history": "A's claim expired during an unknown create outcome. B can acquire a replacement lease, but the service cannot fence A from writing late. The policy still requires strict prevention.",
+    "expected": "Hold B's creation and reconcile; lease expiry alone is not safe takeover. Do not blindly retry A either."
+  },
+  {
+    "id": "different-keys-without-protection",
+    "name": "Different keys without protection",
+    "history": "K1 and K2 are independent but each requires strict cross-run prevention. Only lookup/create exist. An unrelated read-only summary is also requested.",
+    "expected": "Hold both creations for their own missing guarantee, not for collision with each other. Continue the summary."
+  },
+  {
+    "id": "plain-lookup-absent",
+    "name": "Plain lookup, absent",
+    "history": "The procedure says only \"create today's page unless one with the same title exists\". One run. The lookup finds no page with that title. Only lookup, ordinary create, and readback exist.",
+    "expected": "Create the page and read it back. Do not hold it for a missing shared guarantee; the run report may note that concurrent runs are not protected."
+  },
+  {
+    "id": "plain-lookup-present",
+    "name": "Plain lookup, present",
+    "history": "Same procedure and capabilities. The lookup finds a page with that title.",
+    "expected": "Do not create. Report the existing page."
+  },
+  {
+    "id": "plain-lookup-two-runs",
+    "name": "Plain lookup, two runs",
+    "history": "Same procedure and capabilities. Runs A and B each look up the title and find no page. Both are ready to create.",
+    "expected": "Both may create and read back under the best-effort policy; do not hold. The run report may note that concurrent runs are not protected."
+  },
+  {
+    "id": "duplicate-rule-without-concurrency",
+    "name": "Duplicate rule without concurrency",
+    "history": "The procedure says \"Do not create duplicate pages; keep one summary page per day.\" It says nothing about concurrent runs. One run; the lookup finds no page for today. Only lookup, ordinary create, and readback exist.",
+    "expected": "Create today's page and read it back; the rule is best-effort. Do not hold it for a missing shared guarantee."
+  }
+]
