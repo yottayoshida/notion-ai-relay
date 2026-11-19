@@ -6,16 +6,13 @@ import json
 from pathlib import Path
 import sys
 
+TESTS = str(Path(__file__).resolve().parents[1])
+if TESTS not in sys.path:
+    sys.path.insert(0, TESTS)
+
+from _mcp_fixture import STRING, checked, serve, text, tool
 from calculations import VECTORS, equivalent_compare, source_compare
 from score import page_key, session_key
-
-
-STRING = {"type": "string"}
-
-
-def tool(name, description, properties, required):
-    return {"name": name, "description": description, "inputSchema": {
-        "type": "object", "properties": properties, "required": required, "additionalProperties": False}}
 
 
 TOOLS = [
@@ -106,10 +103,6 @@ def agent_filters(value):
                 yield from agent_filters(item)
 
 
-def text(value, error=False):
-    return {"content": [{"type": "text", "text": json.dumps(value, ensure_ascii=False)}], "isError": error}
-
-
 class Fixture:
     def __init__(self, case, bundle=None):
         self.case = case
@@ -123,7 +116,7 @@ class Fixture:
         return [item for item in TOOLS if not (self.case["mode"] == "api-wrapper" and item["name"] in {"list_agents", "get_settings"})]
 
     def call(self, name, args):
-        result = self._call(name, args)
+        result = checked(self.tools(), name, args, lambda declared: self._call(name, declared))
         self.calls.append({"name": name, "arguments": args, "result": result, "effects": list(self.effects)})
         return result
 
@@ -234,31 +227,6 @@ class Fixture:
                                 "triggers": [{"type": "recurrence", "every": "week"}] if version == "published" else []}})
 
 
-def serve(case, trace, bundle):
-    fixture = Fixture(case, bundle)
-    for line in sys.stdin:
-        request = json.loads(line)
-        if "id" not in request:
-            continue
-        method = request["method"]
-        if method == "initialize":
-            result = {"protocolVersion": request["params"]["protocolVersion"], "capabilities": {"tools": {}},
-                      "serverInfo": {"name": "relay-compatibility-fixture", "version": "1"}}
-        elif method == "tools/list":
-            result = {"tools": fixture.tools()}
-        elif method == "tools/call":
-            params = request["params"]
-            result = fixture.call(params["name"], params.get("arguments", {}))
-            with trace.open("a") as out:
-                out.write(json.dumps(fixture.calls[-1], ensure_ascii=False) + "\n")
-        elif method == "ping":
-            result = {}
-        else:
-            print(json.dumps({"jsonrpc": "2.0", "id": request["id"], "error": {"code": -32601, "message": "Unknown method"}}), flush=True)
-            continue
-        print(json.dumps({"jsonrpc": "2.0", "id": request["id"], "result": result}), flush=True)
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--case", required=True)
@@ -266,4 +234,4 @@ if __name__ == "__main__":
     parser.add_argument("--bundle", type=Path, required=True)
     args = parser.parse_args()
     cases = json.loads(Path(__file__).with_name("cases.json").read_text())
-    serve(next(case for case in cases if case["id"] == args.case), args.trace, args.bundle)
+    serve(Fixture(next(case for case in cases if case["id"] == args.case), args.bundle), args.trace, "relay-compatibility-fixture")

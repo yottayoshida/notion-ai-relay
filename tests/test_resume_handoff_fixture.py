@@ -1,20 +1,12 @@
-import importlib.util
 import json
 from pathlib import Path
+import tempfile
 import unittest
 
-DIRECTORY = Path(__file__).parent / "resume-handoff"
+from _support import load, run
 
-
-def load(name):
-    spec = importlib.util.spec_from_file_location(name, DIRECTORY / f"{name}.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-mock = load("mock_mcp")
-scorer = load("score")
+mock = load("resume-handoff", "mock_mcp")
+scorer = load("resume-handoff", "score")
 
 
 NORMAL_RESUME = [("get_configuration", None), ("read_result", "B"), ("advance_checkpoint", "B"), ("read_item", "C"),
@@ -142,6 +134,21 @@ ONE_FAULT_ROWS = [
         final='Done! {"completed":["A","B","C"]}'),
     row("no handoff after stop", "stopped-partial", ["missing handoff or clarification"], final="  "),
 ]
+
+
+class ScorerCliTests(unittest.TestCase):
+    def test_the_scorer_cli_exits_zero_only_for_a_passing_run(self):
+        operations, report_text = VALID["normal-resume-output-only"]
+        connection = mock.MockMCP("normal-resume-output-only")
+        for operation, item in operations:
+            connection.call(operation, item)
+        with tempfile.TemporaryDirectory() as directory:
+            state, final = Path(directory) / "state.json", Path(directory) / "final.txt"
+            state.write_text(json.dumps(connection.snapshot()))
+            for text, code in [(report_text, 0), ("Done! " + report_text, 1)]:
+                with self.subTest(text=text):
+                    final.write_text(text)
+                    self.assertEqual(run("resume-handoff", "score.py", ["normal-resume-output-only", state, final]).returncode, code)
 
 
 if __name__ == "__main__":

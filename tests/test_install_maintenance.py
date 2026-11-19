@@ -1,4 +1,3 @@
-import importlib.util
 import os
 from pathlib import Path
 import subprocess
@@ -6,11 +5,10 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+from _support import load
 
-SPEC = importlib.util.spec_from_file_location(
-    "maintenance_replay", Path(__file__).parent / "install-maintenance/replay.py")
-replay = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(replay)
+
+replay = load("install-maintenance", "replay")
 
 
 class InstallationIsolationTests(unittest.TestCase):
