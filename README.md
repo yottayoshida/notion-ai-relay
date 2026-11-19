@@ -46,7 +46,7 @@ Input: <items to process>
 
 ## Requirements and limits
 
-The Skill maps each operation to the MCP tools and argument schemas exposed by your environment. It does not require Computer Use, browser automation, a particular operating system, or a client-specific automation API.
+The Skill maps each operation to the MCP tools and argument schemas exposed by your environment. It does not require Computer Use, browser automation, a particular operating system, or a client-specific automation API. When Notion MCP returns a download URL for a file in the same run, such as a file uploaded to a page, the Skill downloads it instead of asking you to paste it, in a client that can download it and, for an archive, extract it; no other URL is downloaded outside MCP.
 
 | Operation | Required information or capability |
 |---|---|
