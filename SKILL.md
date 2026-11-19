@@ -9,7 +9,7 @@ Read the target's settings or instructions from Notion at runtime and have the c
 
 ## Runtime requirements
 
-Use an assistant that can read these instructions and MCP connections that expose the necessary read and execution capabilities. Do not require a particular operating system or a client-specific API or scheduler. Tool names in the references are examples from the hosted Notion MCP. Their spelling differs by client and layer: the tool list shows `notion-search-agents`, while that server's access map calls it `search_agents`. Map tools by capability and schema, not by spelling. MCP support alone does not imply access to Agent settings or Skill catalogs. Reading a file that Notion MCP returns only as a download URL also needs a client that can download it and, for an archive, extract it.
+Use an assistant that can read these instructions and MCP connections that expose the necessary read and execution capabilities. Do not require a particular operating system or a client-specific API or scheduler. Tool names in the references are examples from the hosted Notion MCP. Their spelling can differ by client and layer, for example with or without a server prefix, or with hyphens instead of underscores. Map tools by capability and schema, not by spelling. MCP support alone does not imply access to Agent settings or Skill catalogs. Reading a file that Notion MCP returns only as a download URL also needs a client that can download it and, for an archive, extract it.
 
 The execution instructions live in this file and `references/`.
 

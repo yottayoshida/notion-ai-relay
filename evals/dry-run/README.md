@@ -14,4 +14,4 @@ The cases pair dry-run restrictions with ordinary authorized execution and outpu
 
 ## Evidence boundary
 
-The previous result rule distinguished planned counts but did not specify preview destinations, diffs, and omissions. These cases evaluate the new contract; no pre-change model failure or improvement rate is claimed. Passing synthetic executions cannot establish live write permissions or client Skill discovery/loading compatibility. The executed candidate and outcomes are linked from the [compatibility notes](../../docs/compatibility.md#current-finite-fixtures).
+The previous result rule distinguished planned counts but did not specify preview destinations, diffs, and omissions. These cases evaluate the new contract; no pre-change model failure or improvement rate is claimed. Passing synthetic executions cannot establish live write permissions or client Skill discovery/loading compatibility. The executed candidate and outcomes are linked from the [compatibility notes](../../docs/compatibility.md#finite-fixture-runs).
