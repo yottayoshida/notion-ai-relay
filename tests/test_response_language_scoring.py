@@ -23,26 +23,32 @@ def grade(case_id, output, languages=None, **kwargs):
     return scorer.score(CASES[case_id], output, judgment(output, languages), **kwargs)
 
 
+def json_output(**changes):
+    value = {"status": "ok", "source_id": "fixture-03", "total": 10, "summary": "The total is 10."}
+    value.update(changes)
+    return json.dumps(value)
+
+
+POST_REPLY = {"post": "English", "reply": "Japanese"}
+EXAMPLES = {
+    "japanese-request": ("合計は10です。", {"reply": "Japanese"}),
+    "explicit-english": ("The total is 10.", {"reply": "English"}),
+    "json-only": (json_output(), {}),
+    "delegated-french": ("合計は10です。", {"reply": "Japanese"}),
+    "destination-language-required": (
+        "POST\n- Shipped onboarding email v2; fixed login timeout.\nREPLY\n投稿内容を確認しました。", POST_REPLY),
+    "destination-language-unstated": (
+        "POST\n- Shipped onboarding email v2; fixed login timeout.\nREPLY\n投稿内容を確認しました。", POST_REPLY),
+    "returned-required-language": (
+        "DRAFT\nDear Acme Paper, we confirm delivery on November 20, 2026.",
+        {"draft": "English"}),
+}
+
+
 class ResponseLanguageScoringTests(unittest.TestCase):
     def test_valid_outputs_cover_all_seven_cases(self):
-        examples = {
-            "japanese-request": ("合計は10です。", {"reply": "Japanese"}),
-            "explicit-english": ("The total is 10.", {"reply": "English"}),
-            "json-only": (json.dumps({"status": "ok", "source_id": "fixture-03", "total": 10,
-                                      "summary": "The total is 10."}), {}),
-            "delegated-french": ("合計は10です。", {"reply": "Japanese"}),
-            "destination-language-required": (
-                "POST\n- Shipped onboarding email v2; fixed login timeout.\nREPLY\n投稿内容を確認しました。",
-                {"post": "English", "reply": "Japanese"}),
-            "destination-language-unstated": (
-                "POST\n- Shipped onboarding email v2; fixed login timeout.\nREPLY\n投稿内容を確認しました。",
-                {"post": "English", "reply": "Japanese"}),
-            "returned-required-language": (
-                "DRAFT\nDear Acme Paper, we confirm delivery on November 20, 2026.",
-                {"draft": "English"}),
-        }
-        self.assertEqual(set(examples), set(CASES))
-        for case_id, (output, languages) in examples.items():
+        self.assertEqual(set(EXAMPLES), set(CASES))
+        for case_id, (output, languages) in EXAMPLES.items():
             with self.subTest(case=case_id):
                 result = grade(case_id, output, languages)
                 self.assertTrue(result["passed"], result)
@@ -203,6 +209,69 @@ class ResponseLanguageScoringTests(unittest.TestCase):
                     self.assertEqual(result.returncode, expected_exit, result.stderr)
                     report = json.loads(result.stdout)
                     self.assertEqual(report["passed"], expected_exit == 0)
+
+
+UNREVIEWED = object()
+
+
+def row(label, case_id, expected, output=None, languages=None, assessment=UNREVIEWED, completed=True, **review):
+    valid_output, valid_languages = EXAMPLES[case_id]
+    output = valid_output if output is None else output
+    if assessment is UNREVIEWED:
+        assessment = judgment(output, valid_languages if languages is None else languages)
+        assessment.update(review)
+    return label, (CASES[case_id], output, assessment), {"completed": completed}, expected
+
+
+VALID_JSON_LENGTH = len(json_output())
+ONE_FAULT_ROWS = [
+    *[row(f"valid {case_id}", case_id, []) for case_id in EXAMPLES],
+    row("JSON total written as 10.0", "json-only", [], output=json_output(total=10.0)),
+    row("JSON total written as 1e1", "json-only", [], output='{"status":"ok","source_id":"fixture-03","total":1e1,"summary":"Total 10"}'),
+    row("post with a preamble in the reply language", "destination-language-required", [],
+        output="以下が投稿案です。\nPOST\nShipped.\nREPLY\n確認しました。", languages={**POST_REPLY, "preamble": "Japanese"}),
+    row("draft with a Japanese note", "returned-required-language", [],
+        output="DRAFT\nDear Acme Paper, delivery is confirmed.\nNOTE\n送付前に日付を確認してください。",
+        languages={"draft": "English", "note": "Japanese"}),
+    row("incomplete run", "japanese-request", ["missing or incomplete output"], completed=False),
+    row("no labeled blocks", "destination-language-required", ["expected labeled output blocks"], output="Shipped. 確認しました。"),
+    row("POST block twice", "destination-language-required", ["duplicate block: post"],
+        output="POST\nShipped.\nPOST\nAgain.\nREPLY\n確認しました。"),
+    row("empty POST block", "destination-language-required", ["empty block: post"], output="POST\n\nREPLY\n確認しました。"),
+    row("REPLY block missing", "destination-language-required", ["expected POST and REPLY blocks"], output="POST\nShipped."),
+    row("DRAFT block missing", "returned-required-language", ["expected DRAFT and optional NOTE blocks"], output="NOTE\n送付前に確認。"),
+    row("extra block beside DRAFT", "returned-required-language", ["expected DRAFT and optional NOTE blocks"],
+        output="DRAFT\nDear Acme Paper.\nPOST\nShipped."),
+    row("JSON key repeated", "json-only", ["duplicate JSON key: status"],
+        output='{"status":"ok","status":"ok","source_id":"fixture-03","total":10,"summary":"Total 10"}'),
+    row("JSON with commentary", "json-only", [f"Extra data: line 1 column {VALID_JSON_LENGTH + 2} (char {VALID_JSON_LENGTH + 1})"],
+        output=json_output() + " Done."),
+    row("JSON key missing", "json-only", ["incorrect JSON keys"],
+        output=json.dumps({"status": "ok", "source_id": "fixture-03", "total": 10})),
+    row("JSON status changed", "json-only", ["incorrect JSON value: status"], output=json_output(status="done")),
+    row("JSON source changed", "json-only", ["incorrect JSON value: source_id"], output=json_output(source_id="fixture-04")),
+    row("JSON total changed", "json-only", ["incorrect JSON value: total"], output=json_output(total=11)),
+    row("JSON total off by a tiny fraction", "json-only", ["incorrect JSON value: total"],
+        output='{"status":"ok","source_id":"fixture-03","total":10.0000000000000001,"summary":"Total 10"}'),
+    row("JSON summary empty", "json-only", ["summary must be nonempty text"], output=json_output(summary=" ")),
+    row("no semantic review", "japanese-request", ["semantic assessment required; format checks alone are not a case PASS"],
+        assessment=None),
+    row("review of another output", "japanese-request", ["semantic assessment is not bound to this output"], output_sha256="0" * 64),
+    row("format not confirmed", "japanese-request", ["format not semantically confirmed"], format_ok=False),
+    row("meaning not confirmed", "japanese-request", ["meaning not semantically confirmed"], meaning_ok=False),
+    row("French example total copied", "delegated-french", ["incorrect or unreviewed total"], total=6),
+    row("reply in the wrong language", "japanese-request", ["wrong or unreviewed reply language: expected Japanese"],
+        languages={"reply": "English"}),
+    row("post in the wrong language", "destination-language-required", ["wrong or unreviewed post language: expected English"],
+        languages={**POST_REPLY, "post": "Japanese"}),
+    row("preamble in the wrong language", "destination-language-required",
+        ["wrong or unreviewed preamble language: expected Japanese"],
+        output="Here are the drafts.\nPOST\nShipped.\nREPLY\n確認しました。", languages={**POST_REPLY, "preamble": "English"}),
+    row("draft in the wrong language", "returned-required-language", ["wrong or unreviewed draft language: expected English"],
+        languages={"draft": "Japanese"}),
+    row("note in the wrong language", "returned-required-language", ["wrong or unreviewed note language: expected Japanese"],
+        output="DRAFT\nDear Acme Paper.\nNOTE\nCheck the date.", languages={"draft": "English", "note": "English"}),
+]
 
 
 if __name__ == "__main__":

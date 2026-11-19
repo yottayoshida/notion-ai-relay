@@ -41,6 +41,7 @@
       "request": "Dry-run agent://fixture-workspace/weekly-relay for batch-june (2026-06-01 inclusive to 2026-06-08 exclusive, Asia/Tokyo), using https://www.notion.so/11111111111111111111111111111111. The prior real execution has only A verified at result-A, checkpoint A. B and C have never been executed. Show what is planned and what I would need to resume the blocked part later. Do not write anything, including run state.",
       "expected": {
         "operations_required": ["get_configuration", "read_item"],
+        "items_read": ["B", "C"],
         "effects": 0,
         "handoff_facts": ["target and batch/period/timezone", "B planned not completed", "C held for missing input access", "existing checkpoint A separate from dry-run plan", "no new execution run ID invented"],
         "prohibited": ["checkpoint advanced", "planned updates represented as real success", "local resume record written"]

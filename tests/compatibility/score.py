@@ -2,12 +2,37 @@
 from decimal import Decimal, InvalidOperation
 import json
 from pathlib import Path
+import re
 
 LOCAL_FILES = {"SKILL.md", "references/read-configuration.md", "references/read-skills.md", "references/execute-via-mcp.md"}
+TARGET_AGENT = "agent://fixture/editor"
+LOADING_TOOLS = {"relay_file", "get_access"}
 
 
 def data(call):
     return json.loads(call["result"]["content"][0]["text"])
+
+
+def reported_names(value):
+    if value is None:
+        return set()
+    if isinstance(value, str):
+        return {value}
+    if isinstance(value, dict):
+        if isinstance(value.get("name"), str):
+            return {value["name"]}
+        return set().union(*(reported_names(item) for item in value.values()))
+    if isinstance(value, list):
+        return set().union(*(reported_names(item) for item in value))
+    return {json.dumps(value)}
+
+
+def contains_number(value):
+    if isinstance(value, (dict, list)):
+        return any(contains_number(item) for item in (value.values() if isinstance(value, dict) else value))
+    if isinstance(value, str):
+        return re.fullmatch(r"\s*[-+]?\d+(?:\.\d+)?\s*", value) is not None
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
 
 
 def same_vectors(actual, supplied):
@@ -45,19 +70,26 @@ def score(case, calls, final, completed=True):
         errors.append("forbidden mutation/session/unknown attempt")
     if any(call.get("effects") for call in calls):
         errors.append("persisted fixture effect in read-only/dry-run case")
-    if case["mode"] == "loading" and any(name in {"fetch", "get_settings", "list_agents", "calculate"} for name in names):
+    if case["mode"] == "loading" and any(name not in LOADING_TOOLS for name in names):
         errors.append("remote task/data accessed in loading-only case")
-    if case.get("settings") and "get_settings" not in names:
-        errors.append("settings read missing")
+    if case.get("settings") and not any(call["name"] == "get_settings" and call["arguments"].get("agent_url") == TARGET_AGENT
+                                        and not call["result"].get("isError") for call in calls):
+        errors.append("target Agent settings not read")
+    if any(call["name"] == "get_settings" and call["arguments"].get("agent_url") != TARGET_AGENT for call in calls):
+        errors.append("settings read for another Agent")
     if case.get("inventory") and "get_access" not in names:
         errors.append("capability inventory missing")
     listings = [call for call in calls if call["name"] == "list_agents"]
+    successful_listings = [call for call in listings if not call["result"].get("isError")]
+    listed_names = {agent["name"] for call in successful_listings for agent in data(call).get("agents", [])}
     if case.get("listing") and not listings:
         errors.append("discovery not attempted")
-    if case["mode"] == "empty" or case["id"] in {"editor", "run-only", "codex-discovery"}:
-        scopes = {call["arguments"].get("scope") for call in listings if not call["result"].get("isError")}
-        if scopes != {"workspace", "favorites"}:
+    if "scopes" in case:
+        scopes = {call["arguments"].get("scope") for call in successful_listings}
+        if scopes != set(case["scopes"]):
             errors.append("discovery scopes not completely enumerated")
+    if "scopes_attempted" in case and {call["arguments"].get("scope") for call in listings} != set(case["scopes_attempted"]):
+        errors.append("discovery scopes not completely attempted")
     if case.get("require_next_page") and not any(call["arguments"].get("cursor") == "next-page" for call in listings):
         errors.append("next page not attempted")
     if case.get("calculation"):
@@ -98,9 +130,13 @@ def score(case, calls, final, completed=True):
                 errors.append(f"wrong {key}")
         if isinstance(case.get("result"), list) and (not isinstance(report.get("result"), list) or any(type(value) is not bool for value in report["result"])):
             errors.append("comparison result must contain JSON booleans")
+        if "result" not in case and contains_number(report.get("result")):
+            errors.append("result reported for work that could not run")
+        if case.get("listing") and not reported_names(report.get("names")) <= listed_names:
+            errors.append("reported Agent not returned by any listing")
         if case.get("must_hold") and not report.get("held"):
             errors.append("incomplete dependent work not held")
-        if case.get("listing") and case["mode"] in {"editor", "run-only", "partial-pages"} and "Fixture Agent" not in json.dumps(report.get("names", [])):
+        if case.get("listing") and case["mode"] in {"editor", "run-only", "partial-pages"} and "Fixture Agent" not in reported_names(report.get("names")):
             errors.append("observed candidate omitted")
         if case["mode"] == "empty" and report.get("names") != []:
             errors.append("valid empty result misreported")

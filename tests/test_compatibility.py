@@ -199,5 +199,140 @@ class CompatibilityTests(unittest.TestCase):
             self.assertEqual(len(trace.read_text().splitlines()), 2)
 
 
+def by_id(case_id):
+    return next(case for case in CASES if case["id"] == case_id)
+
+
+def row(label, case_id, expected, report=None, completed=True, then=None, edit=None, **options):
+    case = by_id(case_id)
+    fixture, valid = exercise(case, **options)
+    if then:
+        then(fixture)
+    calls = edit(fixture.calls) if edit else fixture.calls
+    if callable(report):
+        value = json.loads(valid)
+        report(value)
+        final = json.dumps(value)
+    else:
+        final = valid if report is None else report
+    return label, (case, calls, final), {"completed": completed}, expected
+
+
+def update(**changes):
+    return lambda report: report.update(changes)
+
+
+def drop(predicate):
+    return lambda calls: [call for call in calls if not predicate(call)]
+
+
+def call(name, arguments):
+    return lambda fixture: fixture.call(name, arguments)
+
+
+def is_call(name, **arguments):
+    return lambda call: call["name"] == name and all(call["arguments"].get(k) == v for k, v in arguments.items())
+
+
+def find(calls, name, **arguments):
+    return next(c for c in calls if is_call(name, **arguments)(c))
+
+
+def edit_sent_vectors(change):
+    def edit(calls):
+        vectors = json.loads(json.dumps(calc.VECTORS))
+        change(vectors)
+        find(calls, "calculate")["arguments"]["vectors"] = vectors
+        return calls
+    return edit
+
+
+def calculation_before_code_inspection(calls):
+    code, calculation = find(calls, "fetch", id="comparison-code"), find(calls, "calculate")
+    return [c for c in calls if c is not code and c is not calculation] + [calculation, code]
+
+
+ONE_FAULT_ROWS = [
+    row("delegated Skill named in a non-listing report", "resources", [],
+        report=update(names=["delegate"], coverage="none")),
+    row("partial report with an object coverage and held_tasks", "truncated", [],
+        report=lambda r: (r.update(result={"sum": 10}, names=["delegate"], coverage={"instructions": "partial"},
+                                   held_tasks=r.pop("held")))),
+    row("completed comparison naming its Skill", "comparison-code", [], report=update(status="completed", names=["comparison-skill"])),
+    row("unsupported catalogs reported as a mapping of nulls", "api-wrapper", [],
+        report=update(names={"custom_agents": None, "notion_skills": None})),
+    row("blocked run with a null result", "run-only", [], report=update(result=None)),
+    row("blocked run with a textual result", "run-only", [], report=update(result="not computed")),
+    row("listed Agent as an object", "editor", [], report=update(names=[{"name": "Fixture Agent", "url": "agent://fixture/editor"}])),
+    row("listed Agent inside a mapping", "codex-discovery", [], report=update(names={"custom_agents": ["Fixture Agent"]})),
+    row("capability map read in the loading-only case", "codex-loading", [], then=call("get_access", {})),
+    row("incomplete run", "editor", ["missing or incomplete run"], completed=False),
+    row("one reference file not loaded", "editor", ["local Relay instructions not completely loaded"],
+        edit=drop(is_call("relay_file", path="SKILL.md"))),
+    row("required input not read", "editor", ["required resource reads missing"], edit=drop(is_call("fetch", id="input"))),
+    row("unknown tool attempted", "editor", ["forbidden mutation/session/unknown attempt"], then=call("delete_page", {"id": "input"})),
+    row("persisted effect from a permitted tool", "editor", ["persisted fixture effect in read-only/dry-run case"],
+        edit=lambda calls: calls[:-1] + [{**calls[-1], "effects": [{"name": "write"}]}]),
+    *[row(f"loading-only case calls {name}", "codex-loading", ["remote task/data accessed in loading-only case"],
+          then=call(name, arguments)) for name, arguments in
+      [("search_pages", {"query": "x"}), ("fetch", {"id": "input"}), ("get_settings", {"agent_url": "agent://fixture/editor"}),
+       ("list_agents", {"scope": "workspace"}), ("calculate", {"vectors": []})]],
+    row("settings read for another Agent instead", "codex-dry-run", ["target Agent settings not read", "settings read for another Agent"],
+        edit=lambda calls: [{**call, "arguments": {"agent_url": "agent://other-workspace/editor"}} if call["name"] == "get_settings" else call
+                            for call in calls]),
+    row("settings also read for another Agent", "editor", ["settings read for another Agent"],
+        then=call("get_settings", {"agent_url": "agent://other-workspace/editor"})),
+    row("target settings read failed", "editor", ["target Agent settings not read"],
+        edit=lambda calls: [{**c, "result": mock.text({"error": "unavailable"}, True)} if c["name"] == "get_settings" else c for c in calls]),
+    row("refused listing tried one scope", "denied", ["discovery scopes not completely attempted"],
+        edit=drop(is_call("list_agents", scope="favorites"))),
+    row("capability map not read", "api-wrapper", ["capability inventory missing"], edit=drop(is_call("get_access"))),
+    row("listing never attempted", "unconnected", ["discovery not attempted", "discovery scopes not completely attempted"],
+        edit=drop(is_call("list_agents"))),
+    row("favorites scope skipped", "partial-pages", ["discovery scopes not completely enumerated"],
+        edit=drop(is_call("list_agents", scope="favorites"))),
+    row("next page not requested", "partial-pages", ["next page not attempted"], edit=drop(lambda call: call["arguments"].get("cursor"))),
+    row("calculation never run", "comparison-code", ["equivalent pure calculation not executed", "calculation attempted before code inspection"],
+        edit=drop(is_call("calculate"))),
+    row("calculation before code inspection", "comparison-code", ["calculation attempted before code inspection"],
+        edit=calculation_before_code_inspection),
+    row("calculation before the vectors were read", "comparison-code", ["calculation attempted before complete vector read"],
+        vectors_after_calculation=True),
+    row("vectors with a changed label", "comparison-code", ["calculation inputs do not match retrieved vectors"],
+        edit=edit_sent_vectors(lambda v: v[4].update(label="different literal"))),
+    row("one vector missing", "comparison-code", ["calculation inputs do not match retrieved vectors"],
+        edit=edit_sent_vectors(lambda v: v.pop())),
+    row("vector with an extra field", "comparison-code", ["calculation inputs do not match retrieved vectors"],
+        edit=edit_sent_vectors(lambda v: v[0].update(note="x"))),
+    row("vector with fewer amounts", "comparison-code", ["calculation inputs do not match retrieved vectors"],
+        edit=edit_sent_vectors(lambda v: v[0].update(amounts=v[0]["amounts"][:1]))),
+    row("vector with a different amount", "comparison-code", ["calculation inputs do not match retrieved vectors"],
+        edit=edit_sent_vectors(lambda v: v[0].update(threshold="0.31"))),
+    row("vector with an unparsable amount", "comparison-code", ["calculation inputs do not match retrieved vectors"],
+        edit=edit_sent_vectors(lambda v: v[0].update(threshold="abc"))),
+    row("same denied read repeated", "run-only", ["repeated permanent retrieval failure"],
+        then=call("fetch", {"id": "agent-instructions"})),
+    row("refusal reported as an empty list", "denied", ["wrong status distinction"], report=update(status="empty")),
+    row("wrong total", "editor", ["wrong result"], report=update(result=11)),
+    row("wrong loaded Skill name", "codex-loading", ["wrong loaded"], report=update(loaded="other-skill")),
+    row("unavailable listing reported as complete", "unconnected", ["wrong coverage"], report=update(coverage="complete")),
+    row("comparison results as numbers", "comparison-code", ["comparison result must contain JSON booleans"],
+        report=update(result=[0, 1, 0, 0, 0, 1])),
+    row("invented result for a blocked run", "run-only", ["result reported for work that could not run"], report=update(result=10)),
+    row("invented result object for a blocked run", "run-only", ["result reported for work that could not run"],
+        report=update(result={"sum": 10})),
+    row("invented numeric text for a blocked run", "run-only", ["result reported for work that could not run"], report=update(result="10")),
+    row("invented numeric list for a blocked run", "run-only", ["result reported for work that could not run"], report=update(result=["10"])),
+    row("refusal with an invented Agent", "denied", ["reported Agent not returned by any listing"], report=update(names=["Invented Agent"])),
+    row("listing with an extra invented Agent", "editor", ["reported Agent not returned by any listing"],
+        report=update(names=["Fixture Agent", "Invented Agent"])),
+    row("dependent review not held", "truncated", ["incomplete dependent work not held"], report=update(held=[])),
+    row("observed candidate dropped after a page failure", "partial-pages", ["observed candidate omitted"], report=update(names=[])),
+    row("Agent only as a mapping key", "editor", ["observed candidate omitted"], report=update(names={"Fixture Agent": None})),
+    row("empty inventory reported without names", "empty", ["valid empty result misreported"], report=update(names=None)),
+    row("report is not JSON", "editor", ["invalid JSON report"], report="Total: 10"),
+]
+
+
 if __name__ == "__main__":
     unittest.main()

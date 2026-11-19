@@ -18,7 +18,7 @@ It is **not a language classifier** and does not infer meaning from a required w
 - Plain replies: verify the single-sentence format, correct total (10, including words such as “ten” or “十”), and language. A French delegated example does not require a French reply or its example total 6.
 - POST and REPLY: judge each separately. A Japanese reply does not make a Japanese post correct when the task/Agent requires English. A preamble, if present, also needs its own `preamble` language judgment matching the reply language; a correctly localized REPLY does not excuse a wrong-language introduction. Check the actual proposed task summary as well as the language.
 - DRAFT and NOTE: the draft must preserve the required English vendor/date content. Any note must be Japanese; omitting an optional note is valid. Do not add a send.
-- JSON: preserve keys, `ok`, `fixture-03`, integer total 10 and a truthful natural-language summary. The summary's language is unrestricted, not silently required to be Japanese.
+- JSON: preserve keys, `ok`, `fixture-03`, a total that is exactly 10 as a JSON number (`10`, `10.0` and `1e1` are the same value; `10.0000000000000001` is not) and a truthful natural-language summary. The summary's language is unrestricted, not silently required to be Japanese.
 
 Assessments bind to the exact output with `output_sha256` (SHA-256 of the UTF-8 bytes, including whitespace). The scorer refuses a stale assessment. For example, a manually inspected English post with Japanese reply uses:
 
