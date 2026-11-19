@@ -4,7 +4,7 @@ import sys
 import tempfile
 import unittest
 
-from scripts.check_structure import frontmatter, load_yaml, stage, validate
+from scripts.check_structure import check_eval_cases, frontmatter, load_yaml, stage, validate
 
 
 REPOSITORY = Path(__file__).resolve().parents[1]
@@ -212,6 +212,54 @@ class StructureTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("missing local reference", result.stderr)
         self.assertNotIn("PASS", result.stdout)
+
+
+class EvalCaseTests(unittest.TestCase):
+    def test_every_eval_folder_holds_cases_with_a_unique_id_and_an_expected_outcome(self):
+        with tempfile.TemporaryDirectory() as directory:
+            stage(REPOSITORY, Path(directory))
+            self.assertGreaterEqual(check_eval_cases(Path(directory)), 1)
+
+    def test_eval_cases_without_an_id_or_an_expected_outcome_fail(self):
+        for name, text, message in [
+            ("no-id", '[{"expected": "x"}]', "missing or duplicate id"),
+            ("no-expected", '[{"id": "a"}]', "no expected outcome"),
+            ("blank-expected", '[{"id": "a", "expected": "   "}]', "no expected outcome"),
+            ("no-cases", '[]', "no cases"),
+            ("no-cases-key", '{"version": 1}', "no cases"),
+            ("cases-not-a-list", '{"cases": {"id": "a"}}', "no cases"),
+            ("case-not-an-object", '["a"]', "not an object"),
+            ("null-case", '[null]', "not an object"),
+            ("empty-expected", '[{"id": "a", "expected": {}}]', "no expected outcome"),
+            ("all-expectations-empty", '{"cases": [{"id": "a", "expected_status": "", "expected_operations": []}]}', "no expected outcome"),
+            ("duplicate-id", '[{"id": "a", "expected": "x"}, {"id": "a", "expected": "y"}]', "duplicate id"),
+            ("broken-json", "{", "Expecting"),
+            ("no-cases-file", None, "missing cases.json"),
+        ]:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                folder = Path(directory) / "evals" / "topic"
+                folder.mkdir(parents=True)
+                if text is not None:
+                    (folder / "cases.json").write_text(text, encoding="utf-8")
+                with self.assertRaisesRegex(ValueError, message):
+                    check_eval_cases(Path(directory))
+
+    def test_a_case_whose_only_expectation_is_false_or_zero_still_has_one(self):
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory) / "evals" / "topic"
+            folder.mkdir(parents=True)
+            (folder / "cases.json").write_text('[{"id": "a", "expected": false}, {"id": "b", "expected_count": 0}]', encoding="utf-8")
+            self.assertEqual(check_eval_cases(Path(directory)), 1)
+
+    def test_validate_rejects_a_distribution_with_a_bad_eval_case(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "notion-ai-relay"
+            root.mkdir()
+            stage(REPOSITORY, root)
+            validate(root)
+            (root / "evals/discovery/cases.json").write_text('[{"id": "a"}]', encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "no expected outcome"):
+                validate(root)
 
 
 if __name__ == "__main__":
