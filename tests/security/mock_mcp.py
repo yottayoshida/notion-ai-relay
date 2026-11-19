@@ -6,19 +6,14 @@ from pathlib import Path
 import sys
 from urllib.parse import urlsplit
 
+TESTS = str(Path(__file__).resolve().parents[1])
+if TESTS not in sys.path:
+    sys.path.insert(0, TESTS)
 
-STRING = {"type": "string"}
+from _mcp_fixture import STRING, checked, serve, text, tool
+
 DOWNLOAD_BASE = "https://download.invalid"
 DECOY = {"text": "Unrelated synthetic page."}
-
-
-def text(value, error=False):
-    return {"content": [{"type": "text", "text": value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)}], "isError": error}
-
-
-def tool(name, description, properties, required):
-    return {"name": name, "description": description, "inputSchema": {
-        "type": "object", "properties": properties, "required": required, "additionalProperties": False}}
 
 
 TOOLS = [
@@ -39,7 +34,7 @@ class Fixture:
         self.deny = set(deny)
         self.download_base = download_base.rstrip("/")
         self.files = case.get("files", {})
-        self.trace = []
+        self.calls = []
         self.effects = []
 
     def signed(self, path):
@@ -49,11 +44,19 @@ class Fixture:
         page = json.dumps(value, ensure_ascii=False)
         return {reference: self.signed(path) for reference, path in self.files.items() if reference in page}
 
+    def tools(self):
+        return TOOLS
+
     def call(self, name, arguments):
         event = {"name": name, "arguments": arguments, "denied": name in self.deny}
-        self.trace.append(event)
+        self.calls.append(event)
         if event["denied"]:
-            return text("Host permission denied", True)
+            event["result"] = text("Host permission denied", True)
+        else:
+            event["result"] = checked(self.tools(), name, arguments, lambda declared: self._call(name, declared))
+        return event["result"]
+
+    def _call(self, name, arguments):
         if name not in {item["name"] for item in TOOLS}:
             return text("Unknown tool", True)
         if name == "notion_fetch":
@@ -83,33 +86,8 @@ class Fixture:
         parsed = urlsplit(url)
         served = self.case.get("downloads", {}) if f"{parsed.scheme}://{parsed.netloc}" == self.download_base else {}
         result = text(served.get(parsed.path, DECOY))
-        self.trace.append({"name": "direct_fetch", "arguments": {"url": url}, "denied": False, "result": result})
+        self.calls.append({"name": "direct_fetch", "arguments": {"url": url}, "denied": False, "result": result})
         return result
-
-
-def serve(case, trace, deny, download_base):
-    fixture = Fixture(case, deny, download_base)
-    for line in sys.stdin:
-        request = json.loads(line)
-        if "id" not in request:
-            continue
-        method = request["method"]
-        if method == "initialize":
-            result = {"protocolVersion": request["params"]["protocolVersion"],
-                      "capabilities": {"tools": {}}, "serverInfo": {"name": "relay-security-fixture", "version": "1"}}
-        elif method == "tools/list":
-            result = {"tools": TOOLS}
-        elif method == "tools/call":
-            params = request["params"]
-            result = fixture.call(params["name"], params.get("arguments", {}))
-            with trace.open("a") as out:
-                out.write(json.dumps({**fixture.trace[-1], "result": result}) + "\n")
-        elif method == "ping":
-            result = {}
-        else:
-            print(json.dumps({"jsonrpc": "2.0", "id": request["id"], "error": {"code": -32601, "message": "Unknown method"}}), flush=True)
-            continue
-        print(json.dumps({"jsonrpc": "2.0", "id": request["id"], "result": result}), flush=True)
 
 
 if __name__ == "__main__":
@@ -120,4 +98,5 @@ if __name__ == "__main__":
     parser.add_argument("--download-base", default=DOWNLOAD_BASE)
     args = parser.parse_args()
     cases = json.loads(Path(__file__).with_name("cases.json").read_text())
-    serve(next(case for case in cases if case["id"] == args.case), args.trace, args.deny, args.download_base)
+    case = next(case for case in cases if case["id"] == args.case)
+    serve(Fixture(case, args.deny, args.download_base), args.trace, "relay-security-fixture")

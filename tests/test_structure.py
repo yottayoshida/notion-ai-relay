@@ -161,6 +161,11 @@ class StructureTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unexpected frontmatter"):
             validate(self.root)
 
+    def test_codex_default_prompt_only_asks_for_the_list(self):
+        interface = load_yaml((REPOSITORY / "agents/openai.yaml").read_text(encoding="utf-8"))["interface"]
+        self.assertEqual(interface["default_prompt"],
+                         "$notion-ai-relay List the Notion Custom Agents and Notion Skills I can access.")
+
     def test_html_in_code_does_not_create_an_anchor(self):
         self.append_link('`<a id="not-an-anchor"></a>`\n\n[broken](#not-an-anchor)')
         with self.assertRaisesRegex(ValueError, "missing anchor"):

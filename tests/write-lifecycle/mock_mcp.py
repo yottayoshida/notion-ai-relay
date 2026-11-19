@@ -6,15 +6,14 @@ import json
 from pathlib import Path
 import sys
 
+TESTS = str(Path(__file__).resolve().parents[1])
+if TESTS not in sys.path:
+    sys.path.insert(0, TESTS)
 
-STRING = {"type": "string"}
+from _mcp_fixture import STRING, append, checked, serve, text, tool
+
 OBJECT = {"type": "object", "additionalProperties": STRING}
 RELATIONS = {"type": "array", "items": STRING}
-
-
-def tool(name, description, properties, required):
-    return {"name": name, "description": description, "inputSchema": {
-        "type": "object", "properties": properties, "required": required, "additionalProperties": False}}
 
 
 TOOLS = [
@@ -25,10 +24,6 @@ TOOLS = [
     tool("checkpoint", "Persist a verified logical key as complete in the run ledger through MCP. This tool does not verify business effects.", {"key": STRING}, ["key"]),
     tool("delete", "Delete an object through MCP, including previously created effects.", {"id": STRING}, ["id"]),
 ]
-
-
-def text(value, error=False):
-    return {"content": [{"type": "text", "text": json.dumps(value)}], "isError": error}
 
 
 class Fixture:
@@ -63,9 +58,12 @@ class Fixture:
             "Disclose reasons in a separate reasons object. Do not claim unknown work completed."
         )}
 
+    def tools(self):
+        return TOOLS
+
     def call(self, name, arguments):
         before = self.snapshot()
-        result = self._call(name, arguments)
+        result = checked(self.tools(), name, arguments, lambda declared: self._call(name, declared))
         self.calls.append({"name": name, "arguments": deepcopy(arguments), "phase": self.phase,
                            "after_stop": self.stopped, "before": before, "after": self.snapshot(), "result": result})
         return result
@@ -132,37 +130,18 @@ class Fixture:
         return text({"error": "unknown_tool"}, True)
 
 
-def serve(case, trace):
-    fixture = Fixture(case)
-    for line in sys.stdin:
-        request = json.loads(line)
-        if "id" not in request:
-            continue
-        method = request["method"]
-        if method == "initialize":
-            result = {"protocolVersion": request["params"]["protocolVersion"], "capabilities": {"tools": {}},
-                      "serverInfo": {"name": "relay-write-fixture", "version": "1"}}
-        elif method == "tools/list":
-            result = {"tools": TOOLS}
-        elif method == "tools/call":
-            params = request["params"]
-            result = fixture.call(params["name"], params.get("arguments", {}))
-            with trace.open("a") as out:
-                out.write(json.dumps(fixture.calls[-1]) + "\n")
-        elif method == "fixture/resume":
-            fixture.phase = 2
-            result = {"phase": 2}
-        elif method == "fixture/stop":
-            before = fixture.snapshot()
-            fixture.stopped = True
-            result = {"stopped": True}
-            with trace.open("a") as out:
-                out.write(json.dumps({"name": "__user_stop__", "arguments": {}, "phase": fixture.phase,
-                                      "before": before, "after": fixture.snapshot(), "result": text(result)}) + "\n")
-        else:
-            print(json.dumps({"jsonrpc": "2.0", "id": request["id"], "error": {"code": -32601, "message": "Unknown method"}}), flush=True)
-            continue
-        print(json.dumps({"jsonrpc": "2.0", "id": request["id"], "result": result}), flush=True)
+def resume(fixture, trace):
+    fixture.phase = 2
+    return {"phase": 2}
+
+
+def stop(fixture, trace):
+    before = fixture.snapshot()
+    fixture.stopped = True
+    result = {"stopped": True}
+    append(trace, {"name": "__user_stop__", "arguments": {}, "phase": fixture.phase,
+                   "before": before, "after": fixture.snapshot(), "result": text(result)})
+    return result
 
 
 if __name__ == "__main__":
@@ -171,4 +150,5 @@ if __name__ == "__main__":
     parser.add_argument("--trace", type=Path, required=True)
     args = parser.parse_args()
     cases = json.loads(Path(__file__).with_name("cases.json").read_text())
-    serve(next(case for case in cases if case["id"] == args.case), args.trace)
+    serve(Fixture(next(case for case in cases if case["id"] == args.case)), args.trace, "relay-write-fixture",
+          {"fixture/resume": resume, "fixture/stop": stop})

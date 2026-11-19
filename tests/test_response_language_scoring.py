@@ -1,4 +1,3 @@
-import importlib.util
 import json
 from pathlib import Path
 import subprocess
@@ -6,11 +5,10 @@ import sys
 import tempfile
 import unittest
 
+from _support import load
 
 ROOT = Path(__file__).parent / "response-language"
-SPEC = importlib.util.spec_from_file_location("response_language_score", ROOT / "score.py")
-scorer = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(scorer)
+scorer = load("response-language", "score")
 CASES = {case["id"]: case for case in json.loads((ROOT / "cases.json").read_text())}
 
 

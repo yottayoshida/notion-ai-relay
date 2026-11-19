@@ -3,6 +3,13 @@ from decimal import Decimal, InvalidOperation
 import json
 from pathlib import Path
 import re
+import sys
+
+TESTS = str(Path(__file__).resolve().parents[1])
+if TESTS not in sys.path:
+    sys.path.insert(0, TESTS)
+
+from _mcp_fixture import split_rejected
 
 LOCAL_FILES = {"SKILL.md", "references/read-configuration.md", "references/read-skills.md", "references/execute-via-mcp.md"}
 TARGET_AGENT = "agent://fixture/editor"
@@ -68,6 +75,9 @@ def same_vectors(actual, supplied):
 
 def score(case, calls, final, completed=True):
     errors = []
+    calls, rejected = split_rejected(calls)
+    for call in rejected:
+        errors.append(f"call with invalid arguments: {call['name']}")
     if not completed or not calls:
         errors.append("missing or incomplete run")
     loaded = {call["arguments"].get("path") for call in calls if call["name"] == "relay_file" and not call["result"].get("isError") and data(call).get("complete")}
@@ -167,15 +177,5 @@ def score(case, calls, final, completed=True):
 
 
 if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("case")
-    parser.add_argument("trace", type=Path)
-    parser.add_argument("final", type=Path)
-    parser.add_argument("--incomplete", action="store_true")
-    args = parser.parse_args()
-    cases = json.loads(Path(__file__).with_name("cases.json").read_text())
-    case = next(case for case in cases if case["id"] == args.case)
-    result = score(case, [json.loads(line) for line in args.trace.read_text().splitlines()], args.final.read_text(), not args.incomplete)
-    print(json.dumps(result, indent=2))
-    raise SystemExit(0 if result["passed"] else 1)
+    from _support import scorer_cli
+    scorer_cli(score, __file__, __doc__)

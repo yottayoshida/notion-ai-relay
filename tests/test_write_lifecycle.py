@@ -1,24 +1,13 @@
-import importlib.util
 import json
 from pathlib import Path
-import subprocess
-import sys
 import tempfile
 import unittest
 
-ROOT = Path(__file__).resolve().parent / "write-lifecycle"
+from _support import case_with_id, cases_of, load, run, stdio
 
-
-def load(name):
-    spec = importlib.util.spec_from_file_location("lifecycle_" + name, ROOT / f"{name}.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-mock = load("mock_mcp")
-scorer = load("score")
-CASES = json.loads((ROOT / "cases.json").read_text())
+mock = load("write-lifecycle", "mock_mcp")
+scorer = load("write-lifecycle", "score")
+CASES = cases_of("write-lifecycle")
 CREATE = {"key": "A", "content": "Created A", "properties": {"status": "done"}, "relations": ["R"]}
 
 
@@ -90,7 +79,7 @@ class LifecycleTests(unittest.TestCase):
                 self.assertTrue(result["passed"], result)
 
     def test_effects_before_each_required_page_read_are_rejected(self):
-        case = CASES[1]
+        case = by_id("write-timeout")
         for delayed in ("skill", "input", "checkpoint"):
             with self.subTest(delayed=delayed):
                 fixture = delayed_read(case, delayed)
@@ -99,7 +88,7 @@ class LifecycleTests(unittest.TestCase):
                 self.assertIn("checkpoint before required procedure/input/ledger reads", result["errors"])
 
     def test_conflict_requires_current_object_read_before_next_update(self):
-        case = CASES[6]
+        case = by_id("concurrent-edit")
         for reader in (None, "fetch", "lookup"):
             with self.subTest(reader=reader):
                 fixture = mock.Fixture(case)
@@ -123,34 +112,34 @@ class LifecycleTests(unittest.TestCase):
                     self.assertIn("update without current target read", result["errors"])
 
     def test_unknown_write_is_created_once_and_reconciled(self):
-        fixture, final, _ = exercise(CASES[1])
+        fixture, final, _ = exercise(by_id("write-timeout"))
         self.assertEqual(fixture.creations, 1)
         self.assertTrue(fixture.calls[4]["result"]["isError"])
         fixture.call("create", CREATE)
-        self.assertFalse(scorer.score(CASES[1], fixture.calls, final)["passed"])
+        self.assertFalse(scorer.score(by_id("write-timeout"), fixture.calls, final)["passed"])
 
     def test_verification_failure_does_not_block_independent_B(self):
-        fixture, final, _ = exercise(CASES[2])
+        fixture, final, _ = exercise(by_id("verification-failure"))
         self.assertEqual(fixture.checkpoints, ["B"])
         self.assertEqual(len(fixture.objects), 2)
         fixture.call("checkpoint", {"key": "A"})
-        self.assertFalse(scorer.score(CASES[2], fixture.calls, final)["passed"])
+        self.assertFalse(scorer.score(by_id("verification-failure"), fixture.calls, final)["passed"])
 
     def test_unverified_effect_still_must_match_requested_mutation(self):
-        case = CASES[2]
+        case = by_id("verification-failure")
         fixture, final, _ = exercise(case)
         fixture.objects["created-1"]["content"] = "Wrong content"
         fixture.call("fetch", {"id": "B"})
         self.assertFalse(scorer.score(case, fixture.calls, final)["passed"])
 
     def test_repeating_permanent_failure_is_not_a_read_retry(self):
-        case = CASES[2]
+        case = by_id("verification-failure")
         fixture, final, _ = exercise(case)
         fixture.call("fetch", {"id": "created-1"})
         self.assertFalse(scorer.score(case, fixture.calls, final)["passed"])
 
     def test_checkpoint_before_readback_fails(self):
-        case = CASES[1]
+        case = by_id("write-timeout")
         fixture = mock.Fixture(case)
         fixture.call("lookup", {"key": "A"})
         fixture.call("create", CREATE)
@@ -159,14 +148,14 @@ class LifecycleTests(unittest.TestCase):
         self.assertFalse(scorer.score(case, fixture.calls, report(case))["passed"])
 
     def test_stop_does_not_allow_verification_or_rollback(self):
-        case = CASES[4]
+        case = by_id("stop")
         for name, arguments in [("fetch", {"id": "created-1"}), ("delete", {"id": "created-1"}), ("checkpoint", {"key": "A"})]:
             fixture, final, _ = exercise(case)
             fixture.call(name, arguments)
             self.assertFalse(scorer.score(case, fixture.calls, final)["passed"])
 
     def test_concurrent_additions_are_preserved_not_just_counted(self):
-        case = CASES[6]
+        case = by_id("concurrent-edit")
         fixture, final, _ = exercise(case)
         self.assertIn("Collaborator addition", fixture.objects["B"]["content"])
         fixture.objects["B"]["content"] = "Existing B\nProcessed B"
@@ -174,7 +163,7 @@ class LifecycleTests(unittest.TestCase):
         self.assertFalse(scorer.score(case, fixture.calls, final)["passed"])
 
     def test_holding_without_reading_input_and_ledger_is_not_success(self):
-        case = CASES[-1]
+        case = by_id("no-readback")
         fixture = mock.Fixture(case)
         fixture.call("fetch", {"id": "skill"})
         self.assertFalse(scorer.score(case, fixture.calls, report(case))["passed"])
@@ -185,11 +174,11 @@ class LifecycleTests(unittest.TestCase):
             self.assertFalse(scorer.score(case, [], final)["passed"])
             self.assertFalse(scorer.score(case, fixture.calls, final, completed=False, first_report=first)["passed"])
             self.assertFalse(scorer.score(case, fixture.calls, "all done", first_report=first)["passed"])
-        fixture, final, _ = exercise(CASES[3])
-        self.assertFalse(scorer.score(CASES[3], fixture.calls, final)["passed"])
+        fixture, final, _ = exercise(by_id("partial-resume"))
+        self.assertFalse(scorer.score(by_id("partial-resume"), fixture.calls, final)["passed"])
 
     def test_permanent_verification_failure_cannot_escape_via_lookup(self):
-        fixture = mock.Fixture(CASES[2])
+        fixture = mock.Fixture(by_id("verification-failure"))
         fixture.call("create", CREATE)
         self.assertTrue(fixture.call("fetch", {"id": "created-1"})["isError"])
         self.assertTrue(fixture.call("lookup", {"key": "A"})["isError"])
@@ -204,10 +193,8 @@ class LifecycleTests(unittest.TestCase):
                 {"id": 3, "method": "tools/call", "params": {"name": "create", "arguments": CREATE}},
                 {"id": 4, "method": "fixture/stop"},
             ]
-            result = subprocess.run([sys.executable, str(ROOT / "mock_mcp.py"), "--case", "write-timeout", "--trace", str(trace)],
-                                    input="".join(json.dumps({"jsonrpc": "2.0", **r}) + "\n" for r in requests), text=True, capture_output=True, timeout=5)
+            result, replies = stdio("write-lifecycle", ["--case", "write-timeout", "--trace", trace], requests)
             self.assertEqual(result.returncode, 0, result.stderr)
-            replies = [json.loads(line) for line in result.stdout.splitlines()]
             self.assertEqual([r["id"] for r in replies], [1, 2, 3, 4])
             self.assertEqual(replies[1]["result"]["tools"], mock.TOOLS)
             self.assertTrue(replies[2]["result"]["isError"])
@@ -217,7 +204,7 @@ class LifecycleTests(unittest.TestCase):
 
 
 def by_id(case_id):
-    return next(case for case in CASES if case["id"] == case_id)
+    return case_with_id(CASES, case_id)
 
 
 def row(label, case_id, expected, final=None, completed=True, first=None, then=None, edit=None, built=None):
@@ -272,6 +259,7 @@ def drop_collaborator_addition(fixture):
 
 
 ONE_FAULT_ROWS = [
+    row("call with invalid arguments", "normal", ["call with invalid arguments: fetch"], then=calls_to(("fetch", {}))),
     row("page returned as plain text", "normal", [], edit=plain_text_page),
     row("incomplete run", "normal", ["missing or incomplete run"], completed=False),
     row("verification after the user stop", "stop", ["service attempt after user stop"], then=calls_to(("fetch", {"id": "created-1"}))),
@@ -330,6 +318,26 @@ ONE_FAULT_ROWS = [
     row("user stop not delivered", "stop", ["user stop was not delivered"],
         edit=without(lambda call: call["name"] == "__user_stop__")),
 ]
+
+
+class ScorerCliTests(unittest.TestCase):
+    def test_the_scorer_cli_exits_zero_only_for_a_passing_run_and_reads_the_first_report(self):
+        with tempfile.TemporaryDirectory() as directory:
+            trace, final, first_file = (Path(directory) / name for name in ("trace.jsonl", "final.json", "first.json"))
+            for case_id in ("normal", "partial-resume"):
+                case = by_id(case_id)
+                fixture, report_text, first = exercise(case)
+                trace.write_text("".join(json.dumps(call) + "\n" for call in fixture.calls))
+                final.write_text(report_text)
+                flags = []
+                if first is not None:
+                    first_file.write_text(first)
+                    flags = ["--first-report", first_file]
+                    with self.subTest(case=case_id, first_report=False):
+                        self.assertEqual(run("write-lifecycle", "score.py", [case_id, trace, final]).returncode, 1)
+                with self.subTest(case=case_id):
+                    self.assertEqual(run("write-lifecycle", "score.py", [case_id, trace, final, *flags]).returncode, 0)
+                    self.assertEqual(run("write-lifecycle", "score.py", [case_id, trace, final, *flags, "--incomplete"]).returncode, 1)
 
 
 if __name__ == "__main__":

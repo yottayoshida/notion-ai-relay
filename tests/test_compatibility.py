@@ -1,30 +1,15 @@
-import importlib.util
 import json
 from pathlib import Path
-import subprocess
-import sys
 import tempfile
 import unittest
 
-ROOT = Path(__file__).resolve().parent / "compatibility"
-BUNDLE = ROOT.parents[1]
+from _support import TESTS, case_with_id, cases_of, load, run, stdio
 
-
-def load(name):
-    spec = importlib.util.spec_from_file_location("compat_" + name, ROOT / f"{name}.py")
-    module = importlib.util.module_from_spec(spec)
-    sys.path.insert(0, str(ROOT))
-    try:
-        spec.loader.exec_module(module)
-    finally:
-        sys.path.pop(0)
-    return module
-
-
-mock = load("mock_mcp")
-scorer = load("score")
-calc = load("calculations")
-CASES = json.loads((ROOT / "cases.json").read_text())
+BUNDLE = TESTS.parent
+mock = load("compatibility", "mock_mcp")
+scorer = load("compatibility", "score")
+calc = load("compatibility", "calculations")
+CASES = cases_of("compatibility")
 
 
 def exercise(case, *, calculated_vectors=None, vectors_after_calculation=False):
@@ -80,7 +65,6 @@ class CompatibilityTests(unittest.TestCase):
     def test_pure_replacement_matches_explicit_boundary_results(self):
         self.assertEqual([calc.source_compare(**v) for v in calc.VECTORS], calc.EXPECTED)
         self.assertEqual([calc.equivalent_compare(**v) for v in calc.VECTORS], calc.EXPECTED)
-        self.assertTrue(0.1 + 0.2 > 0.3)
         self.assertFalse(calc.EXPECTED[0])
         self.assertFalse(calc.EXPECTED[4])
         self.assertTrue(calc.EXPECTED[5])
@@ -134,7 +118,7 @@ class CompatibilityTests(unittest.TestCase):
         self.assertTrue(fixture.call("list_agents", {"scope": "workspace"})["isError"])
 
     def test_run_only_discovery_settings_and_instruction_read_are_separate(self):
-        fixture = mock.Fixture(CASES[1])
+        fixture = mock.Fixture(by_id("run-only"))
         self.assertFalse(fixture.call("list_agents", {"scope": "workspace"})["isError"])
         self.assertFalse(fixture.call("get_settings", {"agent_url": "agent://fixture/editor"})["isError"])
         self.assertTrue(fixture.call("fetch", {"id": "agent-instructions"})["isError"])
@@ -196,7 +180,7 @@ class CompatibilityTests(unittest.TestCase):
         self.assertTrue(fixture.call("read_session_event", {"session_url": "session://unknown-run", "sequence": 1})["isError"])
 
     def test_frozen_reader_never_reads_arbitrary_host_paths(self):
-        fixture = mock.Fixture(CASES[0], BUNDLE)
+        fixture = mock.Fixture(by_id("editor"), BUNDLE)
         self.assertTrue(fixture.call("relay_file", {"path": "../../AGENTS.md"})["isError"])
         self.assertTrue(fixture.call("relay_file", {"path": "/etc/passwd"})["isError"])
 
@@ -207,10 +191,8 @@ class CompatibilityTests(unittest.TestCase):
                         {"method": "notifications/initialized"}, {"id": 2, "method": "tools/list"},
                         {"id": 3, "method": "tools/call", "params": {"name": "list_agents", "arguments": {"scope": "workspace"}}},
                         {"id": 4, "method": "tools/call", "params": {"name": "list_agents", "arguments": {"scope": "workspace", "cursor": "next-page"}}}]
-            result = subprocess.run([sys.executable, str(ROOT / "mock_mcp.py"), "--case", "partial-pages", "--trace", str(trace), "--bundle", str(BUNDLE)],
-                                    input="".join(json.dumps({"jsonrpc": "2.0", **r}) + "\n" for r in requests), text=True, capture_output=True, timeout=5)
+            result, replies = stdio("compatibility", ["--case", "partial-pages", "--trace", trace, "--bundle", BUNDLE], requests)
             self.assertEqual(result.returncode, 0, result.stderr)
-            replies = [json.loads(line) for line in result.stdout.splitlines()]
             self.assertEqual(replies[1]["result"]["tools"], mock.TOOLS)
             self.assertFalse(replies[2]["result"]["isError"])
             self.assertTrue(replies[3]["result"]["isError"])
@@ -218,7 +200,7 @@ class CompatibilityTests(unittest.TestCase):
 
 
 def by_id(case_id):
-    return next(case for case in CASES if case["id"] == case_id)
+    return case_with_id(CASES, case_id)
 
 
 def row(label, case_id, expected, report=None, completed=True, then=None, edit=None, **options):
@@ -282,6 +264,8 @@ def calculation_before_code_inspection(calls):
 
 RUN_HISTORY = by_id("run-history-pages")
 ONE_FAULT_ROWS = [
+    row("call with invalid arguments", "editor", ["call with invalid arguments: list_agents"],
+        then=call("list_agents", {"scope": 5})),
     row("delegated Skill named in a non-listing report", "resources", [],
         report=update(names=["delegate"], coverage="none")),
     row("partial report with an object coverage and held_tasks", "truncated", [],
@@ -386,6 +370,19 @@ ONE_FAULT_ROWS = [
     row("run history tool used where none is exposed", "editor", ["forbidden mutation/session/unknown attempt"],
         then=call("query_sessions", {})),
 ]
+
+
+class ScorerCliTests(unittest.TestCase):
+    def test_the_scorer_cli_exits_zero_only_for_a_passing_run(self):
+        case = by_id("editor")
+        fixture, report = exercise(case)
+        with tempfile.TemporaryDirectory() as directory:
+            trace, final = Path(directory) / "trace.jsonl", Path(directory) / "final.json"
+            trace.write_text("".join(json.dumps(call) + "\n" for call in fixture.calls))
+            final.write_text(report)
+            for flags, code in [([], 0), (["--incomplete"], 1)]:
+                with self.subTest(flags=flags):
+                    self.assertEqual(run("compatibility", "score.py", [case["id"], trace, final, *flags]).returncode, code)
 
 
 if __name__ == "__main__":

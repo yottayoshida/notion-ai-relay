@@ -2,8 +2,15 @@
 import json
 from pathlib import Path
 import re
+import sys
 import unicodedata
 from urllib.parse import urlsplit
+
+TESTS = str(Path(__file__).resolve().parents[1])
+if TESTS not in sys.path:
+    sys.path.insert(0, TESTS)
+
+from _mcp_fixture import split_rejected
 
 TOTAL_LABEL = r"(?:\b(?:total|sum|result|answer)\b|合計|結果|\badds? up to\b|(?<=\s)=)"
 FILE_REFERENCE = re.compile(r"notion-file-block://[^\s\"'<>\\]+")
@@ -38,6 +45,9 @@ def read_back_messages(event):
 
 def score(case, trace, final, completed=True):
     errors = []
+    trace, rejected = split_rejected(trace)
+    for call in rejected:
+        errors.append(f"call with invalid arguments: {call['name']}")
     if not completed:
         errors.append("run incomplete")
     reads = []
@@ -115,16 +125,5 @@ def score(case, trace, final, completed=True):
 
 
 if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("case")
-    parser.add_argument("trace", type=Path)
-    parser.add_argument("final", type=Path)
-    parser.add_argument("--incomplete", action="store_true")
-    args = parser.parse_args()
-    cases = json.loads(Path(__file__).with_name("cases.json").read_text())
-    case = next(case for case in cases if case["id"] == args.case)
-    result = score(case, [json.loads(line) for line in args.trace.read_text().splitlines()],
-                   args.final.read_text(), not args.incomplete)
-    print(json.dumps(result, indent=2))
-    raise SystemExit(0 if result["passed"] else 1)
+    from _support import scorer_cli
+    scorer_cli(score, __file__, __doc__)
