@@ -2,6 +2,7 @@
 
 import argparse
 from html.parser import HTMLParser
+import json
 import os
 from pathlib import Path
 import re
@@ -131,6 +132,35 @@ def local_target(root, source, url):
     return target
 
 
+def empty(value):
+    if isinstance(value, str):
+        return not value.strip()
+    return value is None or value == [] or value == {}
+
+
+def check_eval_cases(root):
+    folders = sorted(path for path in (Path(root) / "evals").iterdir() if path.is_dir())
+    for folder in folders:
+        path = folder / "cases.json"
+        if not path.is_file():
+            raise ValueError(f"{folder.relative_to(root)}: missing cases.json")
+        value = json.loads(path.read_text(encoding="utf-8"))
+        cases = value.get("cases") if isinstance(value, dict) else value
+        if not isinstance(cases, list) or not cases:
+            raise ValueError(f"{path.relative_to(root)}: no cases")
+        seen = set()
+        for case in cases:
+            if not isinstance(case, dict):
+                raise ValueError(f"{path.relative_to(root)}: case is not an object: {case!r}")
+            case_id = case.get("id")
+            if not isinstance(case_id, str) or not case_id or case_id in seen:
+                raise ValueError(f"{path.relative_to(root)}: missing or duplicate id {case_id!r}")
+            seen.add(case_id)
+            if not any(key.startswith("expected") and not empty(case[key]) for key in case):
+                raise ValueError(f"{path.relative_to(root)}: case {case_id} has no expected outcome")
+    return len(folders)
+
+
 def validate(root):
     root = Path(root)
     for relative in REQUIRED:
@@ -185,6 +215,9 @@ def validate(root):
             url = interface[key]
             if not isinstance(url, str) or not url.strip() or local_target(root, root / "SKILL.md", url) is None:
                 raise ValueError(f"openai.yaml {key} must reference a local asset")
+
+    if (root / "evals").is_dir():
+        check_eval_cases(root)
 
     markdowns = sorted(root.rglob("*.md"))
     link_count = 0
