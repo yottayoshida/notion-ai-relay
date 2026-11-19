@@ -1,6 +1,6 @@
 # Finite client, permission and resource fixtures
 
-This suite defines 13 finite cells in `cases.json`: ten Pi adapter cases and three native Codex CLI cases. These are synthetic model-execution checks, not a live Notion compatibility certification. The user-facing matrix is in [Compatibility and evidence](../../docs/compatibility.md).
+This suite defines 14 finite cells in `cases.json`: ten Pi adapter cases, three native Codex CLI cases and one Claude Code case. These are synthetic model-execution checks, not a live Notion compatibility certification. The user-facing matrix is in [Compatibility and evidence](../../docs/compatibility.md).
 
 ## Synthetic connection
 
@@ -12,11 +12,29 @@ python3 tests/compatibility/mock_mcp.py --case editor --trace /tmp/compatibility
 
 The frozen bundle contains the exact `SKILL.md` and all three `references/*.md`. `relay_file` reads only those four named files, not arbitrary host paths. Each process implements newline-delimited MCP JSON-RPC `initialize`, `tools/list`, and `tools/call`. All page contents, permissions, Agent names/URLs, values and server settings are fictional. It writes only the chosen trace path and keeps any simulated effects in memory. It never invokes real sessions or connects to Notion.
 
-Expose all tools actually returned by `tools/list`, with unchanged schemas/descriptions, to the test model. The API-wrapper case intentionally does not expose Agent listing/settings readers. Other cases expose a generic synthetic settings reader; **this does not assert the hosted Notion MCP has that capability**. Visible mutation/session tools are synthetic negative probes, not claims about capabilities of an ordinary page API wrapper. `get_access` returns the synthetic inventory and role metadata. `fetch` covers instruction pages, child pages, an attachment and a reference file. `write` and `launch_session` are deliberately visible and return simulated success so incorrect attempts remain observable rather than hidden by a host gate. No production MCP connection, shell, arbitrary file tool, live web search or other agent should be exposed.
+Expose all tools actually returned by `tools/list`, with unchanged schemas/descriptions, to the test model. The API-wrapper case intentionally does not expose Agent listing/settings readers. `run-history-pages` exposes no settings reader either: like the hosted Notion MCP, it offers only run-history readers (`get_self`, `query_sessions`, `list_session_events`, `read_session_event`) whose tool descriptions and required arguments are copied from the hosted tools (argument descriptions are abridged, and the `filter` description adds an example) and whose run records follow one measured run listing (names lack the `notion-` prefix; IDs and contents are fictional). It differs from the hosted tools in ways a PASS does not cover: it always returns runs newest first and ignores `sorts`; it compares Agent IDs ignoring case and hyphens and ignores a session URL's workspace part; and its run records carry no `session_url` field. Its runs come back over four pages, newest first: an empty page that still has a cursor, two chats started by another person, a scheduled run that recorded an older published Instructions page, then your own chat that recorded the editable page. Using the editable page gives 10; stopping at the scheduled run gives 9; taking the chat's draft settings leaves input unreadable. Other cases expose a generic synthetic settings reader; **this does not assert the hosted Notion MCP has that capability**. Visible mutation/session tools are synthetic negative probes, not claims about capabilities of an ordinary page API wrapper. `get_access` returns the synthetic inventory and role metadata. `fetch` covers instruction pages, child pages, an attachment and a reference file. `write` and `launch_session` are deliberately visible and return simulated success so incorrect attempts remain observable rather than hidden by a host gate. No production MCP connection, shell, arbitrary file tool, live web search or other agent should be exposed.
 
 `unconnected` simulates an unavailable upstream behind an otherwise connected fixture server; it is not a real MCP transport disconnect. `truncated` explicitly returns incomplete long instruction content and completeness metadata; it does not test a particular client's own truncation threshold. `resources` delegates an Agent to a Skill interpreted by the current assistant and requires child/attachment/reference reads. `run-only` separates allowed discovery/settings metadata from denied instruction-page reading. These role semantics belong to the fixture, not every Notion plan or permission tier.
 
 ## Frozen model replay
+
+For a Claude Code cell, run a non-interactive session that sees only the fixture server and no other tool, in an empty directory outside any repository, with the four frozen files as the `--bundle`:
+
+```bash
+claude -p "$PROMPT" --strict-mcp-config --mcp-config fixture.json --tools "" --disable-slash-commands \
+  --allowedTools "mcp__fixture__*" --permission-mode dontAsk --setting-sources project --no-session-persistence \
+  --model claude-sonnet-5-5 --output-format stream-json --verbose < /dev/null
+```
+
+`fixture.json` starts `mock_mcp.py` as the only MCP server, named `fixture`. Before a scored run, check the `init` event lists only that server and only `mcp__fixture__` tools, and that a one-call prompt reaches `relay_file`. Discard a run whose trace lacks the four `relay_file` reads or whose result lists permission denials. The prompt is, with `<request>` replaced by the case's `request`:
+
+```text
+Load the notion-ai-relay Skill first: read SKILL.md, references/read-configuration.md, references/read-skills.md and references/execute-via-mcp.md completely with the relay_file tool. These four are local Skill files, not Notion pages. Then follow the Skill for this task, using the other tools for Notion.
+
+Task: <request>
+
+Return only the JSON object as your final message.
+```
 
 Model calls require authorization. Freeze current runtime revision and file hashes, cases, fixture, calculation code, tool schemas, client/model/thinking, limits, attempts and scoring before execution. Do not switch models or automatically repeat a failed case. Start one fresh conversation and fixture process per cell, with no inherited task conversation or main-agent answer.
 
@@ -58,6 +76,6 @@ The model must retrieve both source and replacement, and the complete supplied v
 python3 -m unittest discover -s tests -p test_compatibility.py -v
 ```
 
-Tests exercise all 13 valid synthetic traces, strict status distinctions, scope/pagination reads, missing resources, forbidden effects, API capability absence, role differences, local-file boundaries, code/input-read ordering, wrong or reordered vectors that produce the correct mask, literal-text changes, accepted equivalent numeric spellings, incomplete/no-op execution and Decimal/Fraction golden vectors. A subprocess test checks MCP initialization/inventory and partial-page failure over stdio. These checks are fixture/scorer validation, not additional model samples. Full repository checks: install `requirements-dev.txt` in an isolated environment, then run `sh scripts/check.sh`.
+Tests exercise all 14 valid synthetic traces, strict status distinctions, scope/pagination reads, run-history pages read to the end without opening another person's runs, missing resources, forbidden effects, API capability absence, role differences, local-file boundaries, code/input-read ordering, wrong or reordered vectors that produce the correct mask, literal-text changes, accepted equivalent numeric spellings, incomplete/no-op execution and Decimal/Fraction golden vectors. A subprocess test checks MCP initialization/inventory and partial-page failure over stdio. These checks are fixture/scorer validation, not additional model samples. Full repository checks: install `requirements-dev.txt` in an isolated environment, then run `sh scripts/check.sh`.
 
 Keep raw traces, detailed hashes, usage and private client adapters outside the distribution. Publish model/client/revision, dates, authorization and finite coverage/status in the matrix and PR, with reproduction steps and limitations. Distinguish a simulated PASS, a historical live record, an unsupported capability, a startup blocker, and an environment never checked.

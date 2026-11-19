@@ -7,10 +7,21 @@ import re
 LOCAL_FILES = {"SKILL.md", "references/read-configuration.md", "references/read-skills.md", "references/execute-via-mcp.md"}
 TARGET_AGENT = "agent://fixture/editor"
 LOADING_TOOLS = {"relay_file", "get_access"}
+BASE_TOOLS = {"relay_file", "get_access", "list_agents", "get_settings", "fetch", "search_pages", "calculate"}
+HEX_ID = re.compile(r"[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}")
 
 
 def data(call):
     return json.loads(call["result"]["content"][0]["text"])
+
+
+def page_key(value):
+    found = HEX_ID.search(str(value).lower())
+    return found.group(0).replace("-", "") if found else str(value)
+
+
+def session_key(value):
+    return str(value).lower().removeprefix("session://").removeprefix("thread://").rsplit("/", 1)[-1].replace("-", "")
 
 
 def reported_names(value):
@@ -62,11 +73,12 @@ def score(case, calls, final, completed=True):
     loaded = {call["arguments"].get("path") for call in calls if call["name"] == "relay_file" and not call["result"].get("isError") and data(call).get("complete")}
     if loaded != LOCAL_FILES:
         errors.append("local Relay instructions not completely loaded")
-    reads = {call["arguments"].get("id") for call in calls if call["name"] == "fetch" and not call["result"].get("isError")}
-    if not set(case["reads"]).issubset(reads):
+    reads = {page_key(call["arguments"].get("id")) for call in calls if call["name"] == "fetch" and not call["result"].get("isError")}
+    if not {page_key(target) for target in case["reads"]}.issubset(reads):
         errors.append("required resource reads missing")
     names = [call["name"] for call in calls]
-    if any(name not in {"relay_file", "get_access", "list_agents", "get_settings", "fetch", "search_pages", "calculate"} for name in names):
+    allowed = BASE_TOOLS | set(case.get("extra_tools", []))
+    if any(name not in allowed for name in names):
         errors.append("forbidden mutation/session/unknown attempt")
     if any(call.get("effects") for call in calls):
         errors.append("persisted fixture effect in read-only/dry-run case")
@@ -111,6 +123,14 @@ def score(case, calls, final, completed=True):
                     errors.append("calculation attempted before complete vector read")
                 elif not same_vectors(call["arguments"].get("vectors"), supplied_vectors):
                     errors.append("calculation inputs do not match retrieved vectors")
+    listed_runs = {session_key(session.get("id")) for call in calls if call["name"] == "query_sessions" and not call["result"].get("isError")
+                   for session in data(call).get("results", [])}
+    if "own_run" in case and session_key(case["own_run"]) not in listed_runs:
+        errors.append("run list not read to the end")
+    opened = {session_key(call["arguments"].get("session_url", "")) for call in calls
+              if call["name"] in {"list_session_events", "read_session_event"}}
+    if opened & {session_key(run) for run in case.get("other_runs", [])}:
+        errors.append("another person's run opened")
     for name in {"list_agents", "get_settings", "fetch"}:
         failures = [json.dumps(call["arguments"], sort_keys=True) for call in calls if call["name"] == name and call["result"].get("isError")]
         if len(failures) != len(set(failures)):

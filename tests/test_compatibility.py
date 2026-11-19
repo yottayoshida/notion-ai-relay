@@ -40,6 +40,15 @@ def exercise(case, *, calculated_vectors=None, vectors_after_calculation=False):
             fixture.call("list_agents", {"scope": "workspace", "cursor": "next-page"})
     if case.get("settings"):
         fixture.call("get_settings", {"agent_url": "agent://fixture/editor"})
+    if case["mode"] == "run-history":
+        fixture.call("get_self", {})
+        query = {"filter": {"property": "agent_id", "string": {"equals": mock.AGENT}}, "page_size": 60}
+        page = json.loads(fixture.call("query_sessions", query)["content"][0]["text"])
+        while page["has_more"]:
+            page = json.loads(fixture.call("query_sessions", {**query, "start_cursor": page["next_cursor"]})["content"][0]["text"])
+        for run in (mock.SCHEDULED["id"], mock.OWN_CHAT["id"]):
+            fixture.call("list_session_events", {"session_url": f"session://{mock.SPACE}/{run}", "count": 20, "after_sequence": 1})
+            fixture.call("read_session_event", {"session_url": f"session://{mock.SPACE}/{run}", "sequence": mock.CONFIGURATION_EVENT})
     for target in case["reads"]:
         if target != "vectors" or not vectors_after_calculation:
             fixture.call("fetch", {"id": target})
@@ -59,8 +68,8 @@ def exercise(case, *, calculated_vectors=None, vectors_after_calculation=False):
 
 
 class CompatibilityTests(unittest.TestCase):
-    def test_valid_traces_for_all_thirteen_cells(self):
-        self.assertEqual(len(CASES), 13)
+    def test_valid_traces_for_all_fourteen_cells(self):
+        self.assertEqual(len(CASES), 14)
         self.assertEqual(sum(c["client"] == "pi" for c in CASES), 10)
         for case in CASES:
             with self.subTest(case=case["id"]):
@@ -177,6 +186,15 @@ class CompatibilityTests(unittest.TestCase):
                 result = scorer.score(case, fixture.calls, report)
                 self.assertIn("calculation inputs do not match retrieved vectors", result["errors"])
 
+    def test_run_history_readers_accept_every_session_url_form(self):
+        fixture = mock.Fixture(by_id("run-history-pages"))
+        run = mock.OWN_CHAT["id"]
+        for url in (f"session://{mock.SPACE}/{run}", f"session://{run}", thread_url(run), f"session://{run.replace('-', '').upper()}"):
+            with self.subTest(url=url):
+                self.assertFalse(fixture.call("list_session_events", {"session_url": url, "count": 1})["isError"])
+                self.assertFalse(fixture.call("read_session_event", {"session_url": url, "sequence": mock.CONFIGURATION_EVENT})["isError"])
+        self.assertTrue(fixture.call("read_session_event", {"session_url": "session://unknown-run", "sequence": 1})["isError"])
+
     def test_frozen_reader_never_reads_arbitrary_host_paths(self):
         fixture = mock.Fixture(CASES[0], BUNDLE)
         self.assertTrue(fixture.call("relay_file", {"path": "../../AGENTS.md"})["isError"])
@@ -247,11 +265,22 @@ def edit_sent_vectors(change):
     return edit
 
 
+def thread_url(session_id):
+    return "thread://" + session_id.replace("-", "")
+
+
+def reopen_with_shorthand_urls(fixture):
+    for run in (mock.SCHEDULED["id"], mock.OWN_CHAT["id"]):
+        fixture.call("list_session_events", {"session_url": thread_url(run), "count": 20, "after_sequence": 1})
+        fixture.call("read_session_event", {"session_url": f"session://{run}", "sequence": mock.CONFIGURATION_EVENT})
+
+
 def calculation_before_code_inspection(calls):
     code, calculation = find(calls, "fetch", id="comparison-code"), find(calls, "calculate")
     return [c for c in calls if c is not code and c is not calculation] + [calculation, code]
 
 
+RUN_HISTORY = by_id("run-history-pages")
 ONE_FAULT_ROWS = [
     row("delegated Skill named in a non-listing report", "resources", [],
         report=update(names=["delegate"], coverage="none")),
@@ -331,6 +360,31 @@ ONE_FAULT_ROWS = [
     row("Agent only as a mapping key", "editor", ["observed candidate omitted"], report=update(names={"Fixture Agent": None})),
     row("empty inventory reported without names", "empty", ["valid empty result misreported"], report=update(names=None)),
     row("report is not JSON", "editor", ["invalid JSON report"], report="Total: 10"),
+    row("own chat found on the fourth page of runs", "run-history-pages", []),
+    row("runs opened through shorthand session URLs", "run-history-pages", [], then=reopen_with_shorthand_urls,
+        edit=drop(lambda call: call["arguments"].get("session_url", "").startswith(f"session://{mock.SPACE}/"))),
+    row("editable page fetched by its bare ID", "run-history-pages", [], then=call("fetch", {"id": mock.EDITABLE_PAGE}),
+        edit=drop(is_call("fetch", id=RUN_HISTORY["reads"][0]))),
+    row("run list stopped at the empty first page", "run-history-pages", ["run list not read to the end"],
+        edit=drop(lambda call: call["name"] == "query_sessions" and "start_cursor" in call["arguments"])),
+    row("run list read only to the third page", "run-history-pages", ["run list not read to the end"],
+        edit=drop(is_call("query_sessions", start_cursor="cursor-3"))),
+    row("runs listed for another Agent", "run-history-pages", ["run list not read to the end"],
+        then=call("query_sessions", {"filter": {"property": "agent_id", "string": {"equals": "another-agent"}}, "start_cursor": "cursor-3"}),
+        edit=drop(lambda call: call["name"] == "query_sessions" and call["arguments"].get("filter", {}).get("string", {}).get("equals") != "another-agent")),
+    row("older published page used instead of the editable page", "run-history-pages",
+        ["required resource reads missing", "wrong result"],
+        edit=drop(is_call("fetch", id=RUN_HISTORY["reads"][0])), report=update(result=9),
+        then=call("fetch", {"id": f"https://www.notion.so/Instructions-{mock.PUBLISHED_PAGE}"})),
+    row("draft settings used, so input was never read", "run-history-pages",
+        ["required resource reads missing", "wrong status distinction", "wrong result"],
+        edit=drop(is_call("fetch", id="input")), report=lambda r: (r.update(status="blocked"), r.pop("result"))),
+    row("another person's chat listed", "run-history-pages", ["another person's run opened"],
+        then=call("list_session_events", {"session_url": f"session://{RUN_HISTORY['other_runs'][0]}", "count": 20})),
+    row("another person's chat read through a shorthand URL", "run-history-pages", ["another person's run opened"],
+        then=call("read_session_event", {"session_url": thread_url(RUN_HISTORY["other_runs"][1]), "sequence": 99})),
+    row("run history tool used where none is exposed", "editor", ["forbidden mutation/session/unknown attempt"],
+        then=call("query_sessions", {})),
 ]
 
 
