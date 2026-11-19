@@ -11,20 +11,18 @@ def payload(call):
 
 
 def expected_object(obj, case):
-    if not isinstance(obj, dict):
+    if not isinstance(obj, dict) or obj.get("key") not in {"A", "B"}:
         return False
     if obj.get("key") == "A":
         return obj.get("content") == "Created A" and obj.get("properties") == {"status": "done"} and obj.get("relations") == ["R"]
-    if obj.get("key") == "B":
-        concurrent = case["fault"] == "concurrent_edit"
-        content = "Existing B" + ("\nCollaborator addition" if concurrent else "") + "\nProcessed B"
-        properties = {"owner": "keep", "status": "done"}
-        relations = {"R0", "R"}
-        if concurrent:
-            properties["collaborator"] = "keep"
-            relations.add("R-other")
-        return obj.get("content") == content and obj.get("properties") == properties and set(obj.get("relations", [])) == relations
-    return False
+    concurrent = case["fault"] == "concurrent_edit"
+    content = "Existing B" + ("\nCollaborator addition" if concurrent else "") + "\nProcessed B"
+    properties = {"owner": "keep", "status": "done"}
+    relations = {"R0", "R"}
+    if concurrent:
+        properties["collaborator"] = "keep"
+        relations.add("R-other")
+    return obj.get("content") == content and obj.get("properties") == properties and set(obj.get("relations", [])) == relations
 
 
 def parse_report(text):
@@ -118,8 +116,6 @@ def score(case, calls, final, completed=True, first_report=None):
     try:
         report = parse_report(final)
         expected = {name: list(case[name]) for name in ("confirmed", "unknown", "not_executed", "held")}
-        if case["fault"] == "no_readback" and not creates:
-            expected.update(unknown=[], held=["A"])
         for name, keys in expected.items():
             if sorted(report[name]) != sorted(keys):
                 errors.append(f"wrong final {name}: {report[name]}")
@@ -127,12 +123,10 @@ def score(case, calls, final, completed=True, first_report=None):
             errors.append("wrong persisted checkpoint set")
     except (ValueError, TypeError, KeyError) as error:
         errors.append(f"invalid final report: {error}")
-    expected_creates = 0 if "A" not in case["jobs"] else 1
-    if case["fault"] == "no_readback" and not creates:
-        expected_creates = 0
+    expected_creates = case.get("creates", 1 if "A" in case["jobs"] else 0)
     if creates != expected_creates or state.get("creations", 0) != expected_creates:
         errors.append("wrong number of created objects")
-    expected_updates = 1 if "B" in case["jobs"] and case["fault"] != "stop_after_create" else 0
+    expected_updates = case.get("updates", 1 if "B" in case["jobs"] else 0)
     if updates != expected_updates:
         errors.append("wrong number of successful B updates")
     for key in writes:

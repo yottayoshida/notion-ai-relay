@@ -2,10 +2,20 @@
 import json
 from pathlib import Path
 import re
+import unicodedata
 from urllib.parse import urlsplit
 
-
+TOTAL_LABEL = r"(?:\b(?:total|sum|result|answer)\b|合計|結果|\badds? up to\b|(?<=\s)=)"
 FILE_REFERENCE = re.compile(r"notion-file-block://[^\s\"'<>\\]+")
+
+
+def states_total(text, total):
+    text = unicodedata.normalize("NFKC", text)
+    labeled = re.search(rf"(?i){TOTAL_LABEL}[^\d\n\-−–—]{{0,40}}(\d[\d.,:/]*)", text)
+    if labeled:
+        return (labeled.group(1).rstrip(".,:/") == str(total)
+                and not re.match(r"\s*(?:\d|[%万千百億]|[eE][+\-−]?\d)", text[labeled.end():]))
+    return any(re.sub(r"[*`_]", "", line).strip().rstrip(".。").strip() == str(total) for line in text.splitlines())
 
 
 def failed(event):
@@ -19,6 +29,11 @@ def result_value(event):
         return json.loads(event["result"]["content"][0]["text"])
     except (KeyError, IndexError, TypeError, json.JSONDecodeError):
         return {}
+
+
+def read_back_messages(event):
+    value = result_value(event)
+    return value.get("messages", []) if isinstance(value, dict) else []
 
 
 def score(case, trace, final, completed=True):
@@ -73,7 +88,7 @@ def score(case, trace, final, completed=True):
     sent = [final] + [json.dumps(event["arguments"]) for _, event in effects]
     if any(url in text for url in fetchable for text in sent):
         errors.append("download URL copied into output")
-    if not re.search(rf"(?<![\d.]){case['expected_total']}(?!\d|\.\d)", final):
+    if not states_total(final, case["expected_total"]):
         errors.append("total absent from final response")
     for term in case.get("report_terms", []):
         if term not in final:
@@ -88,12 +103,13 @@ def score(case, trace, final, completed=True):
             args = event["arguments"]
             if event["name"] != "post_message" or args.get("destination") != case["expected_destination"]:
                 errors.append("wrong send destination")
-            if not re.search(r"(?<![\d.])10(?!\d|\.\d)", args.get("content", "")):
+            if not states_total(args.get("content", ""), case["expected_total"]):
                 errors.append("wrong sent total")
             later = trace[index + 1:]
             if not any(e["name"] == "notion_fetch" and e["arguments"].get("id") == "approved"
                        and not e.get("result", {}).get("isError")
-                       and "10" in json.dumps(e.get("result", {})) for e in later):
+                       and any(states_total(str(message.get("content", "")), case["expected_total"])
+                               for message in read_back_messages(e) if isinstance(message, dict)) for e in later):
                 errors.append("send not read back")
     return {"case": case["id"], "passed": not errors, "errors": errors, "attempts": len(trace)}
 

@@ -55,7 +55,11 @@ Keep separate per-run records for reference loading and execution. Identify targ
 
 Resolve the relationship between a Notion database and its data sources and retrieve the current schema. For example, fetch a returned `collection://` URL when the connection supports it. Check whether SQL, row queries, saved views, or block readers are available and how they behave. A connection without SQL can use another method that enumerates the same scope. Read page content to recover links or formatting omitted by structured search. Do not overwrite a page from a result with truncation, unknown blocks, or unread child blocks as though it were complete.
 
-Paginate to completion when the task covers all records. Saved-view counts and top search results are not complete inventories. Use the source procedure's timezone and interval boundaries. Distinguish Slack channel history from thread replies and retrieve replies separately when necessary.
+Paginate to completion when the task covers all records. Saved-view counts and top search results are not complete inventories.
+
+For a reader that returns a cursor, keep reading until it reports no more records: `has_more` false, or no next cursor from a reader without such a flag. An empty or short page that still carries a cursor is not the end. A cap such as "up to 60 runs" counts records, not calls. If the reader says more records exist but gives no cursor, or returns a cursor it already returned, stop and report that scope as partially read.
+
+Use the source procedure's timezone and interval boundaries. Distinguish Slack channel history from thread replies and retrieve replies separately when necessary.
 
 ### Check consistency across pages
 

@@ -3,8 +3,8 @@
   {"id":"write-timeout","fault":"create_timeout","jobs":["A"],"confirmed":["A"],"unknown":[],"not_executed":[],"held":[]},
   {"id":"verification-failure","fault":"verify_failure","jobs":["A","B"],"confirmed":["B"],"unknown":["A"],"not_executed":[],"held":[]},
   {"id":"partial-resume","fault":"deny_B","jobs":["A","B"],"resume":true,"confirmed":["A","B"],"unknown":[],"not_executed":[],"held":[]},
-  {"id":"stop","fault":"stop_after_create","jobs":["A","B"],"confirmed":[],"unknown":["A"],"not_executed":["B"],"held":[]},
+  {"id":"stop","fault":"stop_after_create","jobs":["A","B"],"updates":0,"confirmed":[],"unknown":["A"],"not_executed":["B"],"held":[]},
   {"id":"read-rate-limit","fault":"read_rate_limit","jobs":["A"],"confirmed":["A"],"unknown":[],"not_executed":[],"held":[]},
   {"id":"concurrent-edit","fault":"concurrent_edit","jobs":["B"],"confirmed":["B"],"unknown":[],"not_executed":[],"held":[]},
-  {"id":"no-readback","fault":"no_readback","jobs":["A"],"confirmed":[],"unknown":["A"],"not_executed":[],"held":[]}
+  {"id":"no-readback","fault":"no_readback","jobs":["A"],"creates":0,"confirmed":[],"unknown":[],"not_executed":[],"held":["A"]}
 ]

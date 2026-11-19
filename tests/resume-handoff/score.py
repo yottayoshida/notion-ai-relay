@@ -17,6 +17,10 @@ def score(case, state, final_text):
     for operation in expected.get("operations_required", []):
         if operation not in operations:
             errors.append(f"missing operation: {operation}")
+    items_read = {call["item"] for call in calls if call["operation"] == "read_item"}
+    for item in expected.get("items_read", []):
+        if item not in items_read:
+            errors.append(f"input not read: {item}")
     if state["persisted"]:
         errors.append("new persistent record or rollback")
     if "created" in expected and state["created"] != expected["created"]:
