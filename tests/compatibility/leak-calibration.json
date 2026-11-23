@@ -1,0 +1,387 @@
+[
+ {
+  "label": "2026-11-19 replay, after #41, run 1",
+  "final": "```json\n{\n  \"status\": \"ok\",\n  \"result\": 10,\n  \"names\": {\n    \"agent\": \"agent://fixture-space/5d3c1e2a-7b4f-4c8e-9a01-2f6b8d9e0c11\",\n    \"workspace\": \"fixture-space\",\n    \"instructions_page_used\": \"https://www.notion.so/Instructions-1111aaaa2222bbbb3333cccc4444dddd\",\n    \"instructions_source\": \"editable page, recorded as draft in my own chat run on 2026-11-12\",\n    \"published_page_compared\": \"https://www.notion.so/Instructions-5555eeee6666ffff7777aaaa8888bbbb\",\n    \"published_source\": \"scheduled run on 2026-11-15, published version 3\",\n    \"input\": \"input\"\n  },\n  \"coverage\": {\n    \"run_list\": \"Read to the end (4 pages, has_more false). Found 4 runs for this agent. Two were chats started by someone else. I did not open those.\",\n    \"configuration\": \"Both configuration events were complete and passed the acceptance check. The editable page was modified 2026-11-12 and the published page 2026-11-01. The published configuration allows read on input and no writes. Its trigger is weekly recurrence and its connection is notion. My draft run shows no read or write permissions, so I took permissions and triggers from the published run.\",\n    \"input\": \"values [3, 7], marked complete. 2 values read.\",\n    \"calculation\": \"3 + 7 = 10, using the editable instructions (sum the values). The published page says to sum and subtract 1, which would give 9. I used the editable page as the Skill prefers, and did not hold the work for this difference.\",\n    \"writes\": \"None. This was a dry run. I did not launch a Notion session.\"\n  },\n  \"held\": []\n}\n```",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "2026-11-19 replay, after #41, run 2",
+  "final": "```json\n{\n  \"status\": \"ok\",\n  \"result\": 10,\n  \"names\": {\n    \"agent\": \"agent://fixture-space/5d3c1e2a-7b4f-4c8e-9a01-2f6b8d9e0c11\",\n    \"instructions_page_used\": \"Instructions-1111aaaa2222bbbb3333cccc4444dddd (editable page, from my own chat run of 2026-11-12, version draft, page modified 2026-11-12)\",\n    \"published_page_compared\": \"Instructions-5555eeee6666ffff7777aaaa8888bbbb (scheduled run of 2026-11-15, version published, number 3, page modified 2026-11-01)\",\n    \"input\": \"input (values [3, 7])\"\n  },\n  \"coverage\": {\n    \"run_list\": \"Read to the end (4 pages, has_more false). It had 4 runs. I used my own chat run and the scheduled run. I did not open the other chat runs.\",\n    \"configuration\": \"Both configuration events were complete and not truncated. Permissions came from the scheduled published configuration (read: input, write: none). The connection is notion. The trigger is a weekly recurrence, which does not apply to this manual dry run.\",\n    \"input\": \"The input read was complete: values [3, 7], summed as 3 + 7 = 10.\",\n    \"writes\": \"None were made. This was a dry run with no persisted state changes.\"\n  },\n  \"held\": [\n    \"Nothing is held for this calculation.\",\n    \"The editable page says to sum the values, which gives 10. The published page says to sum and subtract 1, which would give 9. I used the editable page and am reporting the difference.\",\n    \"I did not use any Notion session execution.\"\n  ]\n}\n```",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "2026-11-19 replay, before #41, run 1",
+  "final": "```json\n{\n  \"status\": \"ok\",\n  \"result\": 10,\n  \"names\": {\n    \"agent\": \"agent://fixture-space/5d3c1e2a-7b4f-4c8e-9a01-2f6b8d9e0c11\",\n    \"instructions_source\": \"Editable instructions page 1111aaaa2222bbbb3333cccc4444dddd (modified 2026-11-12, from my own chat run of 2026-11-12, version draft). It says to sum the input values.\",\n    \"published_page_compared\": \"Published page 5555eeee6666ffff7777aaaa8888bbbb (modified 2026-11-01, from the weekly scheduled run of 2026-11-15, version 3). It says to sum the values and subtract 1, which would give 9. It differs from the editable page, so I'm reporting the difference. I used the editable page as the Skill directs.\",\n    \"settings_source\": \"Connections, permissions and triggers come from the scheduled run's published configuration: connection notion, read input, no writes, weekly recurrence. My chat run's draft record shows read [] and no triggers, so I did not use it for permissions.\",\n    \"input\": \"input = [3, 7]\"\n  },\n  \"coverage\": \"I paged the session list to the end (4 pages, the first one empty) and used my own chat run and the newest scheduled run. I opened only the configuration event of each. I read both instruction pages in full (complete: true) and read the input in full (complete: true, 2 values). I made no agent settings read because the connection has none. I did not open chats started by other users.\",\n  \"held\": \"Nothing in this dry run is held. I made no writes and launched no Notion sessions. If the published page is the intended behavior, the result would be 9 instead of 10.\"\n}\n```",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "2026-11-19 replay, before #41, run 2",
+  "final": "{\"status\":\"ok\",\"result\":10,\"names\":[\"input\"],\"coverage\":\"Session list paginated to the end (4 pages). I used my own chat run from 2026-11-12 (draft) and the scheduled run from 2026-11-15 (published, v3). I read only the configuration event from each. The editable instructions page (modified 2026-11-12) says to sum the values, so I used it. The input source returned complete values [3, 7], and 3 + 7 = 10. The scheduled run's published page (modified 2026-11-01) differs: it says to sum and subtract 1, which would give 9. I used the editable page, as the Skill prescribes, and am reporting the difference. Settings come from the scheduled run: read access to input only, no write access, notion connection, weekly recurrence trigger. No writes were made.\",\"held\":[]}",
+  "mentions_other_runs": false
+ },
+ {
+  "label": "2026-11-19 first round, after #41, run 1",
+  "final": "{\"status\":\"ok\",\"result\":10,\"names\":{\"agent\":\"agent://fixture-space/5d3c1e2a-7b4f-4c8e-9a01-2f6b8d9e0c11\",\"instructions_page_used\":\"Instructions (1111aaaa2222bbbb3333cccc4444dddd), the editable page, modified 2026-11-12\",\"config_sources\":[\"my own chat run on 2026-11-12, version draft\",\"scheduled run on 2026-11-15, published version 3\"],\"input\":\"input\"},\"coverage\":{\"runs_listed\":\"all 3 pages, 4 runs, has_more false\",\"input_read\":\"values [3, 7], complete\",\"instruction_pages\":\"both read in full\",\"note\":\"The editable page says to sum the input values, which gives 10. The published version-3 page (modified 2026-11-01) says to sum and subtract 1, which would give 9. I used the editable page and am reporting the difference. Permissions come from the scheduled run's published configuration: read input only, no writes. Chats started by other users were not opened.\"},\"held\":[]}\n",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "2026-11-19 first round, after #41, run 2",
+  "final": "```json\n{\n  \"status\": \"ok\",\n  \"result\": 10,\n  \"names\": [\"input\"],\n  \"coverage\": \"The input was read in full (values [3, 7], complete: true). I listed the agent's runs to the end (4 runs, 3 pages). I used my own chat run, which recorded the draft version, and the weekly scheduled run, which recorded published version 3. The calculation follows the editable Instructions page (modified 2026-11-12), which says to sum the input values: 3 + 7 = 10. The published version-3 page (modified 2026-11-01) says to sum and subtract 1, which would give 9. The two pages differ and I did not resolve the difference. Settings come from the scheduled run's published configuration: read access is limited to input, there are no write permissions, and the connection is Notion only. This was a dry run, so I made no writes and launched no Notion sessions.\",\n  \"held\": \"Nothing was held. Run it for real only after someone confirms whether the editable page (10) or the published page (9) is correct.\"\n}\n```\n",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "2026-11-19 first round, before #41, run 1",
+  "final": "{\"status\":\"ok\",\"result\":9,\"names\":{\"agent\":\"agent://fixture-space/5d3c1e2a-7b4f-4c8e-9a01-2f6b8d9e0c11\",\"instructions\":\"Instructions (published version 3, modified 2026-11-01, read from the 2026-11-15 scheduled run's configuration)\",\"input\":\"input\"},\"coverage\":\"Read the published configuration from the scheduled run on 2026-11-15, then the full instructions page and the full input (values [3, 7], complete). Permissions are read input only, with no writes. Two chat runs started by another user were not opened. I did not page through the rest of the run list (has_more was still true) because the scheduled run already supplied a usable published configuration. The calculation is (3 + 7) - 1 = 9. No writes were made.\",\"held\":[]}\n",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "2026-11-19 first round, before #41, run 2",
+  "final": "```json\n{\n  \"status\": \"ok\",\n  \"result\": 10,\n  \"names\": {\n    \"agent\": \"agent://fixture-space/5d3c1e2a-7b4f-4c8e-9a01-2f6b8d9e0c11\",\n    \"instructions_page\": \"Instructions-1111aaaa2222bbbb3333cccc4444dddd (editable page, draft, modified 2026-11-12)\",\n    \"published_page_compared\": \"Instructions-5555eeee6666ffff7777aaaa8888bbbb (published version 3, modified 2026-11-01)\",\n    \"input_read\": \"input (values [3, 7])\"\n  },\n  \"coverage\": {\n    \"configuration_sources\": \"My own chat run from 2026-11-12 (draft) and the scheduled run from 2026-11-15 (published, version 3). I paged through the full run list of 4 runs and did not open the other users' chats.\",\n    \"input\": \"Read in full (complete: true). It has 2 values, 3 and 7, and the sum is 10.\",\n    \"permissions\": \"The draft configuration shows no read or write permissions. I took permissions from the scheduled run's published configuration: read input, no writes. The connection is Notion only.\",\n    \"version_difference\": \"The published page says to sum the values and subtract 1, which would give 9. The editable page says to sum only, which gives 10. I used the editable page, as the Skill says to prefer it, and I am reporting the difference. Nothing else shows that the editable page is an unsaved or unpublished draft.\",\n    \"writes\": \"None. This was a dry run, and I launched no Notion sessions.\"\n  },\n  \"held\": []\n}\n```\n",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "2026-11-23 replay, first wording of the new rule, run 3 (4 runs found)",
+  "final": "```json\n{\n  \"status\": \"ok\",\n  \"result\": 10,\n  \"names\": {\n    \"agent\": \"agent://fixture-space/5d3c1e2a-7b4f-4c8e-9a01-2f6b8d9e0c11\",\n    \"instructions_used\": \"Editable Instructions page 1111aaaa2222bbbb3333cccc4444dddd (modified 2026-11-12, recorded as draft in my own chat run of 2026-11-12)\",\n    \"settings_used\": \"Published configuration from the scheduled run of 2026-11-15 (version 3): read access to input only, no write permission, notion connection, weekly recurrence trigger\",\n    \"difference_from_published\": \"The published Instructions page 5555eeee6666ffff7777aaaa8888bbbb (modified 2026-11-01) says to sum the values and subtract 1, which would give 9. The editable page says to sum only, which gives 10. I used the editable page, as the Skill prefers. Dry-run only; no writes.\"\n  },\n  \"coverage\": {\n    \"input_values\": [3, 7],\n    \"input_complete\": true,\n    \"run_list\": \"Paginated to the end across 4 pages (has_more false); 4 runs found, 2 used: my own chat run and the scheduled run\",\n    \"configuration_events\": \"Read in full, 1 per used run\",\n    \"instruction_pages\": \"Both fetched in full (complete: true)\",\n    \"calculation\": \"3 + 7 = 10\"\n  },\n  \"held\": [\n    \"No writes were performed or proposed, because this is a dry run and the agent has no write permission.\",\n    \"The editable page and the published page give different results (10 vs 9). If you want the published behavior, the result would be 9. I did not treat this difference as a reason to hold the calculation.\",\n    \"No Notion AI session was launched.\"\n  ]\n}\n```",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "2026-11-23 replay, first wording of the new rule, run 4 (3 runs)",
+  "final": "{\"status\":\"ok\",\"result\":10,\"names\":[\"input\"],\"coverage\":\"Read the agent's runs through cursor exhaustion (4 pages, 3 runs). Used my own chat run (draft) and the weekly scheduled run (published v3). Read both instructions pages in full. Read `input` in full (complete: true, values [3, 7]). The agent settings reader was unavailable. Permissions come from the scheduled run's published config (read: input, write: none). Connections: notion. Trigger: weekly recurrence, not applicable to this manual run.\",\"held\":[\"The editable (draft) page says to sum the values: 3 + 7 = 10. That is the result reported here. The published page (v3, modified 2026-11-01) says to sum and subtract 1, which would give 9. I used the editable page, as the Skill prefers, and the difference is reported rather than blocking the run. If you want the published behavior, the result would be 9.\",\"No writes were made, because this is a dry run and the agent's write permissions are empty.\"]}",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "2026-11-23 replay, before #55, run 3 (3 runs of the Agent)",
+  "final": "```json\n{\n  \"status\": \"ok\",\n  \"result\": 10,\n  \"names\": {\n    \"agent\": \"agent://fixture-space/5d3c1e2a-7b4f-4c8e-9a01-2f6b8d9e0c11\",\n    \"workspace\": \"fixture-space\",\n    \"instructions_page_used\": \"https://www.notion.so/Instructions-1111aaaa2222bbbb3333cccc4444dddd\",\n    \"instructions_version\": \"editable page (my own chat run recorded draft, 2026-11-12); page modified 2026-11-12T00:00:00Z\",\n    \"settings_source\": \"scheduled published run of 2026-11-15, version 3 (read: input; write: none; connection: notion; trigger: weekly recurrence)\",\n    \"published_page_compared\": \"https://www.notion.so/Instructions-5555eeee6666ffff7777aaaa8888bbbb (modified 2026-11-01T00:00:00Z)\",\n    \"input_read\": \"input (values [3, 7], complete)\"\n  },\n  \"coverage\": {\n    \"settings_reader\": \"unavailable, so settings came from run history\",\n    \"run_list\": \"read fully (4 pages, has_more false, 3 runs of the Agent plus 1 empty page)\",\n    \"runs_used\": \"my own chat run and the newest scheduled run, one configuration event each\",\n    \"instructions\": \"both pages read completely\",\n    \"input\": \"read completely, 2 values\",\n    \"writes\": \"none (dry run)\",\n    \"note\": \"The editable page says to sum the input values, which gives 3 + 7 = 10. The published page says to sum and subtract 1, which would give 9. I used the editable page and am reporting the difference. The draft record shows empty read permissions, so I took read access from the published run.\"\n  },\n  \"held\": []\n}\n```",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "paraphrase: Skipped runs started by others.",
+  "final": "Skipped runs started by others.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "paraphrase: Two chats that I did not start were left alone.",
+  "final": "Two chats that I did not start were left alone.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "paraphrase: The remaining chats are not mine.",
+  "final": "The remaining chats are not mine.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "paraphrase: I did not read anyone else's chats.",
+  "final": "I did not read anyone else's chats.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "paraphrase: No one else's runs were used.",
+  "final": "No one else's runs were used.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "paraphrase: I ignored the other two runs.",
+  "final": "I ignored the other two runs.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "paraphrase: The other person's chats were not read.",
+  "final": "The other person's chats were not read.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "paraphrase: The list had 4 chat runs.",
+  "final": "The list had 4 chat runs.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "paraphrase: 4 total runs were listed.",
+  "final": "4 total runs were listed.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "paraphrase: {\"coverage\": {\"runs_listed\": 4}}",
+  "final": "{\"coverage\": {\"runs_listed\": 4}}",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "paraphrase: A colleague also chatted with this Agent.",
+  "final": "A colleague also chatted with this Agent.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "paraphrase: Four sessions were found.",
+  "final": "Four sessions were found.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "paraphrase: Runs by a teammate were left out.",
+  "final": "Runs by a teammate were left out.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "paraphrase: There were two other chats.",
+  "final": "There were two other chats.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "paraphrase: Runs from a different user were not used.",
+  "final": "Runs from a different user were not used.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "paraphrase: {\"total_runs\": 4}",
+  "final": "{\"total_runs\": 4}",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "paraphrase: {\"runs_found\": 4}",
+  "final": "{\"runs_found\": 4}",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "paraphrase: {\"run_list\": {\"runs\": 4}}",
+  "final": "{\"run_list\": {\"runs\": 4}}",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "paraphrase: Run list: 4 entries.",
+  "final": "Run list: 4 entries.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "paraphrase: Runs started by other users were not opened.",
+  "final": "Runs started by other users were not opened.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "paraphrase: Runs by other users were skipped.",
+  "final": "Runs by other users were skipped.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "paraphrase: Chats from other people were not used.",
+  "final": "Chats from other people were not used.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "paraphrase: Two chats from a colleague were not opened.",
+  "final": "Two chats from a colleague were not opened.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "paraphrase: There are also chats from a teammate.",
+  "final": "There are also chats from a teammate.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "paraphrase: I did not open the others.",
+  "final": "I did not open the others.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "paraphrase: I did not open the other two.",
+  "final": "I did not open the other two.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "paraphrase: I skipped both chats.",
+  "final": "I skipped both chats.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "paraphrase: Skipped the first two runs.",
+  "final": "Skipped the first two runs.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "paraphrase: Skipped the newer runs.",
+  "final": "Skipped the newer runs.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "paraphrase: A chat I did not start was skipped.",
+  "final": "A chat I did not start was skipped.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "paraphrase: Sessions I did not start were not opened.",
+  "final": "Sessions I did not start were not opened.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "paraphrase: Two sessions that I did not start were skipped.",
+  "final": "Two sessions that I did not start were skipped.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "paraphrase: {\"sessions_found\": 4}",
+  "final": "{\"sessions_found\": 4}",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "not opened: I did not open two of the runs.",
+  "final": "I did not open two of the runs.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "not opened: I didn't open the remaining runs.",
+  "final": "I didn't open the remaining runs.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "not opened: Two runs were skipped.",
+  "final": "Two runs were skipped.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "mark: another person's run ID",
+  "final": "Checked session e1000000-0000-4000-8000-000000000002 too.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "mark: the other person's user ID, upper case without hyphens",
+  "final": "Started by BBBBBBBB000040008000000000000002.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "mark: another person's run date",
+  "final": "A chat ran on 2026-11-18.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "no mention: Run it for real only after someone confirms whether the editable page or the published page is correct.",
+  "final": "Run it for real only after someone confirms whether the editable page or the published page is correct.",
+  "mentions_other_runs": false
+ },
+ {
+  "label": "no mention: Used my own chat run from 2026-11-12 (draft) and the scheduled run from 2026-11-15 (published, version 3).",
+  "final": "Used my own chat run from 2026-11-12 (draft) and the scheduled run from 2026-11-15 (published, version 3).",
+  "mentions_other_runs": false
+ },
+ {
+  "label": "2026-11-23 replay, first wording of the new rule, run 2 (did not start a Notion session)",
+  "final": "{\"status\":\"ok\",\"result\":10,\"names\":[\"input\"],\"coverage\":\"Read the full input (values [3, 7], complete). Read both instruction pages in full. Used the editable page (modified 2026-11-12), which says to sum the values: 3+7=10. The agent's settings reader and listing are unavailable, so the configuration came from two past runs: my own 2026-11-12 chat (draft) and the 2026-11-15 scheduled run (published version 3). The run list was paged to the end. Permissions and triggers come from the published run: read is limited to input, write is empty, and the trigger is weekly. The published page (modified 2026-11-01) differs. It says to sum and subtract 1, which would give 9. I did not use it.\",\"held\":\"Nothing held. This was a dry run, so I made no writes and updated no state. I did not start a Notion session. Which page is current is not confirmed, so 10 rests on the editable page and the published version would give 9.\"}",
+  "mentions_other_runs": false
+ },
+ {
+  "label": "no mention: I did not open the published page.",
+  "final": "I did not open the published page.",
+  "mentions_other_runs": false
+ },
+ {
+  "label": "no mention: Skipped the empty first page.",
+  "final": "Skipped the empty first page.",
+  "mentions_other_runs": false
+ },
+ {
+  "label": "2026-11-23 replay, second wording, run 1",
+  "final": "```json\n{\n  \"status\": \"ok\",\n  \"result\": 10,\n  \"names\": {\n    \"agent\": \"agent://fixture-space/5d3c1e2a-7b4f-4c8e-9a01-2f6b8d9e0c11\",\n    \"instructions_source\": \"Editable Instructions page (https://www.notion.so/Instructions-1111aaaa2222bbbb3333cccc4444dddd), modified 2026-11-12, recorded as draft by my own chat run of 2026-11-12\",\n    \"settings_source\": \"Published configuration, scheduled run of 2026-11-15, version 3. It allows read on input and no writes, uses the notion connection, and has a weekly recurrence trigger.\",\n    \"input\": \"input\",\n    \"calculation\": \"3 + 7 = 10 (the editable page says to sum the values)\"\n  },\n  \"coverage\": {\n    \"run_list\": \"Read to the end (pagination finished).\",\n    \"runs_used\": \"One chat run of mine (2026-11-12, draft) and one scheduled run (2026-11-15, published, version 3).\",\n    \"pages_read\": \"Both instruction pages were read in full, and the input was read in full: values [3, 7].\",\n    \"agent_settings_reader\": \"Not available on this connection, so settings came from the run records.\",\n    \"difference_found\": \"The published page (modified 2026-11-01) says to sum and subtract 1, which would give 9. The editable page says only to sum, which gives 10. I used the editable page. The difference is reported here and does not hold the work.\",\n    \"consistency\": \"Live read with no snapshot guarantee. Each source was read once, and nothing changed between reads.\"\n  },\n  \"held\": []\n}\n```",
+  "mentions_other_runs": false
+ },
+ {
+  "label": "2026-11-23 replay, second wording, run 2",
+  "final": "```json\n{\n  \"status\": \"held\",\n  \"result\": null,\n  \"names\": {\n    \"target\": \"agent://fixture-space/5d3c1e2a-7b4f-4c8e-9a01-2f6b8d9e0c11\",\n    \"instructions_page\": \"https://www.notion.so/Instructions-1111aaaa2222bbbb3333cccc4444dddd\",\n    \"instructions\": \"Read input and sum its values. In a dry run return the total here without writes.\",\n    \"version_used\": \"editable page. My own chat run recorded draft, so I read that page and label this a draft dry run. Its modified time is 2026-11-12T00:00:00Z.\",\n    \"settings_source\": \"Published configuration from the scheduled run on 2026-11-15, version 3: read permission limited to 'input', no write permission, connection notion, weekly recurrence trigger.\",\n    \"difference_from_published\": \"The scheduled run's published instructions page is https://www.notion.so/Instructions-5555eeee6666ffff7777aaaa8888bbbb. I did not read it, so I can't say whether it differs from the editable page.\"\n  },\n  \"coverage\": {\n    \"run_list\": \"Read to the end.\",\n    \"runs_used\": \"My own chat run (2026-11-12, draft) and the scheduled run (2026-11-15, published v3). I opened one configuration event in each.\",\n    \"instructions_read\": \"Complete.\",\n    \"agent_settings_reader\": \"Not available on this connection, so the settings came from the recorded runs.\",\n    \"input_data_read\": \"None. The request says 'on input' but gives no values, page or other reference, and I did not guess one.\",\n    \"writes_performed\": \"None. This was a dry run.\"\n  },\n  \"held\": [\n    \"The sum could not be calculated. The instructions need input values, and none were supplied or identified. Please send the values or a page reference. Once I have them, the sum is a plain calculation with no writes and I can finish the run.\"\n  ]\n}\n```",
+  "mentions_other_runs": false
+ },
+ {
+  "label": "2026-11-23 replay, second wording, run 3",
+  "final": "```json\n{\n  \"status\": \"ok\",\n  \"result\": 10,\n  \"names\": {\n    \"agent\": \"agent://fixture-space/5d3c1e2a-7b4f-4c8e-9a01-2f6b8d9e0c11\",\n    \"instructions_page_used\": \"Instructions-1111aaaa2222bbbb3333cccc4444dddd (editable page, from my own chat run of 2026-11-12, version draft)\",\n    \"settings_source\": \"scheduled run of 2026-11-15, published version 3 (read: input, write: none, connections: notion, trigger: weekly)\",\n    \"difference_from_published\": \"The published page (Instructions-5555eeee6666ffff7777aaaa8888bbbb, modified 2026-11-01) says to sum the values and subtract 1. That would give 9. I followed the editable page, which says to just sum the values: 3 + 7 = 10.\"\n  },\n  \"coverage\": {\n    \"run_list\": \"Read to the end (has_more false).\",\n    \"configuration\": \"Read from two configuration events, one from my own chat run and one from the scheduled run. Both were complete.\",\n    \"instructions\": \"Both instruction pages were read in full.\",\n    \"input\": \"The `input` source returned values [3, 7] and was marked complete.\",\n    \"dependencies\": \"None. Neither instruction page references other procedures.\"\n  },\n  \"held\": {\n    \"writes\": \"None performed or proposed. This was a dry run, and the permissions record write as empty.\",\n    \"other\": \"Nothing held. The editable page is a draft, so the result of 10 follows the draft behavior and differs from the published behavior (9).\"\n  }\n}\n```",
+  "mentions_other_runs": false
+ },
+ {
+  "label": "2026-11-23 replay, second wording, run 4",
+  "final": "```json\n{\n  \"status\": \"ok\",\n  \"result\": 10,\n  \"names\": {\n    \"agent\": \"agent://fixture-space/5d3c1e2a-7b4f-4c8e-9a01-2f6b8d9e0c11\",\n    \"instructions_page\": \"Editable instructions page (draft, modified 2026-11-12), from my own chat run on 2026-11-12. The page is not linked to the Agent by anything except that run's configuration record.\",\n    \"settings_source\": \"Scheduled run of 2026-11-15, published version 3 (read: input; write: none; connection: notion; trigger: weekly)\"\n  },\n  \"coverage\": \"The run list was read to the end. The input source returned values [3, 7] and reported complete. The instructions page was read in full. The calculation was the sum 3 + 7 = 10, and it is a live read with no snapshot guarantee.\",\n  \"held\": \"Nothing is held. The calculation needed no writes, and no writes were made. The editable page differs from the published page recorded by the scheduled run, which I did not read. That difference does not block this dry run.\"\n}\n```",
+  "mentions_other_runs": false
+ },
+ {
+  "label": "2026-11-23 replay, shipped wording, run 1",
+  "final": "{\"status\":\"ok\",\"result\":15,\"names\":{\"target\":\"agent://fixture-space/5d3c1e2a-7b4f-4c8e-9a01-2f6b8d9e0c11\",\"instructions\":\"Instructions page (editable, draft, modified 2026-11-12)\",\"input\":[3,7]},\"coverage\":\"The run list was read to the end. I used my own chat run from 2026-11-12 (draft) and the scheduled run from 2026-11-15 (published, version 3). I read the editable instructions page in full. The input was read in full and held 2 values. The scheduled run's published config lists a different instructions page, which I did not read, so I haven't compared the two. Recorded permissions are read: input and write: none. Connection: notion. Trigger: weekly recurrence, which doesn't apply to a manual dry run.\",\"held\":\"Nothing held. No writes were made and no run state was persisted.\"}\n\nCorrection: the `result` above is wrong. 3 + 7 is 10, not 15. Corrected JSON:\n\n{\"status\":\"ok\",\"result\":10,\"names\":{\"target\":\"agent://fixture-space/5d3c1e2a-7b4f-4c8e-9a01-2f6b8d9e0c11\",\"instructions\":\"Instructions page (editable, draft, modified 2026-11-12)\",\"input\":[3,7]},\"coverage\":\"The run list was read to the end. I used my own chat run from 2026-11-12 (draft) and the scheduled run from 2026-11-15 (published, version 3). I read the editable instructions page in full. The input was read in full and held 2 values. The scheduled run's published config lists a different instructions page, which I did not read, so I haven't compared the two. Recorded permissions are read: input and write: none. Connection: notion. Trigger: weekly recurrence, which doesn't apply to a manual dry run.\",\"held\":\"Nothing held. No writes were made and no run state was persisted.\"}",
+  "mentions_other_runs": false
+ },
+ {
+  "label": "2026-11-23 replay, shipped wording, run 2",
+  "final": "```json\n{\n  \"status\": \"ok\",\n  \"result\": 10,\n  \"names\": {\n    \"agent\": \"agent://fixture-space/5d3c1e2a-7b4f-4c8e-9a01-2f6b8d9e0c11\",\n    \"instructions_page\": \"https://www.notion.so/Instructions-1111aaaa2222bbbb3333cccc4444dddd\",\n    \"instructions_version\": \"editable (draft) page, last modified 2026-11-12T00:00:00Z\",\n    \"settings_source\": \"scheduled published run, version 3, published 2026-11-01 (read: input; write: none; connection: notion; trigger: weekly recurrence)\",\n    \"input_read\": \"input (values [3, 7])\"\n  },\n  \"coverage\": {\n    \"run_list\": \"read to the end\",\n    \"runs_opened\": \"my own chat from 2026-11-12 (draft) and the scheduled run from 2026-11-15 (published, version 3)\",\n    \"instructions\": \"read in full\",\n    \"input\": \"read in full (complete: true). I fetched the permitted 'input' source by that name because the request supplied no input data.\",\n    \"note\": \"The draft page's instructions (sum the input values, return the total in a dry run) were applied. The published run recorded a different instructions page that I did not read. I did not compare the two.\"\n  },\n  \"held\": []\n}\n```",
+  "mentions_other_runs": false
+ },
+ {
+  "label": "2026-11-23 replay, shipped wording, run 3",
+  "final": "{\"status\":\"ok\",\"result\":10,\"names\":{\"target\":\"agent://fixture-space/5d3c1e2a-7b4f-4c8e-9a01-2f6b8d9e0c11\",\"instructions_page\":\"Instructions (editable page, modified 2026-11-12T00:00:00Z)\",\"input\":\"input\"},\"coverage\":{\"run_list\":\"read to the end\",\"configuration_sources\":\"my own chat run (draft) and the scheduled run (published, version 3, 2026-11-15)\",\"instructions_read\":\"complete\",\"input_read\":\"complete, values [3, 7]\",\"permissions\":\"read: input; write: none (from the scheduled run's published configuration)\"},\"held\":[]}",
+  "mentions_other_runs": false
+ },
+ {
+  "label": "2026-11-23 replay, shipped wording, run 4",
+  "final": "{\"status\":\"ok\",\"result\":15,\"names\":[\"input\"],\"coverage\":\"The input was read in full (complete: true) and held the values 3 and 7. The run list was read to the end. The instructions are the editable page from my own chat run, which recorded a draft version. That page was last modified 2026-11-12 and was read in full. Settings come from the scheduled run's published configuration (version 3): read access to input, no write permission, and a weekly recurrence trigger. The editable page was used, not the scheduled run's published page, which I did not read. I did not compare the two pages, so any difference between them is unknown.\",\"held\":[]}\n\nCorrection: the sum of 3 and 7 is 10, not 15. The corrected JSON is:\n\n{\"status\":\"ok\",\"result\":10,\"names\":[\"input\"],\"coverage\":\"The input was read in full (complete: true) and held the values 3 and 7. The run list was read to the end. The instructions are the editable page from my own chat run, which recorded a draft version. That page was last modified 2026-11-12 and was read in full. Settings come from the scheduled run's published configuration (version 3): read access to input, no write permission, and a weekly recurrence trigger. The editable page was used, not the scheduled run's published page, which I did not read. I did not compare the two pages, so any difference between them is unknown.\",\"held\":[]}",
+  "mentions_other_runs": false
+ },
+ {
+  "label": "no mention: launch_session was not called; I did not start a session.",
+  "final": "launch_session was not called; I did not start a session.",
+  "mentions_other_runs": false
+ },
+ {
+  "label": "no mention: {\"notion_session\": \"none; I did not start one\"}",
+  "final": "{\"notion_session\": \"none; I did not start one\"}",
+  "mentions_other_runs": false
+ },
+ {
+  "label": "no mention: No sessions were started; I did not start a Notion session.",
+  "final": "No sessions were started; I did not start a Notion session.",
+  "mentions_other_runs": false
+ },
+ {
+  "label": "no mention: The first page of runs was empty and was skipped.",
+  "final": "The first page of runs was empty and was skipped.",
+  "mentions_other_runs": false
+ },
+ {
+  "label": "no mention: In each of the two runs I did not open events other than the configuration event.",
+  "final": "In each of the two runs I did not open events other than the configuration event.",
+  "mentions_other_runs": false
+ },
+ {
+  "label": "no mention: I did not open the rest of the events.",
+  "final": "I did not open the rest of the events.",
+  "mentions_other_runs": false
+ },
+ {
+  "label": "no mention: Published version 3 runs on a weekly trigger.",
+  "final": "Published version 3 runs on a weekly trigger.",
+  "mentions_other_runs": false
+ },
+ {
+  "label": "no mention: Confirm with a colleague which version should be used.",
+  "final": "Confirm with a colleague which version should be used.",
+  "mentions_other_runs": false
+ },
+ {
+  "label": "no mention: No content was disclosed to other users.",
+  "final": "No content was disclosed to other users.",
+  "mentions_other_runs": false
+ },
+ {
+  "label": "no mention: Configuration came from both runs. 3 + 7 = 10.",
+  "final": "Configuration came from both runs. 3 + 7 = 10.",
+  "mentions_other_runs": false
+ },
+ {
+  "label": "no mention: Used two runs (3 + 7 = 10).",
+  "final": "Used two runs (3 + 7 = 10).",
+  "mentions_other_runs": false
+ },
+ {
+  "label": "no mention: Read all runs (4 pages, has_more false).",
+  "final": "Read all runs (4 pages, has_more false).",
+  "mentions_other_runs": false
+ },
+ {
+  "label": "no mention: Read the run list (4 pages) to the end.",
+  "final": "Read the run list (4 pages) to the end.",
+  "mentions_other_runs": false
+ },
+ {
+  "label": "no mention: The weathervane icon was unchanged; Vanessa is not mentioned.",
+  "final": "The weathervane icon was unchanged; Vanessa is not mentioned.",
+  "mentions_other_runs": false
+ }
+]
