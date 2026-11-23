@@ -12,6 +12,8 @@ if TESTS not in sys.path:
 
 from _mcp_fixture import STRING, append, checked, serve, text, tool
 
+SERVER = "relay-write-fixture"
+
 OBJECT = {"type": "object", "additionalProperties": STRING}
 RELATIONS = {"type": "array", "items": STRING}
 
@@ -150,5 +152,5 @@ if __name__ == "__main__":
     parser.add_argument("--trace", type=Path, required=True)
     args = parser.parse_args()
     cases = json.loads(Path(__file__).with_name("cases.json").read_text(encoding="utf-8"))
-    serve(Fixture(next(case for case in cases if case["id"] == args.case)), args.trace, "relay-write-fixture",
+    serve(Fixture(next(case for case in cases if case["id"] == args.case)), args.trace, SERVER,
           {"fixture/resume": resume, "fixture/stop": stop})

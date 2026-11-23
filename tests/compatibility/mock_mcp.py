@@ -14,6 +14,8 @@ from _mcp_fixture import STRING, checked, serve, text, tool
 from calculations import VECTORS, equivalent_compare, source_compare
 from score import page_key, session_key
 
+SERVER = "relay-compatibility-fixture"
+
 
 TOOLS = [
     tool("get_access", "Inspect this MCP connection's exposed capability and permission map once per run.", {}, []),
@@ -234,4 +236,4 @@ if __name__ == "__main__":
     parser.add_argument("--bundle", type=Path, required=True)
     args = parser.parse_args()
     cases = json.loads(Path(__file__).with_name("cases.json").read_text(encoding="utf-8"))
-    serve(Fixture(next(case for case in cases if case["id"] == args.case), args.bundle), args.trace, "relay-compatibility-fixture")
+    serve(Fixture(next(case for case in cases if case["id"] == args.case), args.bundle), args.trace, SERVER)

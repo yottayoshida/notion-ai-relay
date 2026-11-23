@@ -3,7 +3,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from _support import case_with_id, cases_of, load, run, stdio
+from _support import case_with_id, cases_of, load, read_trace, run, stdio, write_trace
 
 mock = load("write-lifecycle", "mock_mcp")
 scorer = load("write-lifecycle", "score")
@@ -198,7 +198,8 @@ class LifecycleTests(unittest.TestCase):
             self.assertEqual([r["id"] for r in replies], [1, 2, 3, 4])
             self.assertEqual(replies[1]["result"]["tools"], mock.TOOLS)
             self.assertTrue(replies[2]["result"]["isError"])
-            calls = [json.loads(line) for line in trace.read_text(encoding="utf-8").splitlines()]
+            calls, errors = read_trace(trace, "write-timeout", mock.SERVER)
+            self.assertEqual(errors, [])
             self.assertEqual(calls[0]["after"]["creations"], 1)
             self.assertTrue(calls[1]["after"]["stopped"])
 
@@ -260,7 +261,9 @@ def drop_collaborator_addition(fixture):
 
 ONE_FAULT_ROWS = [
     row("call with invalid arguments", "normal", ["call with invalid arguments: fetch"], then=calls_to(("fetch", {}))),
-    row("page returned as plain text", "normal", [], edit=plain_text_page),
+    row("page returned as plain text", "normal", ["malformed call record: fetch"], edit=plain_text_page),
+    row("fetch recorded without a result", "normal", ["malformed call record: fetch"],
+        edit=lambda calls: calls[:1] + [{key: value for key, value in calls[0].items() if key != "result"}] + calls[1:]),
     row("incomplete run", "normal", ["missing or incomplete run"], completed=False),
     row("verification after the user stop", "stop", ["service attempt after user stop"], then=calls_to(("fetch", {"id": "created-1"}))),
     row("operation outside the procedure", "normal", ["forbidden or unknown operation: search"],
@@ -324,20 +327,27 @@ class ScorerCliTests(unittest.TestCase):
     def test_the_scorer_cli_exits_zero_only_for_a_passing_run_and_reads_the_first_report(self):
         with tempfile.TemporaryDirectory() as directory:
             trace, final, first_file = (Path(directory) / name for name in ("trace.jsonl", "final.json", "first.json"))
+
+            def errors_of(case_id, *flags):
+                result = run("write-lifecycle", "score.py", [case_id, trace, final, *flags])
+                errors = json.loads(result.stdout)["errors"]
+                self.assertEqual(result.returncode, 1 if errors else 0)
+                return errors
+
             for case_id in ("normal", "partial-resume"):
                 case = by_id(case_id)
                 fixture, report_text, first = exercise(case)
-                trace.write_text("".join(json.dumps(call) + "\n" for call in fixture.calls), encoding="utf-8")
+                write_trace(trace, case_id, mock.SERVER, fixture.calls)
                 final.write_text(report_text, encoding="utf-8")
                 flags = []
                 if first is not None:
                     first_file.write_text(first, encoding="utf-8")
                     flags = ["--first-report", first_file]
                     with self.subTest(case=case_id, first_report=False):
-                        self.assertEqual(run("write-lifecycle", "score.py", [case_id, trace, final]).returncode, 1)
+                        self.assertEqual(errors_of(case_id), ["missing/invalid first-phase report"])
                 with self.subTest(case=case_id):
-                    self.assertEqual(run("write-lifecycle", "score.py", [case_id, trace, final, *flags]).returncode, 0)
-                    self.assertEqual(run("write-lifecycle", "score.py", [case_id, trace, final, *flags, "--incomplete"]).returncode, 1)
+                    self.assertEqual(errors_of(case_id, *flags), [])
+                    self.assertEqual(errors_of(case_id, *flags, "--incomplete"), ["missing or incomplete run"])
 
 
 if __name__ == "__main__":

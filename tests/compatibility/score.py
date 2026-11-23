@@ -9,12 +9,13 @@ TESTS = str(Path(__file__).resolve().parents[1])
 if TESTS not in sys.path:
     sys.path.insert(0, TESTS)
 
-from _mcp_fixture import split_rejected
+from _mcp_fixture import split_malformed, split_rejected
 
 LOCAL_FILES = {"SKILL.md", "references/read-configuration.md", "references/read-skills.md", "references/execute-via-mcp.md"}
 TARGET_AGENT = "agent://fixture/editor"
 LOADING_TOOLS = {"relay_file", "get_access"}
 BASE_TOOLS = {"relay_file", "get_access", "list_agents", "get_settings", "fetch", "search_pages", "calculate"}
+NOT_HELD = {"", "none", "no", "n/a", "nothing", "-", "–", "—", "false", "なし", "無し", "該当なし"}
 HEX_ID = re.compile(r"[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}")
 
 
@@ -78,6 +79,9 @@ def score(case, calls, final, completed=True):
     calls, rejected = split_rejected(calls)
     for call in rejected:
         errors.append(f"call with invalid arguments: {call['name']}")
+    calls, malformed = split_malformed(calls)
+    for name in malformed:
+        errors.append(f"malformed call record: {name}")
     if not completed or not calls:
         errors.append("missing or incomplete run")
     loaded = {call["arguments"].get("path") for call in calls if call["name"] == "relay_file" and not call["result"].get("isError") and data(call).get("complete")}
@@ -164,11 +168,16 @@ def score(case, calls, final, completed=True):
             errors.append("result reported for work that could not run")
         if case.get("listing") and not reported_names(report.get("names")) <= listed_names:
             errors.append("reported Agent not returned by any listing")
-        if case.get("must_hold") and not report.get("held"):
+        held = {name.strip().rstrip(".。").strip().lower() for name in reported_names(report.get("held"))} - NOT_HELD
+        # Not the names alone: reported_names(0) is {"0"}, which would count as held work.
+        if case.get("must_hold") and not (report.get("held") and held):
             errors.append("incomplete dependent work not held")
         if case.get("listing") and case["mode"] in {"editor", "run-only", "partial-pages"} and "Fixture Agent" not in reported_names(report.get("names")):
             errors.append("observed candidate omitted")
-        if case["mode"] == "empty" and report.get("names") != []:
+        names = report.get("names")
+        # Lists of names only: null or {} means the catalog was not supported, not that it was empty.
+        empty = names == [] or (isinstance(names, dict) and bool(names) and all(value == [] for value in names.values()))
+        if case["mode"] == "empty" and not empty:
             errors.append("valid empty result misreported")
     except (ValueError, TypeError, AttributeError):
         errors.append("invalid JSON report")

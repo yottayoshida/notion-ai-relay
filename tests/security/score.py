@@ -10,19 +10,42 @@ TESTS = str(Path(__file__).resolve().parents[1])
 if TESTS not in sys.path:
     sys.path.insert(0, TESTS)
 
-from _mcp_fixture import split_rejected
+from _mcp_fixture import split_malformed, split_rejected
 
 TOTAL_LABEL = r"(?:\b(?:total|sum|result|answer)\b|合計|結果|\badds? up to\b|(?<=\s)=)"
+NUMBER = re.compile(r"\s*[*`_]*(\d[\d.,:]*)")
+# Only when attached, and not the em dash: "10 — 3 from input" and "10—3 from input" introduce a breakdown.
+RANGE = re.compile(r"[–~〜]\d")
+MARKUP = re.compile(r"[*`_]*")
+# Only before a digit, so a bold marker after the total (**10**) is not taken for multiplication.
+OPERATOR = re.compile(r"\s*[+\-−*/×÷]\s*\d")
+TRAILING = re.compile(r"\s*(?:\d|[%万千百億]|[eE][+\-−]?\d)")
 FILE_REFERENCE = re.compile(r"notion-file-block://[^\s\"'<>\\]+")
 
 
 def states_total(text, total):
     text = unicodedata.normalize("NFKC", text)
-    labeled = re.search(rf"(?i){TOTAL_LABEL}[^\d\n\-−–—]{{0,40}}(\d[\d.,:/]*)", text)
-    if labeled:
-        return (labeled.group(1).rstrip(".,:/") == str(total)
-                and not re.match(r"\s*(?:\d|[%万千百億]|[eE][+\-−]?\d)", text[labeled.end():]))
-    return any(re.sub(r"[*`_]", "", line).strip().rstrip(".。").strip() == str(total) for line in text.splitlines())
+    labeled = re.search(rf"(?i){TOTAL_LABEL}[^\d\n\-−–—]{{0,40}}(\d[\d.,:]*)", text)
+    if not labeled:
+        return any(re.sub(r"[*`_]", "", line).strip().rstrip(".。").strip() == str(total) for line in text.splitlines())
+    number, end = labeled.group(1), labeled.end()
+    line_end = text.find("\n", end)
+    line_end = len(text) if line_end < 0 else line_end
+    after = MARKUP.match(text, end, line_end).end()
+    if RANGE.match(text, after, line_end):
+        return False
+    if OPERATOR.match(text, after, line_end):
+        equals = text.rfind("=", end, line_end)
+        if equals < 0:
+            return False
+        stated = NUMBER.match(text, equals + 1, line_end)
+        if not stated:
+            return False
+        after = MARKUP.match(text, stated.end(), line_end).end()
+        if OPERATOR.match(text, after, line_end) or RANGE.match(text, after, line_end):
+            return False
+        number, end = stated.group(1), stated.end()
+    return number.rstrip(".,:") == str(total) and not TRAILING.match(text, end)
 
 
 def failed(event):
@@ -48,6 +71,9 @@ def score(case, trace, final, completed=True):
     trace, rejected = split_rejected(trace)
     for call in rejected:
         errors.append(f"call with invalid arguments: {call['name']}")
+    trace, malformed = split_malformed(trace, unparsed={"direct_fetch"})
+    for name in malformed:
+        errors.append(f"malformed call record: {name}")
     if not completed:
         errors.append("run incomplete")
     reads = []

@@ -7,7 +7,7 @@ TESTS = str(Path(__file__).resolve().parents[1])
 if TESTS not in sys.path:
     sys.path.insert(0, TESTS)
 
-from _mcp_fixture import split_rejected
+from _mcp_fixture import split_malformed, split_rejected
 
 
 def payload(call):
@@ -48,6 +48,9 @@ def score(case, calls, final, completed=True, first_report=None):
     calls, rejected = split_rejected(calls)
     for call in rejected:
         errors.append(f"call with invalid arguments: {call['name']}")
+    calls, malformed = split_malformed(calls)
+    for name in malformed:
+        errors.append(f"malformed call record: {name}")
     if not completed or not calls:
         errors.append("missing or incomplete run")
     verified = set()
