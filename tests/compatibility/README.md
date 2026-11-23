@@ -47,7 +47,7 @@ Model calls require authorization. Freeze current runtime revision and file hash
    python3 tests/compatibility/score.py editor /tmp/compatibility-calls.jsonl /tmp/final.txt
    ```
 
-   The scorer accepts the equivalent status `completed` for `ok`, a numeric sum returned as `{sum: 10}`, and `held_tasks` for `held`. Wrong totals, wrong status distinctions, and numeric replacements for boolean comparison results still fail. These aliases were added after the initial execution; retain original and corrected judgments when reporting that run.
+   The scorer reads the trace and final message as UTF-8, whatever the locale. The scorer accepts the equivalent status `completed` for `ok`, a numeric sum returned as `{sum: 10}`, and `held_tasks` for `held`. Wrong totals, wrong status distinctions, and numeric replacements for boolean comparison results still fail. These aliases were added after the initial execution; retain original and corrected judgments when reporting that run.
 
    The scorer also fails: an Agent name in a listing case that no successful listing returned (names may be strings, objects with `name`, or a mapping whose values are such lists; mapping keys are not names); a numeric `result`, or a string of digits, in a case that defines none (`null` or text such as `"not computed"` is accepted); any call in the loading-only case other than `relay_file` and the capability map; a listing case whose listing succeeds but that did not enumerate both scopes, and a refused or unavailable listing that did not try both; settings for `agent://fixture/editor` never read successfully; and any settings read for another Agent.
 

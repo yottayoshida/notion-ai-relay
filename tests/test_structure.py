@@ -3,11 +3,18 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import warnings
 
 from scripts.check_structure import check_eval_cases, frontmatter, load_yaml, stage, validate
 
 
 REPOSITORY = Path(__file__).resolve().parents[1]
+
+
+def run_check_structure(*arguments):
+    # Not strict, for the same reason as _support.run.
+    return subprocess.run([sys.executable, str(REPOSITORY / "scripts/check_structure.py"), *map(str, arguments)],
+                          capture_output=True, encoding="utf-8", errors="backslashreplace")
 
 
 class StructureTests(unittest.TestCase):
@@ -147,11 +154,8 @@ class StructureTests(unittest.TestCase):
         validate(self.root)
 
     def test_cli_rejects_malformed_metadata_yaml(self):
-        (self.root / "agents/openai.yaml").write_text("interface: [", encoding="utf-8")
-        result = subprocess.run(
-            [sys.executable, str(REPOSITORY / "scripts/check_structure.py"), "--skill-dir", str(self.root)],
-            capture_output=True, text=True,
-        )
+        (self.root / "agents/openai.yaml").write_text("interface: [報告", encoding="utf-8")
+        result = run_check_structure("--skill-dir", self.root)
         self.assertEqual(result.returncode, 1)
         self.assertIn("FAIL", result.stderr)
         self.assertNotIn("PASS", result.stdout)
@@ -208,12 +212,11 @@ class StructureTests(unittest.TestCase):
             stage(source, self.root)
 
     def test_cli_staging_success_and_installed_fixture_failure(self):
-        script = REPOSITORY / "scripts/check_structure.py"
-        result = subprocess.run([sys.executable, str(script)], capture_output=True, text=True)
+        result = run_check_structure()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("structure only", result.stdout)
         self.append_link("[broken](references/missing.md)")
-        result = subprocess.run([sys.executable, str(script), "--skill-dir", str(self.root)], capture_output=True, text=True)
+        result = run_check_structure("--skill-dir", self.root)
         self.assertEqual(result.returncode, 1)
         self.assertIn("missing local reference", result.stderr)
         self.assertNotIn("PASS", result.stdout)
@@ -265,6 +268,13 @@ class EvalCaseTests(unittest.TestCase):
             (root / "evals/discovery/cases.json").write_text('[{"id": "a"}]', encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "no expected outcome"):
                 validate(root)
+
+
+class SuiteWarningTests(unittest.TestCase):
+    def test_deprecation_warnings_stay_visible_in_the_suite_run(self):
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.warn("synthetic deprecation", DeprecationWarning)
+        self.assertEqual([str(warning.message) for warning in caught], ["synthetic deprecation"])
 
 
 if __name__ == "__main__":

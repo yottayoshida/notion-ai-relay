@@ -128,7 +128,7 @@ class Fixture:
             path = args["path"]
             if path not in LOCAL_FILES or self.bundle is None:
                 return text({"error": "outside_frozen_bundle"}, True)
-            return text({"path": path, "complete": True, "text": (self.bundle / path).read_text()})
+            return text({"path": path, "complete": True, "text": (self.bundle / path).read_text(encoding="utf-8")})
         if mode == "run-history" and name in RUN_HISTORY_HANDLED:
             return self._run_history(name, args)
         if name == "get_access":
@@ -233,5 +233,5 @@ if __name__ == "__main__":
     parser.add_argument("--trace", type=Path, required=True)
     parser.add_argument("--bundle", type=Path, required=True)
     args = parser.parse_args()
-    cases = json.loads(Path(__file__).with_name("cases.json").read_text())
+    cases = json.loads(Path(__file__).with_name("cases.json").read_text(encoding="utf-8"))
     serve(Fixture(next(case for case in cases if case["id"] == args.case), args.bundle), args.trace, "relay-compatibility-fixture")

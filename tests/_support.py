@@ -21,7 +21,7 @@ def load(suite, name):
 
 
 def cases_of(suite):
-    value = json.loads((TESTS / suite / "cases.json").read_text())
+    value = json.loads((TESTS / suite / "cases.json").read_text(encoding="utf-8"))
     return value["cases"] if isinstance(value, dict) else value
 
 
@@ -30,13 +30,14 @@ def case_with_id(cases, case_id):
 
 
 def run(suite, script, arguments, stdin=""):
+    # Not strict: a child writes its traceback in the locale's encoding, and a decode error would hide it.
     return subprocess.run([sys.executable, str(TESTS / suite / script), *map(str, arguments)],
-                          input=stdin, text=True, capture_output=True, timeout=5)
+                          input=stdin, encoding="utf-8", errors="backslashreplace", capture_output=True, timeout=5)
 
 
 def stdio(suite, arguments, requests):
     result = run(suite, "mock_mcp.py", arguments,
-                 "".join(json.dumps({"jsonrpc": "2.0", **request}) + "\n" for request in requests))
+                 "".join(json.dumps({"jsonrpc": "2.0", **request}, ensure_ascii=False) + "\n" for request in requests))
     return result, [json.loads(line) for line in result.stdout.splitlines()]
 
 
@@ -49,9 +50,9 @@ def scorer_cli(score, script, description, first_report=False):
         parser.add_argument("--first-report", type=Path)
     parser.add_argument("--incomplete", action="store_true")
     args = parser.parse_args()
-    case = case_with_id(json.loads(Path(script).with_name("cases.json").read_text()), args.case)
-    trace = [json.loads(line) for line in args.trace.read_text().splitlines()]
-    options = {"first_report": args.first_report.read_text() if args.first_report else None} if first_report else {}
-    result = score(case, trace, args.final.read_text(), not args.incomplete, **options)
+    case = case_with_id(json.loads(Path(script).with_name("cases.json").read_text(encoding="utf-8")), args.case)
+    trace = [json.loads(line) for line in args.trace.read_text(encoding="utf-8").splitlines()]
+    options = {"first_report": args.first_report.read_text(encoding="utf-8") if args.first_report else None} if first_report else {}
+    result = score(case, trace, args.final.read_text(encoding="utf-8"), not args.incomplete, **options)
     print(json.dumps(result, indent=2))
     raise SystemExit(0 if result["passed"] else 1)

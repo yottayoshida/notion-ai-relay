@@ -58,9 +58,9 @@ def score(case, state, final_text):
 
 
 if __name__ == "__main__":
-    fixture = json.loads(Path(__file__).with_name("cases.json").read_text())
+    fixture = json.loads(Path(__file__).with_name("cases.json").read_text(encoding="utf-8"))
     case = next(c for c in fixture["cases"] if c["id"] == sys.argv[1])
-    state = json.loads(Path(sys.argv[2]).read_text())
-    report = score(case, state, Path(sys.argv[3]).read_text())
+    state = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+    report = score(case, state, Path(sys.argv[3]).read_text(encoding="utf-8"))
     print(json.dumps(report, indent=2))
     sys.exit(0 if report["operation_checks_passed"] else 1)

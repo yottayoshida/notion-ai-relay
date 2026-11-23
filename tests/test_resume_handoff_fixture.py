@@ -136,6 +136,16 @@ ONE_FAULT_ROWS = [
 ]
 
 
+class FixtureProcessTests(unittest.TestCase):
+    def test_the_fixture_process_answers_a_raw_utf8_request_line_by_line(self):
+        requests = [{"operation": "read_item", "item": "報告"}, {"operation": "read_item", "item": "B"}]
+        result = run("resume-handoff", "mock_mcp.py", ["partial-dry-run"],
+                     "".join(json.dumps(request, ensure_ascii=False) + "\n" for request in requests))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        replies = [json.loads(line)["result"] for line in result.stdout.splitlines()]
+        self.assertEqual(replies, [{"error": "unknown item"}, {"id": "input-B", "content": "synthetic value B"}])
+
+
 class ScorerCliTests(unittest.TestCase):
     def test_the_scorer_cli_exits_zero_only_for_a_passing_run(self):
         operations, report_text = VALID["normal-resume-output-only"]
@@ -144,10 +154,10 @@ class ScorerCliTests(unittest.TestCase):
             connection.call(operation, item)
         with tempfile.TemporaryDirectory() as directory:
             state, final = Path(directory) / "state.json", Path(directory) / "final.txt"
-            state.write_text(json.dumps(connection.snapshot()))
+            state.write_text(json.dumps(connection.snapshot()), encoding="utf-8")
             for text, code in [(report_text, 0), ("Done! " + report_text, 1)]:
                 with self.subTest(text=text):
-                    final.write_text(text)
+                    final.write_text(text, encoding="utf-8")
                     self.assertEqual(run("resume-handoff", "score.py", ["normal-resume-output-only", state, final]).returncode, code)
 
 

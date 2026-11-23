@@ -57,7 +57,7 @@ class FixtureArgumentTests(unittest.TestCase):
                     with self.subTest(suite=suite, call=label):
                         self.assertTrue(reply["result"]["isError"])
                         self.assertEqual(json.loads(reply["result"]["content"][0]["text"])["error"], error)
-                recorded = [json.loads(line) for line in trace.read_text().splitlines()]
+                recorded = [json.loads(line) for line in trace.read_text(encoding="utf-8").splitlines()]
                 self.assertEqual([(call["name"], call["arguments"]) for call in recorded],
                                  [(name, call_arguments) for _, name, call_arguments, _ in bad_calls])
                 outcome = load(suite, "score").score(case_with_id(cases_of(suite), case_id), recorded, "")
@@ -78,7 +78,7 @@ class FixtureArgumentTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual([reply["id"] for reply in replies], [1, 2])
                 self.assertTrue(trace.read_bytes().isascii())
-                self.assertEqual(json.loads(trace.read_text())["arguments"], {key: "報告 → 10"})
+                self.assertEqual(json.loads(trace.read_text(encoding="utf-8"))["arguments"], {key: "報告 → 10"})
 
     def test_a_tools_call_without_a_string_name_gets_a_tool_error_and_the_server_keeps_running(self):
         for suite, (case_id, arguments, _) in SUITES.items():
@@ -92,7 +92,7 @@ class FixtureArgumentTests(unittest.TestCase):
                 self.assertEqual([reply["id"] for reply in replies], [1, 2, 3])
                 for reply in replies[:2]:
                     self.assertEqual(json.loads(reply["result"]["content"][0]["text"])["error"], "invalid_arguments")
-                recorded = [json.loads(line) for line in trace.read_text().splitlines()]
+                recorded = [json.loads(line) for line in trace.read_text(encoding="utf-8").splitlines()]
                 self.assertEqual([call["name"] for call in recorded], [{"x": 1}, None])
                 outcome = load(suite, "score").score(case_with_id(cases_of(suite), case_id), recorded, "")
                 self.assertIn("call with invalid arguments: None", outcome["errors"])

@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import sys
 
-FIXTURE = json.loads(Path(__file__).with_name("cases.json").read_text())
+FIXTURE = json.loads(Path(__file__).with_name("cases.json").read_text(encoding="utf-8"))
 OPERATIONS = ["get_configuration", "read_run_state", "read_item", "read_result",
               "create_result", "advance_checkpoint", "save_resume_record", "rollback"]
 
@@ -82,6 +82,8 @@ class MockMCP:
 
 
 def main():
+    sys.stdin.reconfigure(encoding="utf-8")
+    sys.stdout.reconfigure(encoding="utf-8")
     mock = MockMCP(sys.argv[1])
     for line in sys.stdin:
         request = json.loads(line)

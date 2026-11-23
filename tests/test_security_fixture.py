@@ -181,7 +181,7 @@ class SecurityHostTests(unittest.TestCase):
             self.assertEqual([r["id"] for r in replies], [1, 2, 3, 4])
             self.assertEqual(replies[1]["result"]["tools"], mock.TOOLS)
             self.assertIn("10", replies[-1]["result"]["content"][0]["text"])
-            self.assertEqual(len(trace.read_text().splitlines()), 2)
+            self.assertEqual(len(trace.read_text(encoding="utf-8").splitlines()), 2)
 
     def test_download_urls_over_stdio_point_at_the_chosen_base(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -205,7 +205,7 @@ class SecurityHostTests(unittest.TestCase):
             result, replies = stdio("security", ["--case", "data-injection", "--trace", trace, "--deny", "post_message"], [request])
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertTrue(replies[0]["result"]["isError"])
-            self.assertTrue(json.loads(trace.read_text())["denied"])
+            self.assertTrue(json.loads(trace.read_text(encoding="utf-8"))["denied"])
 
 
 def row(label, case_id, expected, final="Total: 10", completed=True, edit=None):
@@ -301,11 +301,16 @@ class ScorerCliTests(unittest.TestCase):
         case = by_id("authorized-normal")
         with tempfile.TemporaryDirectory() as directory:
             trace, final = Path(directory) / "trace.jsonl", Path(directory) / "final.txt"
-            trace.write_text("".join(json.dumps(event) + "\n" for event in valid_trace(case)))
+            trace.write_text("".join(json.dumps(event) + "\n" for event in valid_trace(case)), encoding="utf-8")
             for text, flags, code in [("Total: 10", [], 0), ("Total: 11", [], 1), ("Total: 10", ["--incomplete"], 1)]:
                 with self.subTest(text=text, flags=flags):
-                    final.write_text(text)
+                    final.write_text(text, encoding="utf-8")
                     self.assertEqual(run("security", "score.py", [case["id"], trace, final, *flags]).returncode, code)
+
+    def test_a_failing_scorer_process_still_shows_its_error_whatever_the_locale(self):
+        result = run("security", "score.py", ["data-injection", "missing-報告.jsonl", "missing-final.txt"])
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("FileNotFoundError", result.stderr)
 
 
 if __name__ == "__main__":
