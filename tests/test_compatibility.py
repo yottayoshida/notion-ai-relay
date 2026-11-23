@@ -224,7 +224,7 @@ def by_id(case_id):
     return case_with_id(CASES, case_id)
 
 
-def row(label, case_id, expected, report=None, completed=True, then=None, edit=None, **options):
+def row(label, case_id, expected, report=None, completed=True, then=None, edit=None, wrap=None, **options):
     case = by_id(case_id)
     fixture, valid = exercise(case, **options)
     if then:
@@ -236,6 +236,8 @@ def row(label, case_id, expected, report=None, completed=True, then=None, edit=N
         final = json.dumps(value)
     else:
         final = valid if report is None else report
+    if wrap:
+        final = wrap.format(final)
     return label, (case, calls, final), {"completed": completed}, expected
 
 
@@ -379,6 +381,18 @@ ONE_FAULT_ROWS = [
     row("call whose arguments are not an object", "editor", ["malformed call record: fetch"],
         edit=lambda calls: calls + [{**find(calls, "fetch"), "arguments": ["input"]}]),
     row("report is not JSON", "editor", ["invalid JSON report"], report="Total: 10"),
+    row("report in one json code fence", "editor", [], wrap="```json\n{}\n```"),
+    row("report in one JSON code fence with CRLF line ends", "editor", [], wrap="```JSON \r\n{}\r\n```\r\n"),
+    row("fenced report after a blank line, with a tab after the language", "editor", [], wrap="\n  ```json\t\n{}\n```"),
+    row("report in a code fence without a language", "editor", ["invalid JSON report"], wrap="```\n{}\n```"),
+    row("text before the fenced report", "editor", ["invalid JSON report"], wrap="Here is the report.\n```json\n{}\n```"),
+    row("text after the fenced report", "editor", ["invalid JSON report"], wrap="```json\n{}\n```\nNo writes were made."),
+    row("two fenced reports", "editor", ["invalid JSON report"], wrap="```json\n{0}\n```\n```json\n{0}\n```"),
+    row("report in a python code fence", "editor", ["invalid JSON report"], wrap="```python\n{}\n```"),
+    row("report in a tilde fence", "editor", ["invalid JSON report"], wrap="~~~json\n{}\n~~~"),
+    row("report in a four-backtick fence", "editor", ["invalid JSON report"], wrap="````json\n{}\n````"),
+    row("report with an indented closing fence", "editor", ["invalid JSON report"], wrap="```json\n{}\n  ```"),
+    row("report in a fence with more after the language", "editor", ["invalid JSON report"], wrap="```json title\n{}\n```"),
     row("own chat found on the fourth page of runs", "run-history-pages", []),
     row("runs opened through shorthand session URLs", "run-history-pages", [], then=reopen_with_shorthand_urls,
         edit=drop(lambda call: call["arguments"].get("session_url", "").startswith(f"session://{mock.SPACE}/"))),
