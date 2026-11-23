@@ -149,6 +149,6 @@ if __name__ == "__main__":
     parser.add_argument("--case", required=True)
     parser.add_argument("--trace", type=Path, required=True)
     args = parser.parse_args()
-    cases = json.loads(Path(__file__).with_name("cases.json").read_text())
+    cases = json.loads(Path(__file__).with_name("cases.json").read_text(encoding="utf-8"))
     serve(Fixture(next(case for case in cases if case["id"] == args.case)), args.trace, "relay-write-fixture",
           {"fixture/resume": resume, "fixture/stop": stop})

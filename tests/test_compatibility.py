@@ -196,7 +196,7 @@ class CompatibilityTests(unittest.TestCase):
             self.assertEqual(replies[1]["result"]["tools"], mock.TOOLS)
             self.assertFalse(replies[2]["result"]["isError"])
             self.assertTrue(replies[3]["result"]["isError"])
-            self.assertEqual(len(trace.read_text().splitlines()), 2)
+            self.assertEqual(len(trace.read_text(encoding="utf-8").splitlines()), 2)
 
 
 def by_id(case_id):
@@ -378,8 +378,8 @@ class ScorerCliTests(unittest.TestCase):
         fixture, report = exercise(case)
         with tempfile.TemporaryDirectory() as directory:
             trace, final = Path(directory) / "trace.jsonl", Path(directory) / "final.json"
-            trace.write_text("".join(json.dumps(call) + "\n" for call in fixture.calls))
-            final.write_text(report)
+            trace.write_text("".join(json.dumps(call) + "\n" for call in fixture.calls), encoding="utf-8")
+            final.write_text(report, encoding="utf-8")
             for flags, code in [([], 0), (["--incomplete"], 1)]:
                 with self.subTest(flags=flags):
                     self.assertEqual(run("compatibility", "score.py", [case["id"], trace, final, *flags]).returncode, code)

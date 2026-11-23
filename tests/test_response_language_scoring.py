@@ -1,15 +1,13 @@
 import json
 from pathlib import Path
-import subprocess
-import sys
 import tempfile
 import unittest
 
-from _support import load
+from _support import load, run
 
 ROOT = Path(__file__).parent / "response-language"
 scorer = load("response-language", "score")
-CASES = {case["id"]: case for case in json.loads((ROOT / "cases.json").read_text())}
+CASES = {case["id"]: case for case in json.loads((ROOT / "cases.json").read_text(encoding="utf-8"))}
 
 
 def judgment(output, languages=None, total=10):
@@ -199,11 +197,9 @@ class ResponseLanguageScoringTests(unittest.TestCase):
             ):
                 with self.subTest(case=case_id, assessed=assessed):
                     output_path.write_bytes(output.encode("utf-8"))
-                    assessment_path.write_text(json.dumps(judgment(output, languages)))
-                    command = [sys.executable, "-B", str(ROOT / "score.py"), case_id, str(output_path)]
-                    if assessed:
-                        command += ["--assessment", str(assessment_path)]
-                    result = subprocess.run(command, text=True, capture_output=True, timeout=5)
+                    assessment_path.write_text(json.dumps(judgment(output, languages)), encoding="utf-8")
+                    arguments = [case_id, output_path] + (["--assessment", assessment_path] if assessed else [])
+                    result = run("response-language", "score.py", arguments)
                     self.assertEqual(result.returncode, expected_exit, result.stderr)
                     report = json.loads(result.stdout)
                     self.assertEqual(report["passed"], expected_exit == 0)

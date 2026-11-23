@@ -87,13 +87,19 @@ def split_rejected(calls):
 
 
 def append(trace, record):
-    # ASCII escapes keep the write independent of the locale's encoding.
-    with trace.open("a") as out:
+    with trace.open("a", encoding="utf-8") as out:
         out.write(json.dumps(record) + "\n")
+
+
+def use_utf8_stdio():
+    # Not the locale's encoding: clients send UTF-8 JSON, which fails to decode under Shift JIS.
+    sys.stdin.reconfigure(encoding="utf-8")
+    sys.stdout.reconfigure(encoding="utf-8")
 
 
 def serve(fixture, trace, server_name, extra_methods=None):
     extra_methods = extra_methods or {}
+    use_utf8_stdio()
     for line in sys.stdin:
         request = json.loads(line)
         if "id" not in request:

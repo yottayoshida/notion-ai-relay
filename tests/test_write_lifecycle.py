@@ -198,7 +198,7 @@ class LifecycleTests(unittest.TestCase):
             self.assertEqual([r["id"] for r in replies], [1, 2, 3, 4])
             self.assertEqual(replies[1]["result"]["tools"], mock.TOOLS)
             self.assertTrue(replies[2]["result"]["isError"])
-            calls = [json.loads(line) for line in trace.read_text().splitlines()]
+            calls = [json.loads(line) for line in trace.read_text(encoding="utf-8").splitlines()]
             self.assertEqual(calls[0]["after"]["creations"], 1)
             self.assertTrue(calls[1]["after"]["stopped"])
 
@@ -327,11 +327,11 @@ class ScorerCliTests(unittest.TestCase):
             for case_id in ("normal", "partial-resume"):
                 case = by_id(case_id)
                 fixture, report_text, first = exercise(case)
-                trace.write_text("".join(json.dumps(call) + "\n" for call in fixture.calls))
-                final.write_text(report_text)
+                trace.write_text("".join(json.dumps(call) + "\n" for call in fixture.calls), encoding="utf-8")
+                final.write_text(report_text, encoding="utf-8")
                 flags = []
                 if first is not None:
-                    first_file.write_text(first)
+                    first_file.write_text(first, encoding="utf-8")
                     flags = ["--first-report", first_file]
                     with self.subTest(case=case_id, first_report=False):
                         self.assertEqual(run("write-lifecycle", "score.py", [case_id, trace, final]).returncode, 1)

@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 
 OLD = "16fb435eae7074ccf53a7448ea051d519251b353"
@@ -44,7 +45,7 @@ def run_command(command, *, cwd, env, root):
         validate_cli_destinations(root, cwd, env)
     print("+", " ".join(map(str, command)), flush=True)
     result = subprocess.run(list(map(str, command)), cwd=cwd, env=env,
-                            text=True, stdout=subprocess.PIPE,
+                            encoding="utf-8", stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE, timeout=120)
     print(result.stdout, end="", flush=True)
     print(result.stderr, end="", flush=True)
@@ -53,6 +54,7 @@ def run_command(command, *, cwd, env, root):
 
 
 def main():
+    sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cli", type=Path, required=True,
                         help="skills 1.8.1 bin/cli.mjs, with dependencies installed")
@@ -104,11 +106,11 @@ def main():
                              if item["name"] == "notion-ai-relay")
                 assert Path(entry["path"]).resolve() == installed.resolve()
                 if scope == "project":
-                    lock = json.loads((project / "skills-lock.json").read_text())
+                    lock = json.loads((project / "skills-lock.json").read_text(encoding="utf-8"))
                     assert lock["skills"]["notion-ai-relay"]["ref"] == revision
                     assert entry["status"] == "tracked"
                 if index == 0:
-                    with (installed / "SKILL.md").open("a") as stream:
+                    with (installed / "SKILL.md").open("a", encoding="utf-8") as stream:
                         stream.write("\nLocal maintenance-test note.\n")
                     backup = root / f"{scope}-backup"
                     run("cp", "-RL", installed, backup)
@@ -130,7 +132,7 @@ def main():
             assert run("git", "-C", clone, "rev-parse", "HEAD").strip() == revision
             assert files(clone) == files(snapshots[revision])
             print(f"PASS Git: {revision}", flush=True)
-        (clone / "local-note.txt").write_text("preserve me\n")
+        (clone / "local-note.txt").write_text("preserve me\n", encoding="utf-8")
         assert run("git", "-C", clone, "status", "--porcelain").strip()
         print("PASS dirty-clone detection: untracked file blocks documented clean-check precondition")
 
@@ -143,7 +145,7 @@ def main():
             run("diff", "-ru", "--exclude=.git", snapshots[revision], manual)
             assert files(manual) == files(snapshots[revision])
             if index == 0:
-                (manual / "obsolete-local-file.txt").write_text("keep only in holding copy\n")
+                (manual / "obsolete-local-file.txt").write_text("keep only in holding copy\n", encoding="utf-8")
             print(f"PASS ZIP/manual: {revision}", flush=True)
         assert (root / "manual-holding-1/obsolete-local-file.txt").is_file()
         assert not (manual / "obsolete-local-file.txt").exists()

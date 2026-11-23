@@ -51,7 +51,7 @@ class Disable(ast.NodeTransformer):
 
 
 def scorer(path, position=None):
-    tree = ast.parse(path.read_text())
+    tree = ast.parse(path.read_text(encoding="utf-8"))
     if position is not None:
         tree = ast.fix_missing_locations(Disable(position).visit(tree))
     namespace = {"__name__": "scorer_under_test", "__file__": str(path)}
@@ -82,7 +82,7 @@ class ScorerRuleTests(unittest.TestCase):
         for suite, module in SUITES.items():
             with self.subTest(suite=suite):
                 path = TESTS / suite / "score.py"
-                source = path.read_text()
+                source = path.read_text(encoding="utf-8")
                 positions = sorted((node.lineno, node.col_offset) for node in ast.walk(ast.parse(source)) if is_check(node))
                 counted = sum(len(re.findall(pattern, source, re.MULTILINE)) for pattern in CHECK_PATTERNS)
                 self.assertEqual(len(positions), counted, f"{suite}: AST found {len(positions)} checks, text has {counted}")

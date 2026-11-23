@@ -107,7 +107,7 @@ def score(case, output, assessment=None, completed=True):
 
 
 def main():
-    cases = json.loads(Path(__file__).with_name("cases.json").read_text())
+    cases = json.loads(Path(__file__).with_name("cases.json").read_text(encoding="utf-8"))
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("case", choices=[case["id"] for case in cases])
     parser.add_argument("output", type=Path)
@@ -115,7 +115,7 @@ def main():
     parser.add_argument("--incomplete", action="store_true")
     args = parser.parse_args()
     case = next(case for case in cases if case["id"] == args.case)
-    assessment = json.loads(args.assessment.read_text()) if args.assessment else None
+    assessment = json.loads(args.assessment.read_text(encoding="utf-8")) if args.assessment else None
     output = args.output.read_bytes().decode("utf-8")
     result = score(case, output, assessment, completed=not args.incomplete)
     print(json.dumps(result, indent=2))
