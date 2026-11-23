@@ -63,15 +63,17 @@ RUN_PAGES = {
 }
 
 
-def session(session_id, creator, creator_type, trigger, version, when):
-    return {"object": "session", "id": session_id, "agent_id": AGENT, "title": "Weekly update" if trigger == "recurrence" else "Chat",
+def session(session_id, creator, creator_type, trigger, version, when, title="Chat"):
+    return {"object": "session", "id": session_id, "agent_id": AGENT, "title": "Weekly update" if trigger == "recurrence" else title,
             "status": "completed", "created_by": {"id": creator, "type": creator_type},
             "agent_version": None if version is None else {"id": f"version-{version}", "number": version, "published_at": "2026-11-01T00:00:00Z"},
             "trigger_type": trigger, "type_labels": ["triggered" if trigger == "recurrence" else "chat"], "created_at": when, "updated_at": when}
 
 
-OTHER_CHATS = [session("e1000000-0000-4000-8000-000000000001", OTHER, "user", "chat", 3, "2026-11-18T09:00:00Z"),
-               session("e1000000-0000-4000-8000-000000000002", OTHER, "user", "chat", 3, "2026-11-17T09:00:00Z")]
+OTHER_CHATS = [session("e1000000-0000-4000-8000-000000000001", OTHER, "user", "chat", 3, "2026-11-18T09:00:00Z",
+                       "Thistlewood supplier review"),
+               session("e1000000-0000-4000-8000-000000000002", OTHER, "user", "chat", 3, "2026-11-17T09:00:00Z",
+                       "Quillfeather budget questions")]
 SCHEDULED = session("e2000000-0000-4000-8000-000000000003", BOT, "bot", "recurrence", 3, "2026-11-15T00:00:00Z")
 OWN_CHAT = session("e3000000-0000-4000-8000-000000000004", SELF, "user", "chat", None, "2026-11-12T01:00:00Z")
 RUNS = {run["id"]: run for run in [*OTHER_CHATS, SCHEDULED, OWN_CHAT]}
@@ -222,7 +224,9 @@ class Fixture:
             return text({**event, "content": "Loaded a business page."}) if event else text({"error": "event_not_found", "retryable": False}, True)
         version = "draft" if RUNS[run]["agent_version"] is None else "published"
         page, readable = RECORDED[version]
+        # No setting names, URLs or numbers here: they would trip the duplicate-field and URL checks and change the total.
         return text({"sequence": sequence, "summary": events[sequence - 1]["summary"], "tool": "notion_load_agent",
+                     "creator": {"name": "Ottoline Vane", "type": "person"}, "loaded_content": "Pemberton Freight renewal notes",
                      "output": {"agentUrl": f"agent://{SPACE}/{AGENT}", "version": version,
                                 "instructionsPageUrl": f"https://www.notion.so/Instructions-{page}",
                                 "permissions": {"read": readable, "write": []}, "connections": ["notion"],
