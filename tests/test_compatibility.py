@@ -3,7 +3,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from _support import TESTS, case_with_id, cases_of, load, run, stdio
+from _support import TESTS, case_with_id, cases_of, load, read_trace, run, stdio, write_trace
 
 BUNDLE = TESTS.parent
 mock = load("compatibility", "mock_mcp")
@@ -196,7 +196,8 @@ class CompatibilityTests(unittest.TestCase):
             self.assertEqual(replies[1]["result"]["tools"], mock.TOOLS)
             self.assertFalse(replies[2]["result"]["isError"])
             self.assertTrue(replies[3]["result"]["isError"])
-            self.assertEqual(len(trace.read_text(encoding="utf-8").splitlines()), 2)
+            calls, errors = read_trace(trace, "partial-pages", mock.SERVER)
+            self.assertEqual((len(calls), errors), (2, []))
 
 
 def by_id(case_id):
@@ -343,6 +344,20 @@ ONE_FAULT_ROWS = [
     row("observed candidate dropped after a page failure", "partial-pages", ["observed candidate omitted"], report=update(names=[])),
     row("Agent only as a mapping key", "editor", ["observed candidate omitted"], report=update(names={"Fixture Agent": None})),
     row("empty inventory reported without names", "empty", ["valid empty result misreported"], report=update(names=None)),
+    row("empty inventory reported as a mapping of empty lists", "empty", [],
+        report=update(names={"workspace": [], "favorites": []})),
+    row("empty inventory reported as an empty mapping", "empty", ["valid empty result misreported"], report=update(names={})),
+    row("dependent review reported as held: none", "truncated", ["incomplete dependent work not held"], report=update(held="none")),
+    row("dependent review reported as held: なし", "truncated", ["incomplete dependent work not held"], report=update(held=["なし"])),
+    row("dependent review held as a named object", "truncated", [], report=update(held=[{"name": "review"}])),
+    row("dependent review reported as held: false", "truncated", ["incomplete dependent work not held"], report=update(held=False)),
+    row("dependent review reported as held: None.", "truncated", ["incomplete dependent work not held"], report=update(held="None.")),
+    *[row(f"dependent review reported as held: {held!r}", "truncated", ["incomplete dependent work not held"], report=update(held=held))
+      for held in (0, "false", "無し", "該当なし", "—")],
+    row("fetch recorded without a result", "editor", ["malformed call record: fetch"],
+        edit=lambda calls: calls + [{"name": "fetch", "arguments": {"id": "input"}}]),
+    row("call whose arguments are not an object", "editor", ["malformed call record: fetch"],
+        edit=lambda calls: calls + [{**find(calls, "fetch"), "arguments": ["input"]}]),
     row("report is not JSON", "editor", ["invalid JSON report"], report="Total: 10"),
     row("own chat found on the fourth page of runs", "run-history-pages", []),
     row("runs opened through shorthand session URLs", "run-history-pages", [], then=reopen_with_shorthand_urls,
@@ -378,11 +393,12 @@ class ScorerCliTests(unittest.TestCase):
         fixture, report = exercise(case)
         with tempfile.TemporaryDirectory() as directory:
             trace, final = Path(directory) / "trace.jsonl", Path(directory) / "final.json"
-            trace.write_text("".join(json.dumps(call) + "\n" for call in fixture.calls), encoding="utf-8")
+            write_trace(trace, case["id"], mock.SERVER, fixture.calls)
             final.write_text(report, encoding="utf-8")
-            for flags, code in [([], 0), (["--incomplete"], 1)]:
+            for flags, errors in [([], []), (["--incomplete"], ["missing or incomplete run"])]:
                 with self.subTest(flags=flags):
-                    self.assertEqual(run("compatibility", "score.py", [case["id"], trace, final, *flags]).returncode, code)
+                    result = run("compatibility", "score.py", [case["id"], trace, final, *flags])
+                    self.assertEqual((result.returncode, json.loads(result.stdout)["errors"]), (1 if errors else 0, errors))
 
 
 if __name__ == "__main__":

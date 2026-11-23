@@ -73,7 +73,7 @@ def checked(tools, name, arguments, dispatch):
 
 
 def tool_error(call):
-    result = call.get("result") or {}
+    result = (call.get("result") if isinstance(call, dict) else None) or {}
     try:
         return json.loads(result["content"][0]["text"]).get("error") if result.get("isError") else None
     except (KeyError, IndexError, TypeError, ValueError, AttributeError):
@@ -84,6 +84,33 @@ def split_rejected(calls):
     rejected = [tool_error(call) == "invalid_arguments" for call in calls]
     return ([call for call, flag in zip(calls, rejected) if not flag],
             [call for call, flag in zip(calls, rejected) if flag])
+
+
+def malformed(call, unparsed):
+    if not (isinstance(call, dict) and isinstance(call.get("name"), str) and isinstance(call.get("arguments"), dict)):
+        return True
+    result = call.get("result")
+    content = result.get("content") if isinstance(result, dict) else None
+    if not (isinstance(content, list) and content and isinstance(content[0], dict) and isinstance(content[0].get("text"), str)):
+        return True
+    if result.get("isError") or call["name"] in unparsed:
+        # Not parsed: error text and results a scorer never reads may be plain messages from the host.
+        return False
+    try:
+        # An object, not any JSON value: the scorers read fields from the results they parse.
+        return not isinstance(json.loads(content[0]["text"]), dict)
+    except ValueError:
+        return True
+
+
+def split_malformed(calls, unparsed=()):
+    flags = [malformed(call, unparsed) for call in calls]
+    return ([call for call, flag in zip(calls, flags) if not flag],
+            [call.get("name") if isinstance(call, dict) else None for call, flag in zip(calls, flags) if flag])
+
+
+def start_record(case_id, server):
+    return {"trace": "start", "case": case_id, "server": server}
 
 
 def append(trace, record):
@@ -100,6 +127,8 @@ def use_utf8_stdio():
 def serve(fixture, trace, server_name, extra_methods=None):
     extra_methods = extra_methods or {}
     use_utf8_stdio()
+    # Appended, not truncated: a restarted server would otherwise erase the calls made before the restart.
+    append(trace, start_record(fixture.case["id"], server_name))
     for line in sys.stdin:
         request = json.loads(line)
         if "id" not in request:

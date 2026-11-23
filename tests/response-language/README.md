@@ -11,7 +11,7 @@
 
 ## What the scorer can and cannot determine
 
-`score.py` checks JSON syntax, exact keys/enum/ID/total, a nonempty text summary, and the POST/REPLY or DRAFT/optional NOTE block structure. It accepts ordinary headings, bold labels, colons and CRLF as alternative block formatting. POST/REPLY output may have a preamble; that prose is judged separately in the reply language. Duplicate/empty/missing blocks, extra JSON commentary, and preambles outside the DRAFT/optional NOTE format are rejected.
+`score.py` checks JSON syntax, exact keys/enum/ID/total, a nonempty text summary, and the POST/REPLY or DRAFT/optional NOTE block structure. It accepts Markdown headings, bold labels, colons and CRLF as alternative block formatting. A label on a plain line must be upper case (`POST`, not `Post:`), so that a line such as `Note:` inside a draft stays part of it. POST/REPLY output may have a preamble; that prose is judged separately in the reply language. Duplicate/empty/missing blocks, extra JSON commentary, and preambles outside the DRAFT/optional NOTE format are rejected.
 
 It is **not a language classifier** and does not infer meaning from a required word, script character, or digit. A human must inspect the actual output, then record its observed segment languages, correct meaning, and requested format. Do not copy `expected` into the judgment or accept the assistant's self-reported language as evidence. Manual grading is not independent review unless a separate reviewer actually performed it.
 

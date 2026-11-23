@@ -8,9 +8,9 @@ import re
 
 
 HEADINGS = re.compile(
-    r"^[ \t]*(?:#{1,6}[ \t]+)?(?P<mark>\*\*|__)?(?P<role>POST|REPLY|DRAFT|NOTE)"
+    r"^[ \t]*(?P<hash>#{1,6}[ \t]+)?(?P<mark>\*\*|__)?(?P<role>(?i:POST|REPLY|DRAFT|NOTE))"
     r"[ \t]*[:：]?(?(mark)(?P=mark))[ \t]*[:：]?[ \t]*\r?$",
-    re.IGNORECASE | re.MULTILINE)
+    re.MULTILINE)
 
 
 def output_digest(output):
@@ -18,7 +18,8 @@ def output_digest(output):
 
 
 def blocks(output):
-    matches = list(HEADINGS.finditer(output))
+    # Not case-insensitive on plain lines: a draft's own "Note:" line would split the draft in two.
+    matches = [match for match in HEADINGS.finditer(output) if match["hash"] or match["mark"] or match["role"].isupper()]
     result = {}
     if not matches:
         raise ValueError("expected labeled output blocks")
