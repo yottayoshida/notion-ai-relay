@@ -14,7 +14,7 @@ npx skills add yottayoshida/notion-ai-relay
 
 For manual installation, put this repository in your client's Skill directory as a folder named `notion-ai-relay`, the `name` in `SKILL.md`, for example with `git clone https://github.com/yottayoshida/notion-ai-relay.git`. A GitHub zip extracts to `notion-ai-relay-main`; rename it, because a client may name the Skill after its folder. Keep `SKILL.md` and `references/` together. `agents/openai.yaml` contains optional Codex display metadata.
 
-For installed-file version checks, safe updates, backups, and rollback, see [installation maintenance](docs/install-maintenance.md). The guide separates disk verification from client reload and MCP compatibility.
+For installed-file version checks, safe updates, backups, and rollback, see [installation maintenance](docs/install-maintenance.md).
 
 [Connect Notion MCP](https://developers.notion.com/docs/get-started-with-mcp) in your AI assistant separately. If a workflow uses another service, connect an MCP server that supports the required operations for that service.
 
@@ -58,9 +58,9 @@ The Skill maps each operation to the MCP tools and argument schemas exposed by y
 
 Some MCP connections cannot retrieve full Agent settings. The Skill then uses the Agent's runs as described under Use; failing that, provide an instruction-page URL, the instruction text, or the missing settings. Pasted text and the editable Instructions page are not treated as a verified current published version. Missing registration or enabled-state metadata does not prevent execution of an explicitly selected procedure when its instructions and required input are available.
 
-The Skill does not launch or drive Notion-side agents or AI sessions. External writes and messages remain subject to your request and the host's authorization requirements. A dry run does not update completion state.
+The Skill does not launch or drive Notion-side agents or AI sessions. A relayed run happens in your assistant, not in Notion: it does not appear in the Agent's Activity, and it neither uses nor adds to the Agent's Memories. External writes and messages remain subject to your request and the host's authorization requirements. A dry run does not update completion state.
 
-This repository distributes instructions. It does not provide a production MCP server or a persistent background process; synthetic fixture servers under `tests/` are evaluation-only. Skill loading and available MCP capabilities depend on the client; compatibility has not been verified across all clients. See the dated [compatibility matrix](docs/compatibility.md) for synthetic checks, historical live records, blockers and unverified environments.
+This repository distributes instructions. It does not provide a production MCP server or a persistent background process; synthetic fixture servers under `tests/` are evaluation-only. See the dated [compatibility matrix](docs/compatibility.md) for synthetic checks, historical live records, blockers and unverified environments.
 
 ## Docs
 
