@@ -52,9 +52,15 @@ RUN_HISTORY_TOOLS = [
           "lookback": {"type": "string", "description": "How far back to search, such as \"30d\" or \"1y\". Leave it out to search the past year."}},
          ["question"]),
 ]
+SKILL_TOOLS = [
+    tool("get_enabled_skills", "Use this tool to view the Notion skills the user has enabled for you and other external MCP clients, each with "
+         "a name and a description of when it should be used. If you choose to use one of these skills, mention to the user that you are "
+         "loading the skill from Notion first, then download them.", {}, []),
+]
+SKILL_BASE = {"get_access", "relay_file", "fetch", "search_pages", "write", "launch_session"}
 LOCAL_TOOLS = {"relay_file", "calculate"}
 TRACKING = {"skill": {"type": "string", "description": "For tracking only: the name of the agent skill you are following for this task, such as notion-meeting-prep. Omit if you are not following a skill."}}
-for item in TOOLS + RUN_HISTORY_TOOLS:
+for item in TOOLS + RUN_HISTORY_TOOLS + SKILL_TOOLS:
     if item["name"] not in LOCAL_TOOLS:
         item["inputSchema"]["properties"].update(TRACKING)
 RUN_HISTORY_BASE = {"get_access", "relay_file", "fetch", "write", "launch_session"}
@@ -100,15 +106,19 @@ TOPIC_MATCHES = [{"session_url": f"session://{SPACE}/{run['id']}", "title": run[
                  for run, excerpt in [(OTHER_CHATS[0], "Thistlewood supplier review: compared the two renewal quotes."),
                                       (MENTION, "Marrowgate invoice thread: asked the Agent to total the open invoices."),
                                       (OWN_CHAT, "Dry run: read input and returned the sum.")]]
-CONFIGURATION_EVENT = 10
-EVENT_COUNT = 40
+EVENT_COUNT = 140
+
+
+# Do not move your own chat's event back into the first 20: a reader that stops after one listing would pass.
+def configuration_event(session_id):
+    return 23 if session_id == OWN_CHAT["id"] else 10
 
 
 def run_events(session_id):
     trigger = RUNS[session_id]["trigger_type"]
     events = []
     for sequence in range(1, EVENT_COUNT + 1):
-        if sequence == CONFIGURATION_EVENT:
+        if sequence == configuration_event(session_id):
             summary = "The current custom agent definition and configuration (output of notion_load_agent)"
         elif sequence == 1:
             summary = "Run started" if trigger == "recurrence" else "User message"
@@ -137,6 +147,8 @@ class Fixture:
     def tools(self):
         if self.case["mode"] == "run-history":
             return [item for item in TOOLS if item["name"] in RUN_HISTORY_BASE] + RUN_HISTORY_TOOLS
+        if self.case["mode"] == "enabled-skills":
+            return [item for item in TOOLS if item["name"] in SKILL_BASE] + SKILL_TOOLS
         return [item for item in TOOLS if not (self.case["mode"] == "api-wrapper" and item["name"] in {"list_agents", "get_settings"})]
 
     def call(self, name, args):
@@ -158,8 +170,8 @@ class Fixture:
         if name == "get_access":
             return text({"capabilities": [item["name"] for item in self.tools()],
                          "connection": "ordinary-page-api-wrapper" if mode == "api-wrapper" else "synthetic-hosted-like",
-                         "agent_edit": mode != "run-only", "agent_discovery": mode != "api-wrapper",
-                         "agent_settings_read": mode != "api-wrapper", "instruction_page_read": mode != "run-only",
+                         "agent_edit": mode not in {"run-only", "enabled-skills"}, "agent_discovery": mode not in {"api-wrapper", "enabled-skills"},
+                         "agent_settings_read": mode not in {"api-wrapper", "enabled-skills"}, "instruction_page_read": mode != "run-only",
                          "notion_session_execution": True, "known_skill_management_location": None})
         if name == "list_agents":
             if mode in {"unconnected", "denied"}:
@@ -171,6 +183,9 @@ class Fixture:
             if mode == "partial-pages" and args["scope"] == "workspace":
                 value["nextCursor"] = "next-page"
             return text(value)
+        if name == "get_enabled_skills":
+            return text({"skills": [{"id": f"skill-{number:02d}", "name": f"Fixture skill {number:02d}", "description": "Synthetic Skill"}
+                                    for number in range(1, self.case["skill_count"] + 1)]})
         if name == "get_settings":
             return text({"agent_url": "agent://fixture/editor", "instructions_url": "agent-instructions", "version": "published", "agent_version": 1,
                          "settings_complete": True, "permissions": {"read": ["input", "delegate", "child", "attachment", "reference"], "write": ["approved"]}})
@@ -241,7 +256,7 @@ class Fixture:
                 chosen = events[-count:]
             return text({"events": chosen})
         sequence = args.get("sequence")
-        if sequence != CONFIGURATION_EVENT:
+        if sequence != configuration_event(run):
             event = next((e for e in events if e["sequence"] == sequence), None)
             return text({**event, "content": "Loaded a business page."}) if event else text({"error": "event_not_found", "retryable": False}, True)
         version = "draft" if RUNS[run]["agent_version"] is None else "published"

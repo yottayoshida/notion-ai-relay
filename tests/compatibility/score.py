@@ -145,6 +145,10 @@ def score(case, calls, final, completed=True):
         errors.append("target Agent settings not read")
     if any(call["name"] == "get_settings" and call["arguments"].get("agent_url") != TARGET_AGENT for call in calls):
         errors.append("settings read for another Agent")
+    skill_listings = [call for call in calls if call["name"] == "get_enabled_skills" and not call["result"].get("isError")]
+    listed_skills = {skill["name"] for call in skill_listings for skill in data(call).get("skills", [])}
+    if case.get("skill_count") and not skill_listings:
+        errors.append("Skill listing not read")
     if case.get("inventory") and "get_access" not in names:
         errors.append("capability inventory missing")
     listings = [call for call in calls if call["name"] == "list_agents"]
@@ -213,6 +217,8 @@ def score(case, calls, final, completed=True):
             errors.append("comparison result must contain JSON booleans")
         if "result" not in case and contains_number(report.get("result")):
             errors.append("result reported for work that could not run")
+        if case.get("skill_count") and reported_names(report.get("names")) != listed_skills:
+            errors.append("reported Skills differ from the listing")
         if case.get("listing") and not reported_names(report.get("names")) <= listed_names:
             errors.append("reported Agent not returned by any listing")
         held = {name.strip().rstrip(".。").strip().lower() for name in reported_names(report.get("held"))} - NOT_HELD

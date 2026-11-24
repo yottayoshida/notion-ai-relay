@@ -32,8 +32,15 @@ def exercise(case, *, calculated_vectors=None, vectors_after_calculation=False):
         while page["has_more"]:
             page = json.loads(fixture.call("query_sessions", {**query, "start_cursor": page["next_cursor"]})["content"][0]["text"])
         for run in (mock.SCHEDULED["id"], mock.OWN_CHAT["id"]):
-            fixture.call("list_session_events", {"session_url": f"session://{mock.SPACE}/{run}", "count": 20, "after_sequence": 1})
-            fixture.call("read_session_event", {"session_url": f"session://{mock.SPACE}/{run}", "sequence": mock.CONFIGURATION_EVENT})
+            url = f"session://{mock.SPACE}/{run}"
+            fixture.call("list_session_events", {"session_url": url, "count": 20, "after_sequence": 1})
+            if mock.configuration_event(run) > 21:
+                fixture.call("list_session_events", {"session_url": url, "count": 20, "after_sequence": 21})
+            fixture.call("read_session_event", {"session_url": url, "sequence": mock.configuration_event(run)})
+    skill_names = []
+    if case.get("skill_count"):
+        listing = json.loads(fixture.call("get_enabled_skills", {})["content"][0]["text"])
+        skill_names = [skill["name"] for skill in listing["skills"]]
     for target in case["reads"]:
         if target != "vectors" or not vectors_after_calculation:
             fixture.call("fetch", {"id": target})
@@ -44,7 +51,7 @@ def exercise(case, *, calculated_vectors=None, vectors_after_calculation=False):
         fixture.call("calculate", {"vectors": vectors})
         if vectors_after_calculation:
             fixture.call("fetch", {"id": "vectors"})
-    report = {"status": case["expected_status"][0], "names": ["Fixture Agent"] if case.get("listing") and case["mode"] not in {"empty", "unconnected", "denied"} else [],
+    report = {"status": case["expected_status"][0], "names": ["Fixture Agent"] if case.get("listing") and case["mode"] not in {"empty", "unconnected", "denied"} else skill_names,
               "coverage": case.get("coverage", "complete"), "held": ["review"] if case.get("must_hold") else []}
     for key in ("result", "loaded"):
         if key in case:
@@ -54,7 +61,7 @@ def exercise(case, *, calculated_vectors=None, vectors_after_calculation=False):
 
 class CompatibilityTests(unittest.TestCase):
     def test_valid_traces_for_every_cell(self):
-        self.assertEqual(len(CASES), 15)
+        self.assertEqual(len(CASES), 17)
         self.assertEqual(sum(c["client"] == "pi" for c in CASES), 10)
         for case in CASES:
             with self.subTest(case=case["id"]):
@@ -105,9 +112,18 @@ class CompatibilityTests(unittest.TestCase):
             self.assertEqual(resume[key], RUN_HISTORY[key], key)
         fixture = mock.Fixture(RUN_HISTORY, BUNDLE)
         url = f"session://{mock.SPACE}/{mock.OWN_CHAT['id']}"
-        event = fixture.call("read_session_event", {"session_url": url, "sequence": mock.CONFIGURATION_EVENT})["content"][0]["text"]
+        event = fixture.call("read_session_event", {"session_url": url, "sequence": mock.configuration_event(mock.OWN_CHAT["id"])})["content"][0]["text"]
         for mark in RUN_HISTORY["event_detail_marks"]:
             self.assertIn(mark, event)
+
+    def test_configuration_events_lie_past_a_first_listing_of_twenty_and_outside_the_latest_hundred(self):
+        self.assertGreater(mock.configuration_event(mock.OWN_CHAT["id"]), 20)
+        self.assertLessEqual(mock.configuration_event(mock.SCHEDULED["id"]), 20)
+        fixture = mock.Fixture(RUN_HISTORY)
+        for run in (mock.OWN_CHAT["id"], mock.SCHEDULED["id"]):
+            with self.subTest(run=run):
+                latest = json.loads(fixture.call("list_session_events", {"session_url": f"session://{run}", "count": 100})["content"][0]["text"])
+                self.assertNotIn(mock.configuration_event(run), [event["sequence"] for event in latest["events"]])
 
     def test_empty_is_not_unavailable_denied_or_partial(self):
         for case in CASES:
@@ -199,7 +215,7 @@ class CompatibilityTests(unittest.TestCase):
         for url in (f"session://{mock.SPACE}/{run}", f"session://{run}", thread_url(run), f"session://{run.replace('-', '').upper()}"):
             with self.subTest(url=url):
                 self.assertFalse(fixture.call("list_session_events", {"session_url": url, "count": 1})["isError"])
-                self.assertFalse(fixture.call("read_session_event", {"session_url": url, "sequence": mock.CONFIGURATION_EVENT})["isError"])
+                self.assertFalse(fixture.call("read_session_event", {"session_url": url, "sequence": mock.configuration_event(run)})["isError"])
         self.assertTrue(fixture.call("read_session_event", {"session_url": "session://unknown-run", "sequence": 1})["isError"])
 
     def test_frozen_reader_never_reads_arbitrary_host_paths(self):
@@ -280,7 +296,9 @@ def thread_url(session_id):
 def reopen_with_shorthand_urls(fixture):
     for run in (mock.SCHEDULED["id"], mock.OWN_CHAT["id"]):
         fixture.call("list_session_events", {"session_url": thread_url(run), "count": 20, "after_sequence": 1})
-        fixture.call("read_session_event", {"session_url": f"session://{run}", "sequence": mock.CONFIGURATION_EVENT})
+        if mock.configuration_event(run) > 21:
+            fixture.call("list_session_events", {"session_url": thread_url(run), "count": 20, "after_sequence": 21})
+        fixture.call("read_session_event", {"session_url": f"session://{run}", "sequence": mock.configuration_event(run)})
 
 
 def calculation_before_code_inspection(calls):
@@ -437,6 +455,15 @@ ONE_FAULT_ROWS = [
     row("Skill name passed to a local file read", "editor",
         ["Skill name passed in a tracking argument", "call with invalid arguments: relay_file"],
         then=call("relay_file", {"path": "SKILL.md", "skill": "notion-ai-relay"})),
+    row("Skill list at the documented maximum reported as complete", "skills-at-cap", ["wrong coverage"], report=update(coverage="complete")),
+    row("Skill list below the maximum reported as partial", "skills-below-cap", ["wrong coverage"], report=update(coverage="partial")),
+    row("Skill list never read", "skills-at-cap", ["Skill listing not read", "reported Skills differ from the listing"],
+        edit=drop(is_call("get_enabled_skills"))),
+    row("Skill list reported without names", "skills-below-cap", ["reported Skills differ from the listing"], report=update(names=[])),
+    row("Skill list with an invented Skill", "skills-at-cap", ["reported Skills differ from the listing"],
+        report=lambda r: r.update(names=r["names"] + ["Invented skill"])),
+    row("Skill list as objects with names", "skills-below-cap", [],
+        report=lambda r: r.update(names=[{"name": name} for name in r["names"]])),
     row("past runs searched by topic", "run-history-resume", ["forbidden mutation/session/unknown attempt"],
         then=call("search_sessions", {"question": "what this Agent was doing last time"})),
     row("run started by a bot for a Slack mention opened", "run-history-pages", ["another person's run opened"],
