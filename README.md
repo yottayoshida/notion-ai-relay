@@ -16,7 +16,7 @@ For manual installation, put this repository in your client's Skill directory as
 
 For installed-file version checks, safe updates, backups, and rollback, see [installation maintenance](docs/install-maintenance.md). The guide separates disk verification from client reload and MCP compatibility.
 
-Connect Notion MCP in your AI assistant separately. If a workflow uses another service, connect an MCP server that supports the required operations for that service.
+[Connect Notion MCP](https://developers.notion.com/docs/get-started-with-mcp) in your AI assistant separately. If a workflow uses another service, connect an MCP server that supports the required operations for that service.
 
 ## Use
 
@@ -62,9 +62,9 @@ The Skill does not launch or drive Notion-side agents or AI sessions. External w
 
 This repository distributes instructions. It does not provide a production MCP server or a persistent background process; synthetic fixture servers under `tests/` are evaluation-only. Skill loading and available MCP capabilities depend on the client; compatibility has not been verified across all clients. See the dated [compatibility matrix](docs/compatibility.md) for synthetic checks, historical live records, blockers and unverified environments.
 
-## Files
+## Docs
 
-See the [file guide](docs/files.md).
+[Troubleshooting](docs/troubleshooting.md), [file guide](docs/files.md).
 
 ## License
 
