@@ -13,7 +13,7 @@ One unedited run, in Claude Code, of the Skill files whose hashes are listed bel
 - Where the reply differs from the case's expected report or from the Skill's rules:
   - The opening sentences count the three requests that would move to Triaged without naming R-101, R-102 and R-104; the list below them names them.
   - The opening runs to five sentences; `SKILL.md` asks for one to three.
-  - It says a real run would first list the writes and wait for a go-ahead. `SKILL.md` asks for that list when the settings come from a recorded run; this request gave the Instructions page instead.
+  - It says a real run would first list the writes and wait for a go-ahead. The `SKILL.md` it ran asked for that list only when the settings came from a recorded run, and this request gave the Instructions page; the current `SKILL.md` asks for it whatever route supplied the instructions.
 
 ## The Agent's instructions and input
 
