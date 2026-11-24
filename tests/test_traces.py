@@ -73,7 +73,8 @@ class FixtureStartTests(unittest.TestCase):
     def test_each_fixture_start_appends_one_start_line_for_its_case_and_server(self):
         for suite, case_id, arguments in [("security", "data-injection", []),
                                           ("compatibility", "editor", ["--bundle", TESTS.parent]),
-                                          ("write-lifecycle", "normal", [])]:
+                                          ("write-lifecycle", "normal", []),
+                                          ("eval-fixture", "preview-partial", ["--suite", "dry-run"])]:
             server = load(suite, "mock_mcp").SERVER
             with self.subTest(suite=suite), tempfile.TemporaryDirectory() as directory:
                 trace = Path(directory) / "trace.jsonl"

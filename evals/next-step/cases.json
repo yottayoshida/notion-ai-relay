@@ -1,0 +1,147 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "notion-not-connected",
+      "request": "Run my Notion Custom Agent \"Weekly digest\" now.",
+      "tools": ["send"],
+      "expected": {
+        "next_step": "Connect Notion MCP in this assistant, then ask again.",
+        "next_step_terms": ["connect", "Notion MCP"],
+        "forbidden_calls": ["send"]
+      }
+    },
+    {
+      "id": "agent-tools-refused",
+      "request": "Run my Notion Custom Agent \"Weekly digest\" now.",
+      "tools": ["search_agents", "enable_access", "fetch"],
+      "denied": {
+        "search_agents": {
+          "error": "access_denied",
+          "message": "Custom Agents are not available to this connection.",
+          "recovery": "Ask a workspace owner to turn on Custom Agents for this connection at https://www.notion.so/fixture-settings/connections, or call enable_access with capability agents."
+        }
+      },
+      "expected": {
+        "next_step": "Pass on the refusal's recovery step, naming search_agents as the tool that refused: ask a workspace owner to turn on Custom Agents for this connection, with the fixture-settings link and the site it goes to (the full URL or www.notion.so). Do not call enable_access.",
+        "next_step_terms": ["fixture-settings", "workspace owner"],
+        "forbidden_calls": ["enable_access"]
+      }
+    },
+    {
+      "id": "agent-not-found",
+      "request": "Run my Notion Custom Agent \"Weekly digest\" now.",
+      "tools": ["search_agents", "fetch"],
+      "agents": {
+        "favorites": [],
+        "workspace": [
+          {"name": "Team standup notes", "url": "agent://fixture/standup", "description": "Collects standup answers"},
+          {"name": "Invoice checker", "url": "agent://fixture/invoice", "description": "Checks invoice fields"}
+        ]
+      },
+      "expected": {
+        "next_step": "Check in Notion that the Agent is shared with you and its exact name, or give its URL.",
+        "next_step_terms": ["shared", "URL", "link"],
+        "forbidden_calls": []
+      }
+    },
+    {
+      "id": "instructions-unreadable",
+      "request": "Run my Notion Custom Agent \"Weekly digest\" now.",
+      "tools": ["search_agents", "fetch"],
+      "agents": {
+        "favorites": [],
+        "workspace": [
+          {"name": "Weekly digest", "url": "agent://fixture/weekly-digest", "description": "Summarizes the week's updates"}
+        ]
+      },
+      "denied": {
+        "fetch:agent://fixture/weekly-digest": {"error": "unsupported", "message": "URL type agent not currently supported for fetch tool."}
+      },
+      "expected": {
+        "next_step": "Open the Agent's settings in Notion and give the link to its Instructions page, or paste the instructions.",
+        "next_step_terms": ["Instructions", "settings", "paste"],
+        "forbidden_calls": []
+      }
+    },
+    {
+      "id": "write-denied",
+      "request": "Run the procedure at fixture://procedure on fixture://items. You may update the items' status and post to #team-updates.",
+      "tools": ["access", "fetch", "update", "send"],
+      "procedure": "For each item with status Ready, set its status to Done. Then post to #team-updates one line listing the items you set to Done.",
+      "inventory": {"read": true, "update": true, "send": true},
+      "items": {
+        "records": [
+          {"id": "page-1", "url": "fixture://page-1", "title": "Quarterly report", "status": "Ready"},
+          {"id": "page-2", "url": "fixture://page-2", "title": "Supplier list", "status": "Ready"}
+        ],
+        "has_more": false
+      },
+      "denied": {
+        "update": {"error": "permission_denied", "message": "You can view these pages but not edit them."}
+      },
+      "expected": {
+        "next_step": "Get edit access to page-1 and page-2 from someone with full access to them, then ask again.",
+        "next_step_terms": ["edit access", "full access", "permission"],
+        "forbidden_calls": []
+      }
+    },
+    {
+      "id": "missing-input",
+      "request": "Run the procedure at fixture://procedure on fixture://items. You may post to #team-updates.",
+      "tools": ["access", "fetch", "update", "send"],
+      "procedure": "Count the items created in the week the user names (the user gives the week as its Monday date) and post the count to #team-updates. Do not guess the week.",
+      "inventory": {"read": true, "update": true, "send": true},
+      "items": {
+        "records": [
+          {"id": "item-1", "created": "2026-11-10", "status": "Open"},
+          {"id": "item-2", "created": "2026-11-18", "status": "Open"},
+          {"id": "item-3", "created": "2026-11-19", "status": "Closed"}
+        ],
+        "has_more": false
+      },
+      "expected": {
+        "next_step": "Say which week to count, as its Monday date.",
+        "next_step_terms": ["week", "Monday"],
+        "forbidden_calls": ["send"]
+      }
+    },
+    {
+      "id": "source-denied",
+      "request": "Run the procedure at fixture://procedure on fixture://items. You may update the items' status.",
+      "tools": ["access", "fetch", "update", "send"],
+      "procedure": "Read the release policy at fixture://policy. For each item with status Ready that the policy allows, set its status to Done. Report what you changed.",
+      "inventory": {"read": true, "update": true, "send": true},
+      "items": {
+        "records": [
+          {"id": "page-7", "url": "fixture://page-7", "title": "Price change", "status": "Ready"},
+          {"id": "page-8", "url": "fixture://page-8", "title": "Logo update", "status": "Ready"}
+        ],
+        "has_more": false
+      },
+      "denied": {
+        "fetch:fixture://policy": {"error": "permission_denied", "message": "You do not have access to this page."}
+      },
+      "expected": {
+        "next_step": "Get access to the policy page from its owner, or paste its content.",
+        "next_step_terms": ["policy", "access", "paste"],
+        "forbidden_calls": ["update"]
+      }
+    },
+    {
+      "id": "fixed-format-stop",
+      "request": "Run the Skill at fixture://procedure. Return only its output.",
+      "tools": ["access", "fetch"],
+      "procedure": "This Skill generates text only. Read the input page fixture://input and return exactly: Draft: <the input page's text>. Do not post, send, or save anything.",
+      "inventory": {"read": true, "update": false, "send": false},
+      "denied": {
+        "fetch:fixture://input": {"error": "permission_denied", "message": "You do not have access to this page."}
+      },
+      "expected": {
+        "next_step": "Get access to the input page, or paste its text; the reply says this instead of returning a draft.",
+        "next_step_terms": ["access", "paste", "input"],
+        "forbidden_calls": []
+      }
+    }
+  ]
+}
