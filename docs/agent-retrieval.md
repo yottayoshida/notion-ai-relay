@@ -52,6 +52,8 @@ Running an Agent by name rests on the following; the observations behind them ar
 
 Give the Agent's name, as described under Use in the [README](../README.md#use). The Skill reads the editable Instructions page, which holds the instructions currently set, when a chat you had with the Agent recorded it, and takes settings from its latest scheduled run, with no token. Otherwise it uses the newest published page recorded for your chat or a scheduled run, which may predate later saves. If no run is usable, give the Instructions page URL or the text. Settings cut from a record are reported as unknown. Other people's runs are never opened. Whichever route supplied the instructions, the Skill waits for a go-ahead before operations the user did not name, as the [execution boundaries](../SKILL.md#execution-boundaries) set out; with instructions from a recorded run it also gives the run date, because the Agent's permissions may have changed since that run.
 
+Without full Agent settings from MCP, the Skill uses the routes under [Use](../README.md#use) or settings you supply. Pasted text and the editable Instructions page are not treated as a verified current published version. Missing registration or enabled-state metadata does not prevent execution of an explicitly selected procedure when its instructions and required input are available.
+
 ## Not tested
 
 - Whether a user who can run an Agent but cannot edit it can read the Agent's runs or Instructions page.
