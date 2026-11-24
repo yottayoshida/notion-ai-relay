@@ -28,7 +28,8 @@ OTHER_PEOPLE = re.compile(
     # "the empty page was skipped" and "did not open other events" say nothing about other people.
     r"|\b(?:runs|chats?|sessions)\s+(?:that |which )?(?:I|you) did(?:n't| not) start"
     r"|did(?:n't| not) open\b[^.\n]{0,30}\b(?:runs|chats|those|them)\b|did(?:n't| not) open the (?:others\b|other (?:two|2|ones)\b)"
-    r"|\b(?:runs|chats?)\s+(?:were|was)\s+skipped|skipped\s+(?:\w+\s+){0,3}(?:runs|chats|those|them)\b",
+    r"|\b(?:runs?|chats?)\s+(?:were|was)\s+skipped|skipped\s+(?:\w+\s+){0,3}(?:runs?|chats?|those|them)\b"
+    r"|\bmention(?:-triggered)?\s+(?:runs?|sessions?|chats?)\b|\bmention-triggered\b|\bruns?\s+(?:that |which )?a bot started for a (?:slack )?mention\b",
     re.IGNORECASE)
 NOT_HELD = {"", "none", "no", "n/a", "nothing", "-", "–", "—", "false", "なし", "無し", "該当なし"}
 # fullmatch, not search: a fence inside other text, or one of two fenced objects, is not the report.

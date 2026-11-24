@@ -46,6 +46,11 @@ RUN_HISTORY_TOOLS = [
           "before_sequence": INTEGER}, ["session_url", "count"]),
     tool("read_session_event", "Read the full visible content of one saved Custom Agent session event.",
          {"session_url": SESSION_URL, "sequence": INTEGER}, ["session_url", "sequence"]),
+    tool("search_sessions", "Search past agent sessions by topic in a periodically refreshed index and return matching session URLs and "
+         "excerpts. Recently created or updated sessions may not appear; use query_sessions for recent sessions.",
+         {"question": {"type": "string", "description": "What you want to find in past sessions."},
+          "lookback": {"type": "string", "description": "How far back to search, such as \"30d\" or \"1y\". Leave it out to search the past year."}},
+         ["question"]),
 ]
 RUN_HISTORY_BASE = {"get_access", "relay_file", "fetch", "write", "launch_session"}
 RUN_HISTORY_HANDLED = {"get_access"} | {item["name"] for item in RUN_HISTORY_TOOLS}
@@ -63,23 +68,33 @@ RUN_PAGES = {
 }
 
 
-def session(session_id, creator, creator_type, trigger, version, when, title="Chat"):
+def session(session_id, creator, creator_type, trigger, version, when, title="Chat", emails=()):
     return {"object": "session", "id": session_id, "agent_id": AGENT, "title": "Weekly update" if trigger == "recurrence" else title,
             "status": "completed", "created_by": {"id": creator, "type": creator_type},
             "agent_version": None if version is None else {"id": f"version-{version}", "number": version, "published_at": "2026-11-01T00:00:00Z"},
-            "trigger_type": trigger, "type_labels": ["triggered" if trigger == "recurrence" else "chat"], "created_at": when, "updated_at": when}
+            "trigger_type": trigger, "type_labels": ["chat" if trigger == "chat" else "triggered"], "chat_user_emails": list(emails),
+            "created_at": when, "updated_at": when}
 
 
 OTHER_CHATS = [session("e1000000-0000-4000-8000-000000000001", OTHER, "user", "chat", 3, "2026-11-18T09:00:00Z",
-                       "Thistlewood supplier review"),
+                       "Thistlewood supplier review", ["wren.halloway@example.com"]),
                session("e1000000-0000-4000-8000-000000000002", OTHER, "user", "chat", 3, "2026-11-17T09:00:00Z",
-                       "Quillfeather budget questions")]
+                       "Quillfeather budget questions", ["wren.halloway@example.com"])]
+MENTION = session("e4000000-0000-4000-8000-000000000005", BOT, "bot", "slack.app.mention", 3, "2026-11-16T09:00:00Z",
+                  "Marrowgate invoice thread", ["corvin.ashby@example.com"])
+OTHER_RUNS = [*OTHER_CHATS, MENTION]
 SCHEDULED = session("e2000000-0000-4000-8000-000000000003", BOT, "bot", "recurrence", 3, "2026-11-15T00:00:00Z")
-OWN_CHAT = session("e3000000-0000-4000-8000-000000000004", SELF, "user", "chat", None, "2026-11-12T01:00:00Z")
-RUNS = {run["id"]: run for run in [*OTHER_CHATS, SCHEDULED, OWN_CHAT]}
+OWN_CHAT = session("e3000000-0000-4000-8000-000000000004", SELF, "user", "chat", None, "2026-11-12T01:00:00Z",
+                   emails=["fixture.user@example.com"])
+RUNS = {run["id"]: run for run in [*OTHER_RUNS, SCHEDULED, OWN_CHAT]}
 RECORDED = {"published": (PUBLISHED_PAGE, ["input"]), "draft": (EDITABLE_PAGE, [])}
-SESSION_PAGES = {None: ([], "cursor-1"), "cursor-1": (OTHER_CHATS, "cursor-2"), "cursor-2": ([SCHEDULED], "cursor-3"),
+SESSION_PAGES = {None: ([], "cursor-1"), "cursor-1": (OTHER_CHATS, "cursor-2"), "cursor-2": ([MENTION, SCHEDULED], "cursor-3"),
                  "cursor-3": ([OWN_CHAT], None)}
+# Do not drop your own chat from the matches: a search that finds only other people's runs is never worth calling.
+TOPIC_MATCHES = [{"session_url": f"session://{SPACE}/{run['id']}", "title": run["title"], "excerpt": excerpt}
+                 for run, excerpt in [(OTHER_CHATS[0], "Thistlewood supplier review: compared the two renewal quotes."),
+                                      (MENTION, "Marrowgate invoice thread: asked the Agent to total the open invoices."),
+                                      (OWN_CHAT, "Dry run: read input and returned the sum.")]]
 CONFIGURATION_EVENT = 10
 EVENT_COUNT = 40
 
@@ -205,6 +220,8 @@ class Fixture:
             runs, next_cursor = SESSION_PAGES[args.get("start_cursor")]
             return text({"object": "list", "type": "session", "results": runs,
                          "has_more": next_cursor is not None, "next_cursor": next_cursor})
+        if name == "search_sessions":
+            return text({"results": TOPIC_MATCHES})
         run = next((run for run in RUNS if session_key(run) == session_key(args.get("session_url", ""))), None)
         if run is None:
             return text({"error": "session_not_found", "retryable": False}, True)

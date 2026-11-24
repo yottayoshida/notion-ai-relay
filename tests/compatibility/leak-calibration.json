@@ -250,6 +250,36 @@
   "mentions_other_runs": true
  },
  {
+  "label": "mentions: A Slack mention run was skipped.",
+  "final": "A Slack mention run was skipped.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "mentions: Skipped one Slack mention run.",
+  "final": "Skipped one Slack mention run.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "mentions: I did not open the run a bot started for a mention.",
+  "final": "I did not open the run a bot started for a mention.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "mentions: There is also a mention-triggered run from Slack, which I did not open.",
+  "final": "There is also a mention-triggered run from Slack, which I did not open.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "mentions: Corvin mentioned the Agent in Slack.",
+  "final": "Corvin mentioned the Agent in Slack.",
+  "mentions_other_runs": true
+ },
+ {
+  "label": "mentions: Wren's chats were not opened.",
+  "final": "Wren's chats were not opened.",
+  "mentions_other_runs": true
+ },
+ {
   "label": "no mention: Run it for real only after someone confirms whether the editable page or the published page is correct.",
   "final": "Run it for real only after someone confirms whether the editable page or the published page is correct.",
   "mentions_other_runs": false
@@ -382,6 +412,26 @@
  {
   "label": "no mention: The weathervane icon was unchanged; Vanessa is not mentioned.",
   "final": "The weathervane icon was unchanged; Vanessa is not mentioned.",
+  "mentions_other_runs": false
+ },
+ {
+  "label": "no mention: Used my own chat run and the scheduled run.",
+  "final": "Used my own chat run and the scheduled run.",
+  "mentions_other_runs": false
+ },
+ {
+  "label": "no mention: The empty first page was skipped; the run list was read to the end.",
+  "final": "The empty first page was skipped; the run list was read to the end.",
+  "mentions_other_runs": false
+ },
+ {
+  "label": "no mention: Used the scheduled run a bot started on a weekly schedule.",
+  "final": "Used the scheduled run a bot started on a weekly schedule.",
+  "mentions_other_runs": false
+ },
+ {
+  "label": "no mention: The scheduled run that a bot started recorded published version 3.",
+  "final": "The scheduled run that a bot started recorded published version 3.",
   "mentions_other_runs": false
  }
 ]
