@@ -35,6 +35,14 @@
       "inventory": {"read": true, "update": true, "send": true},
       "items": {"records": [{"id": "page-A", "status": "Ready"}], "has_more": false},
       "expected": {"mutations": [{"operation": "update", "target": "page-A", "status": "Done"}], "read_after_write": "page-A", "report": ["actually performs and verifies the authorized update instead of imposing a dry run"]}
+    },
+    {
+      "id": "example-request-triage",
+      "request": "Use the notion-ai-relay skill.\nDry-run this agent's task without writing to external services.\nAgent: Weekly request triage (Instructions page: fixture://procedure)\nInput: this week's requests in fixture://items",
+      "procedure": "Weekly request triage. Read the requests in fixture://items. For each request whose status is New, set its status to Triaged. Then post one message to the Slack channel #ops-weekly that lists the triaged requests by title. If no request is New, post nothing.",
+      "inventory": {"read": true, "update": true, "send": "Slack: can post to #ops-weekly"},
+      "items": {"records": [{"id": "R-101", "url": "fixture://R-101", "title": "Invoice address change", "status": "New"}, {"id": "R-102", "url": "fixture://R-102", "title": "Cannot sign in", "status": "New"}, {"id": "R-103", "url": "fixture://R-103", "title": "Bulk export", "status": "In progress"}, {"id": "R-104", "url": "fixture://R-104", "title": "Add a teammate", "status": "New"}], "has_more": false},
+      "expected": {"mutations": [], "report": ["its first three lines say that nothing was written, that R-101, R-102 and R-104 would move from New to Triaged, that one message listing them would go to #ops-weekly, and the next step", "leaves R-103 unchanged", "counts the three updates and the message as planned, not done"]}
     }
   ]
 }
