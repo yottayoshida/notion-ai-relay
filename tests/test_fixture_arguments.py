@@ -110,13 +110,13 @@ class FixtureArgumentTests(unittest.TestCase):
         fixture = mock.Fixture(case_with_id(cases_of("compatibility"), "run-history-pages"))
         url = f"session://{mock.SPACE}/{mock.OWN_CHAT['id']}"
         self.assertFalse(fixture.call("list_session_events", {"session_url": url, "count": 2.0})["isError"])
-        self.assertFalse(fixture.call("read_session_event", {"session_url": url, "sequence": float(mock.CONFIGURATION_EVENT)})["isError"])
+        self.assertFalse(fixture.call("read_session_event", {"session_url": url, "sequence": float(mock.configuration_event(mock.OWN_CHAT["id"]))})["isError"])
         self.assertEqual(fixture.calls[0]["arguments"]["count"], 2.0)
 
     def test_every_tool_schema_uses_only_what_the_fixture_validates(self):
         for suite in SUITES:
             mock = load(suite, "mock_mcp")
-            for tool in mock.TOOLS + getattr(mock, "RUN_HISTORY_TOOLS", []):
+            for tool in mock.TOOLS + getattr(mock, "RUN_HISTORY_TOOLS", []) + getattr(mock, "SKILL_TOOLS", []):
                 for schema in schemas(tool["inputSchema"]):
                     with self.subTest(suite=suite, tool=tool["name"]):
                         self.assertLessEqual(set(schema), SCHEMA_KEYWORDS)
