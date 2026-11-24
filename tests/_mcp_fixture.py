@@ -118,41 +118,54 @@ def append(trace, record):
         out.write(json.dumps(record) + "\n")
 
 
-def use_utf8_stdio():
-    # Not the locale's encoding: clients send UTF-8 JSON, which fails to decode under Shift JIS.
-    sys.stdin.reconfigure(encoding="utf-8")
-    sys.stdout.reconfigure(encoding="utf-8")
+def error_reply(request_id, code, message):
+    return {"jsonrpc": "2.0", "id": request_id, "error": {"code": code, "message": message}}
+
+
+def answer(fixture, trace, server_name, extra_methods, raw):
+    if not raw.strip():
+        return None
+    try:
+        # Not the locale's encoding: clients send UTF-8 JSON, which fails to decode under Shift JIS.
+        request = json.loads(raw.decode("utf-8"))
+    except ValueError:
+        return error_reply(None, -32700, "Parse error")
+    if not isinstance(request, dict) or not isinstance(request.get("method"), str):
+        return error_reply(request.get("id") if isinstance(request, dict) else None, -32600, "Invalid request")
+    if "id" not in request:
+        return None
+    request_id, method, params = request["id"], request["method"], request.get("params", {})
+    if not isinstance(params, dict):
+        return error_reply(request_id, -32602, "Invalid params")
+    if method == "initialize":
+        if not isinstance(params.get("protocolVersion"), str):
+            return error_reply(request_id, -32602, "Invalid params: protocolVersion is required")
+        result = {"protocolVersion": params["protocolVersion"], "capabilities": {"tools": {}},
+                  "serverInfo": {"name": server_name, "version": "1"}}
+    elif method == "tools/list":
+        result = {"tools": fixture.tools()}
+    elif method == "tools/call":
+        name, arguments = params.get("name"), params.get("arguments", {})
+        if isinstance(name, str):
+            result = fixture.call(name, arguments)
+            append(trace, fixture.calls[-1])
+        else:
+            result = text({"error": "invalid_arguments", "message": "name must be string"}, True)
+            append(trace, {"name": name, "arguments": arguments, "result": result})
+    elif method == "ping":
+        result = {}
+    elif method in extra_methods:
+        result = extra_methods[method](fixture, trace)
+    else:
+        return error_reply(request_id, -32601, "Unknown method")
+    return {"jsonrpc": "2.0", "id": request_id, "result": result}
 
 
 def serve(fixture, trace, server_name, extra_methods=None):
-    extra_methods = extra_methods or {}
-    use_utf8_stdio()
+    sys.stdout.reconfigure(encoding="utf-8")
     # Appended, not truncated: a restarted server would otherwise erase the calls made before the restart.
     append(trace, start_record(fixture.case["id"], server_name))
-    for line in sys.stdin:
-        request = json.loads(line)
-        if "id" not in request:
-            continue
-        method = request["method"]
-        if method == "initialize":
-            result = {"protocolVersion": request["params"]["protocolVersion"], "capabilities": {"tools": {}},
-                      "serverInfo": {"name": server_name, "version": "1"}}
-        elif method == "tools/list":
-            result = {"tools": fixture.tools()}
-        elif method == "tools/call":
-            params = request.get("params") or {}
-            name, arguments = params.get("name"), params.get("arguments", {})
-            if isinstance(name, str):
-                result = fixture.call(name, arguments)
-                append(trace, fixture.calls[-1])
-            else:
-                result = text({"error": "invalid_arguments", "message": "name must be string"}, True)
-                append(trace, {"name": name, "arguments": arguments, "result": result})
-        elif method == "ping":
-            result = {}
-        elif method in extra_methods:
-            result = extra_methods[method](fixture, trace)
-        else:
-            print(json.dumps({"jsonrpc": "2.0", "id": request["id"], "error": {"code": -32601, "message": "Unknown method"}}), flush=True)
-            continue
-        print(json.dumps({"jsonrpc": "2.0", "id": request["id"], "result": result}), flush=True)
+    for raw in sys.stdin.buffer:
+        reply = answer(fixture, trace, server_name, extra_methods or {}, raw)
+        if reply is not None:
+            print(json.dumps(reply), flush=True)

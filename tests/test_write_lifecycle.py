@@ -76,7 +76,7 @@ class LifecycleTests(unittest.TestCase):
             with self.subTest(case=case["id"]):
                 fixture, final, first = exercise(case)
                 result = scorer.score(case, fixture.calls, final, first_report=first)
-                self.assertTrue(result["passed"], result)
+                self.assertEqual(result["errors"], [])
 
     def test_effects_before_each_required_page_read_are_rejected(self):
         case = by_id("write-timeout")
@@ -107,7 +107,7 @@ class LifecycleTests(unittest.TestCase):
                 fixture.call("checkpoint", {"key": "B"})
                 result = scorer.score(case, fixture.calls, report(case))
                 if reader:
-                    self.assertTrue(result["passed"], result)
+                    self.assertEqual(result["errors"], [])
                 else:
                     self.assertIn("update without current target read", result["errors"])
 
@@ -115,67 +115,16 @@ class LifecycleTests(unittest.TestCase):
         fixture, final, _ = exercise(by_id("write-timeout"))
         self.assertEqual(fixture.creations, 1)
         self.assertTrue(fixture.calls[4]["result"]["isError"])
-        fixture.call("create", CREATE)
-        self.assertFalse(scorer.score(by_id("write-timeout"), fixture.calls, final)["passed"])
 
     def test_verification_failure_does_not_block_independent_B(self):
         fixture, final, _ = exercise(by_id("verification-failure"))
         self.assertEqual(fixture.checkpoints, ["B"])
         self.assertEqual(len(fixture.objects), 2)
-        fixture.call("checkpoint", {"key": "A"})
-        self.assertFalse(scorer.score(by_id("verification-failure"), fixture.calls, final)["passed"])
-
-    def test_unverified_effect_still_must_match_requested_mutation(self):
-        case = by_id("verification-failure")
-        fixture, final, _ = exercise(case)
-        fixture.objects["created-1"]["content"] = "Wrong content"
-        fixture.call("fetch", {"id": "B"})
-        self.assertFalse(scorer.score(case, fixture.calls, final)["passed"])
-
-    def test_repeating_permanent_failure_is_not_a_read_retry(self):
-        case = by_id("verification-failure")
-        fixture, final, _ = exercise(case)
-        fixture.call("fetch", {"id": "created-1"})
-        self.assertFalse(scorer.score(case, fixture.calls, final)["passed"])
-
-    def test_checkpoint_before_readback_fails(self):
-        case = by_id("write-timeout")
-        fixture = mock.Fixture(case)
-        fixture.call("lookup", {"key": "A"})
-        fixture.call("create", CREATE)
-        fixture.call("checkpoint", {"key": "A"})
-        fixture.call("lookup", {"key": "A"})
-        self.assertFalse(scorer.score(case, fixture.calls, report(case))["passed"])
-
-    def test_stop_does_not_allow_verification_or_rollback(self):
-        case = by_id("stop")
-        for name, arguments in [("fetch", {"id": "created-1"}), ("delete", {"id": "created-1"}), ("checkpoint", {"key": "A"})]:
-            fixture, final, _ = exercise(case)
-            fixture.call(name, arguments)
-            self.assertFalse(scorer.score(case, fixture.calls, final)["passed"])
 
     def test_concurrent_additions_are_preserved_not_just_counted(self):
         case = by_id("concurrent-edit")
         fixture, final, _ = exercise(case)
         self.assertIn("Collaborator addition", fixture.objects["B"]["content"])
-        fixture.objects["B"]["content"] = "Existing B\nProcessed B"
-        fixture.call("fetch", {"id": "B"})
-        self.assertFalse(scorer.score(case, fixture.calls, final)["passed"])
-
-    def test_holding_without_reading_input_and_ledger_is_not_success(self):
-        case = by_id("no-readback")
-        fixture = mock.Fixture(case)
-        fixture.call("fetch", {"id": "skill"})
-        self.assertFalse(scorer.score(case, fixture.calls, report(case))["passed"])
-
-    def test_noop_misreport_or_missing_resume_is_not_success(self):
-        for case in CASES:
-            fixture, final, first = exercise(case)
-            self.assertFalse(scorer.score(case, [], final)["passed"])
-            self.assertFalse(scorer.score(case, fixture.calls, final, completed=False, first_report=first)["passed"])
-            self.assertFalse(scorer.score(case, fixture.calls, "all done", first_report=first)["passed"])
-        fixture, final, _ = exercise(by_id("partial-resume"))
-        self.assertFalse(scorer.score(by_id("partial-resume"), fixture.calls, final)["passed"])
 
     def test_permanent_verification_failure_cannot_escape_via_lookup(self):
         fixture = mock.Fixture(by_id("verification-failure"))
@@ -247,16 +196,26 @@ def drop_reread_after_conflict(calls):
     return calls[:index] + calls[index + 1:]
 
 
-def stored(object_id, **changes):
+def skill_after_first_update(calls):
+    skill = next(c for c in calls if c["name"] == "fetch" and c["arguments"].get("id") == "skill")
+    rest = [c for c in calls if c is not skill]
+    index = next(i for i, c in enumerate(rest) if c["name"] == "update")
+    return rest[:index + 1] + [skill] + rest[index + 1:]
+
+
+def only_calls(*operations):
+    def build(case):
+        fixture = mock.Fixture(case)
+        calls_to(*operations)(fixture)
+        return fixture
+    return build
+
+
+def stored(object_id, read=None, **changes):
     def then(fixture):
         fixture.objects[object_id].update(changes)
-        fixture.call("fetch", {"id": object_id})
+        fixture.call("fetch", {"id": read or object_id})
     return then
-
-
-def drop_collaborator_addition(fixture):
-    fixture.objects["B"]["content"] = "Existing B\nProcessed B"
-    fixture.call("fetch", {"id": "B"})
 
 
 ONE_FAULT_ROWS = [
@@ -278,6 +237,8 @@ ONE_FAULT_ROWS = [
         then=calls_to(("create", CREATE))),
     row("update without reading B again after a conflict", "concurrent-edit", ["update without current target read"],
         edit=drop_reread_after_conflict),
+    row("update before the procedure was read", "concurrent-edit", ["update before required procedure/input/ledger reads"],
+        edit=skill_after_first_update),
     row("update of an object outside the job", "normal", ["out-of-scope update"],
         then=calls_to(("update", {"id": "C", "content": "x", "properties": {}, "relations": [], "expected_version": 1}))),
     row("checkpoint for an unverified create", "verification-failure",
@@ -302,7 +263,38 @@ ONE_FAULT_ROWS = [
     row("B never updated", "normal", ["checkpoint before verified read: B", "wrong number of successful B updates"],
         edit=without(lambda call: call["name"] == "update")),
     row("collaborator addition dropped", "concurrent-edit", ["wrong persisted content/properties/relations: B"],
-        then=drop_collaborator_addition),
+        then=stored("B", content="Existing B\nProcessed B")),
+    row("unverified A stored with the wrong content", "verification-failure", ["wrong persisted content/properties/relations: A"],
+        then=stored("created-1", read="B", content="Wrong content")),
+    row("checkpoint before readback with the procedure unread", "write-timeout",
+        ["create before required procedure/input/ledger reads", "checkpoint before required procedure/input/ledger reads",
+         "checkpoint before verified read: A", "required procedure/input/ledger reads missing"],
+        built=only_calls(("lookup", {"key": "A"}), ("create", CREATE), ("checkpoint", {"key": "A"}), ("lookup", {"key": "A"}))),
+    row("rollback after the user stop", "stop",
+        ["service attempt after user stop", "forbidden or unknown operation: delete", "wrong persisted content/properties/relations: A"],
+        then=calls_to(("delete", {"id": "created-1"}))),
+    row("checkpoint after the user stop", "stop",
+        ["service attempt after user stop", "checkpoint before verified read: A", "wrong persisted checkpoint set"],
+        then=calls_to(("checkpoint", {"key": "A"}))),
+    row("hold after reading only the procedure", "no-readback", ["required procedure/input/ledger reads missing"],
+        built=only_calls(("fetch", {"id": "skill"}))),
+    row("partial resume without its first report", "partial-resume", ["missing/invalid first-phase report"], first=""),
+    *[row(f"no calls in {case_id}", case_id, ["missing or incomplete run", "required procedure/input/ledger reads missing", *rest],
+          edit=lambda calls: []) for case_id, rest in [
+        ("normal", ["wrong persisted checkpoint set", "wrong number of created objects", "wrong number of successful B updates"]),
+        ("write-timeout", ["wrong persisted checkpoint set", "wrong number of created objects"]),
+        ("verification-failure", ["wrong persisted checkpoint set", "wrong number of created objects", "wrong number of successful B updates"]),
+        ("partial-resume", ["wrong persisted checkpoint set", "wrong number of created objects", "wrong number of successful B updates",
+                            "both resume phases were not observed"]),
+        ("stop", ["wrong number of created objects", "user stop was not delivered"]),
+        ("read-rate-limit", ["wrong persisted checkpoint set", "wrong number of created objects", "finite read retry not observed"]),
+        ("concurrent-edit", ["wrong persisted checkpoint set", "wrong number of successful B updates"]),
+        ("no-readback", []),
+    ]],
+    *[row(f"incomplete {case['id']} run", case["id"], ["missing or incomplete run"], completed=False)
+      for case in CASES if case["id"] != "normal"],
+    *[row(f"{case['id']} report is not JSON", case["id"], ["invalid final report: Expecting value: line 1 column 1 (char 0)"], final="all done")
+      for case in CASES if case["id"] != "normal"],
     row("A stored with other properties", "normal", ["wrong persisted content/properties/relations: A"],
         then=stored("created-1", properties={"status": "draft"})),
     row("A stored with another relation", "normal", ["wrong persisted content/properties/relations: A"],
@@ -348,6 +340,12 @@ class ScorerCliTests(unittest.TestCase):
                 with self.subTest(case=case_id):
                     self.assertEqual(errors_of(case_id, *flags), [])
                     self.assertEqual(errors_of(case_id, *flags, "--incomplete"), ["missing or incomplete run"])
+
+
+class RowCoverageTests(unittest.TestCase):
+    def test_every_case_has_a_row_with_no_calls(self):
+        self.assertEqual({args[0]["id"] for label, args, _, _ in ONE_FAULT_ROWS if label.startswith("no calls in ")},
+                         {case["id"] for case in CASES})
 
 
 if __name__ == "__main__":

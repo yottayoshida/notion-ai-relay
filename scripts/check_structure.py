@@ -1,6 +1,7 @@
 """Validate the distributed Skill, not model behavior or MCP compatibility."""
 
 import argparse
+from contextlib import contextmanager
 from html.parser import HTMLParser
 import json
 import os
@@ -75,13 +76,23 @@ def check_codex_quoting(node, visited=None):
         raise ValueError("openai.yaml string values must be quoted")
 
 
-class HtmlIds(HTMLParser):
+@contextmanager
+def about(relative):
+    try:
+        yield
+    except (ValueError, yaml.YAMLError, TypeError) as error:
+        raise ValueError(f"{relative}: {error}") from error
+
+
+class HtmlTags(HTMLParser):
     def __init__(self):
         super().__init__()
-        self.ids = set()
+        self.ids, self.links = set(), []
 
     def handle_starttag(self, tag, attrs):
         self.ids.update(value for key, value in attrs if key == "id" or (tag == "a" and key == "name"))
+        self.links.extend(value for key, value in attrs
+                          if value and ((tag == "a" and key == "href") or (tag == "img" and key == "src")))
 
 
 def markdown_info(text):
@@ -105,10 +116,16 @@ def markdown_info(text):
                 links.append(child.attrGet("href") if child.type == "link_open" else child.attrGet("src"))
         html = [token] if token.type == "html_block" else [child for child in token.children or [] if child.type == "html_inline"]
         for fragment in html:
-            parser = HtmlIds()
+            parser = HtmlTags()
             parser.feed(fragment.content)
             anchors.update(parser.ids)
+            links.extend(parser.links)
     return anchors, links
+
+
+def markdown_text(path):
+    text = path.read_text(encoding="utf-8")
+    return frontmatter(text)[1] if path.name == "SKILL.md" else text
 
 
 def local_target(root, source, url):
@@ -118,15 +135,13 @@ def local_target(root, source, url):
     target = (source.parent / unquote(parsed.path)).resolve() if parsed.path else source.resolve()
     if not target.is_relative_to(root.resolve()):
         raise ValueError(f"local reference escapes Skill directory: {url}")
-    if not target.is_file():
+    if not target.exists():
         raise ValueError(f"missing local reference: {url}")
     if parsed.fragment:
         if target.suffix.lower() != ".md":
             raise ValueError(f"cannot validate anchor in non-Markdown file: {url}")
-        text = target.read_text(encoding="utf-8")
-        if target.name == "SKILL.md":
-            _, text = frontmatter(text)
-        anchors, _ = markdown_info(text)
+        with about(target.relative_to(root.resolve())):
+            anchors, _ = markdown_info(markdown_text(target))
         if unquote(parsed.fragment) not in anchors:
             raise ValueError(f"missing anchor: {url}")
     return target
@@ -144,7 +159,8 @@ def check_eval_cases(root):
         path = folder / "cases.json"
         if not path.is_file():
             raise ValueError(f"{folder.relative_to(root)}: missing cases.json")
-        value = json.loads(path.read_text(encoding="utf-8"))
+        with about(path.relative_to(root)):
+            value = json.loads(path.read_text(encoding="utf-8"))
         cases = value.get("cases") if isinstance(value, dict) else value
         if not isinstance(cases, list) or not cases:
             raise ValueError(f"{path.relative_to(root)}: no cases")
@@ -162,10 +178,35 @@ def check_eval_cases(root):
 
 
 def validate(root):
-    root = Path(root)
+    # Not resolve(): a copy reached through a symlink must keep the name it was installed under.
+    root = Path(os.path.abspath(root))
     for relative in REQUIRED:
         if not (root / relative).is_file():
             raise ValueError(f"missing required file: {relative}")
+    with about("SKILL.md"):
+        name = check_skill_metadata(root)
+    yamls = sorted(set(root.rglob("*.yaml")) | set(root.rglob("*.yml")))
+    for path in yamls:
+        with about(path.relative_to(root)):
+            load_yaml(path.read_text(encoding="utf-8"))
+    with about("agents/openai.yaml"):
+        check_codex_metadata(root, name)
+
+    if (root / "evals").is_dir():
+        check_eval_cases(root)
+
+    markdowns = sorted(root.rglob("*.md"))
+    link_count = 0
+    for path in markdowns:
+        with about(path.relative_to(root)):
+            _, links = markdown_info(markdown_text(path))
+            for url in links:
+                if local_target(root, path, url) is not None:
+                    link_count += 1
+    return len(markdowns), len(yamls), link_count
+
+
+def check_skill_metadata(root):
     metadata, _ = frontmatter((root / "SKILL.md").read_text(encoding="utf-8"))
     if set(metadata) - FRONTMATTER_FIELDS:
         raise ValueError("unexpected frontmatter fields")
@@ -191,12 +232,12 @@ def validate(root):
         value = metadata["metadata"]
         if not isinstance(value, dict) or not all(isinstance(k, str) and isinstance(v, str) for k, v in value.items()):
             raise ValueError("frontmatter metadata must map strings to strings")
+    return name
 
-    yamls = sorted(set(root.rglob("*.yaml")) | set(root.rglob("*.yml")))
-    for path in yamls:
-        load_yaml(path.read_text(encoding="utf-8"))
-    config = load_yaml((root / "agents/openai.yaml").read_text(encoding="utf-8"))
-    interface = config.get("interface")
+
+def check_codex_metadata(root, name):
+    source = (root / "agents/openai.yaml").read_text(encoding="utf-8")
+    interface = load_yaml(source).get("interface")
     if not isinstance(interface, dict):
         raise ValueError("openai.yaml requires interface metadata")
     for key in ("display_name", "short_description", "default_prompt"):
@@ -213,27 +254,10 @@ def validate(root):
     for key in ("icon_small", "icon_large"):
         if key in interface:
             url = interface[key]
-            if not isinstance(url, str) or not url.strip() or local_target(root, root / "SKILL.md", url) is None:
+            target = local_target(root, root / "SKILL.md", url) if isinstance(url, str) and url.strip() else None
+            if target is None or not target.is_file():
                 raise ValueError(f"openai.yaml {key} must reference a local asset")
-
-    if (root / "evals").is_dir():
-        check_eval_cases(root)
-
-    markdowns = sorted(root.rglob("*.md"))
-    link_count = 0
-    for path in markdowns:
-        text = path.read_text(encoding="utf-8")
-        if path.name == "SKILL.md":
-            _, text = frontmatter(text)
-        _, links = markdown_info(text)
-        for url in links:
-            try:
-                if local_target(root, path, url) is not None:
-                    link_count += 1
-            except ValueError as error:
-                raise ValueError(f"{path.relative_to(root)}: {error}") from error
-    check_codex_quoting(yaml.compose((root / "agents/openai.yaml").read_text(encoding="utf-8")))
-    return len(markdowns), len(yamls), link_count
+    check_codex_quoting(yaml.compose(source))
 
 
 def repository_files(source):
@@ -262,19 +286,25 @@ def stage(source, destination):
         shutil.copy2(path, target)
 
 
+def validate_staged(source, name):
+    with tempfile.TemporaryDirectory() as temp:
+        destination = Path(temp) / name
+        destination.mkdir()
+        stage(source, destination)
+        return validate(destination)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--skill-dir", type=Path, help="validate an existing installation instead of staging the repository")
     args = parser.parse_args()
     try:
         if args.skill_dir:
-            counts = validate(args.skill_dir)
+            root = Path(os.path.abspath(args.skill_dir))
+            # Not rglob over a checkout: it reaches .venv and .claude, which an install never copies.
+            counts = validate_staged(root, root.name) if (root / ".git").exists() else validate(root)
         else:
-            with tempfile.TemporaryDirectory() as temp:
-                destination = Path(temp) / SKILL_NAME
-                destination.mkdir()
-                stage(Path(__file__).resolve().parents[1], destination)
-                counts = validate(destination)
+            counts = validate_staged(Path(__file__).resolve().parents[1], SKILL_NAME)
     except (ValueError, yaml.YAMLError, OSError, TypeError) as error:
         parser.exit(1, f"FAIL: {error}\n")
     print(f"PASS: {counts[0]} Markdown files, {counts[1]} YAML files, {counts[2]} local references; structure only")

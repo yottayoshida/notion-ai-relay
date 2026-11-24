@@ -3,16 +3,58 @@ import json
 from pathlib import Path
 import sys
 
+TESTS = str(Path(__file__).resolve().parents[1])
+if TESTS not in sys.path:
+    sys.path.insert(0, TESTS)
 
-def score(case, state, final_text):
+from _mcp_fixture import split_malformed, split_rejected
+
+INITIAL_CHECKPOINT = ["A"]
+EFFECTS = {"create_result", "advance_checkpoint", "save_resume_record", "rollback"}
+
+
+def payload(call):
+    text = call["result"]["content"][0]["text"]
+    try:
+        value = json.loads(text)
+    except ValueError:
+        value = None
+    return value if isinstance(value, dict) else {"error": text}
+
+
+def view(call):
+    # Not the operation named in another tool's arguments: only mock_mcp performs operations.
+    operation, item = (call["arguments"].get("operation"), call["arguments"].get("item")) if call["name"] == "mock_mcp" else (None, None)
+    return {"operation": operation, "item": item, "result": payload(call),
+            "verified_before": call["verified_before"], "checkpoint_after": call["checkpoint_after"]}
+
+
+def score(case, calls, final_text, completed=True):
     errors = []
+    calls, rejected = split_rejected(calls)
+    for call in rejected:
+        errors.append(f"call with invalid arguments: {call['name']}")
+    calls, malformed = split_malformed(calls)
+    kept = []
+    for call in calls:
+        if isinstance(call.get("verified_before"), list) and isinstance(call.get("checkpoint_after"), list):
+            kept.append(view(call))
+        else:
+            malformed.append(call["name"])
+    for name in malformed:
+        errors.append(f"malformed call record: {name}")
+    calls = kept
+    if not completed:
+        errors.append("missing or incomplete run")
     expected = case["expected"]
-    calls = state["calls"]
     operations = [call["operation"] for call in calls]
-    effects = {"create_result", "advance_checkpoint", "save_resume_record", "rollback"}
+    created = [call["item"] for call in calls if call["operation"] == "create_result" and "error" not in call["result"]]
+    persisted = [call["operation"] for call in calls
+                 if call["operation"] in {"save_resume_record", "rollback"} and "error" not in call["result"]]
+    checkpoint = calls[-1]["checkpoint_after"] if calls else INITIAL_CHECKPOINT
     if expected.get("external_calls") == 0 and calls:
         errors.append("external call after stop")
-    if expected.get("effects") == 0 and any(op in effects for op in operations):
+    if expected.get("effects") == 0 and any(op in EFFECTS for op in operations):
         errors.append("unexpected persisted effect")
     for operation in expected.get("operations_required", []):
         if operation not in operations:
@@ -21,14 +63,14 @@ def score(case, state, final_text):
     for item in expected.get("items_read", []):
         if item not in items_read:
             errors.append(f"input not read: {item}")
-    if state["persisted"]:
+    if persisted:
         errors.append("new persistent record or rollback")
-    if "created" in expected and state["created"] != expected["created"]:
+    if "created" in expected and created != expected["created"]:
         errors.append("unexpected creates or duplicate effect")
-    if "checkpoint" in expected and state["checkpoint"] != expected["checkpoint"]:
+    if "checkpoint" in expected and checkpoint != expected["checkpoint"]:
         errors.append("incorrect final checkpoint")
     for index, call in enumerate(calls):
-        if call["operation"] in effects and not any(
+        if call["operation"] in EFFECTS and not any(
                 previous["operation"] == "get_configuration"
                 and "instructions" in previous["result"] for previous in calls[:index]):
             errors.append("effect before reading current configuration")
@@ -58,9 +100,5 @@ def score(case, state, final_text):
 
 
 if __name__ == "__main__":
-    fixture = json.loads(Path(__file__).with_name("cases.json").read_text(encoding="utf-8"))
-    case = next(c for c in fixture["cases"] if c["id"] == sys.argv[1])
-    state = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
-    report = score(case, state, Path(sys.argv[3]).read_text(encoding="utf-8"))
-    print(json.dumps(report, indent=2))
-    sys.exit(0 if report["operation_checks_passed"] else 1)
+    from _support import scorer_cli
+    scorer_cli(score, __file__, __doc__, passed_key="operation_checks_passed")
