@@ -14,13 +14,13 @@ npx skills add yottayoshida/notion-ai-relay
 
 For manual installation, put this repository in your client's Skill directory as a folder named `notion-ai-relay`, the `name` in `SKILL.md`, for example with `git clone https://github.com/yottayoshida/notion-ai-relay.git`. A GitHub zip extracts to `notion-ai-relay-main`; rename it, because a client may name the Skill after its folder. Keep `SKILL.md` and `references/` together. `agents/openai.yaml` contains optional Codex display metadata.
 
-For installed-file version checks, safe updates, backups, and rollback, see [installation maintenance](docs/install-maintenance.md). The guide separates disk verification from client reload and MCP compatibility.
+For installed-file version checks, safe updates, backups, and rollback, see [installation maintenance](docs/install-maintenance.md).
 
 Connect Notion MCP in your AI assistant separately. If a workflow uses another service, connect an MCP server that supports the required operations for that service.
 
 ## Use
 
-After your assistant loads the Skill, specify the target and the input for this run.
+After your assistant loads the Skill, specify the target and the input for this run. You need not write in English: the [response-language rules](SKILL.md#response-language) set the language of replies and of content written to destinations.
 
 For a Custom Agent, its name or URL is enough when your connection can read the recorded settings of a chat you had with it or one of its scheduled runs, among its latest 60 runs: the Skill reads the Instructions page set in the Agent's settings if your chat recorded it, or else the newest published page recorded, and reports which page and run it used. Notion can cut a run's recorded settings short; the Skill then reports the missing settings as unknown, or asks for the page URL if the cut hides the page link. Otherwise give the Instructions page URL (the link in the Agent's settings) or paste the text. When instructions or settings come from a recorded run, the Skill lists the write destinations, except those you name in the request, and waits for your go-ahead before the first write. [Agent retrieval](docs/agent-retrieval.md) compares the routes.
 
@@ -60,7 +60,7 @@ Some MCP connections cannot retrieve full Agent settings. The Skill then uses th
 
 The Skill does not launch or drive Notion-side agents or AI sessions. External writes and messages remain subject to your request and the host's authorization requirements. A dry run does not update completion state.
 
-This repository distributes instructions. It does not provide a production MCP server or a persistent background process; synthetic fixture servers under `tests/` are evaluation-only. Skill loading and available MCP capabilities depend on the client; compatibility has not been verified across all clients. See the dated [compatibility matrix](docs/compatibility.md) for synthetic checks, historical live records, blockers and unverified environments.
+This repository distributes instructions. It does not provide a production MCP server or a persistent background process; synthetic fixture servers under `tests/` are evaluation-only. Skill loading and available MCP capabilities depend on the client; compatibility has not been verified across all clients. See the dated [compatibility matrix](docs/compatibility.md).
 
 ## Files
 

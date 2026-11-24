@@ -1,6 +1,7 @@
 ---
 name: notion-ai-relay
 description: Discover accessible Notion Custom Agents and Notion Skills, read their settings or instructions through MCP, and let the current assistant carry out their tasks. Use for execution by name or URL, resumed runs, and dry runs.
+compatibility: Requires an MCP connection to Notion. Reading Agent settings, listing Skills, and downloading files depend on what the connection and client expose.
 ---
 
 # Run Notion agents and skills through MCP
@@ -28,7 +29,7 @@ For discovery requests, follow [agent listing](references/read-configuration.md#
 
 For execution requests, identify the target type, name or URL, task, input, and execution or dry-run mode. Treat "carry out" and "run" as requests to execute, not merely explain the configuration. Evaluate a requested dry run as defined in the [execution boundaries](#execution-boundaries).
 
-If the execution target is missing or ambiguous, show the candidates' types, owners, and URLs and ask only for the necessary selection. An Agent and a Skill with the same name are different targets. Use the current input and applicable conditions to select the task. Do not invent events, target records, selected text, or time periods.
+If the execution target is missing or ambiguous, show the candidates' types, names, descriptions, and URLs where available, and ask only for the necessary selection. An Agent and a Skill with the same name are different targets. Use the current input and applicable conditions to select the task. Do not invent events, target records, selected text, or time periods.
 
 ## 2. Read the current configuration
 

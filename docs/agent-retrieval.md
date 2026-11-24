@@ -1,6 +1,6 @@
 # Reading Custom Agent instructions and settings
 
-Notion AI Relay needs a Custom Agent's instructions before it can carry out the Agent's task. This page compares the ways to get them and records test runs. It is for maintainers; the Skill does not load it.
+Notion AI Relay needs a Custom Agent's instructions before it can carry out the Agent's task. This page compares the ways to get them and records test runs. It is for users comparing routes and for maintainers; the Skill does not load it.
 
 Scope of the checks: one Notion workspace, three Custom Agents, read by a user who can edit the first two (edit access to the third was not checked), using Claude Code with the hosted Notion MCP. These 2026-11-06 records were not rerun on 2026-11-15. Other plans, roles, and clients may differ.
 
