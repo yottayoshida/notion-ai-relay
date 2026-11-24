@@ -13,12 +13,12 @@ From the repository root, choose a **new disposable directory outside client Ski
 ```bash
 scratch='/absolute/path/to/new-disposable-directory'
 mkdir "$scratch"
-npm install --prefix "$scratch/cli" skills@1.8.1 --ignore-scripts --no-audit --no-fund
+npm install --prefix "$scratch/cli" skills@1.9.0 --ignore-scripts --no-audit --no-fund
 python3 -B tests/install-maintenance/replay.py \
   --cli "$scratch/cli/node_modules/skills/bin/cli.mjs"
 ```
 
-The installed CLI entrypoint runs through Node, equivalent to the guide's pinned `npx skills@1.8.1` commands without repeatedly invoking npm. The replay prints commands and assertions; redirect output to a private log if needed. A nonzero exit, timeout, missing dependency, or unavailable network is **not** a PASS. Assertions must remain enabled (do not use Python `-O` or `PYTHONOPTIMIZE`). The CLI download itself is an explicit network dependency, not a model execution or billing path.
+The installed CLI entrypoint runs through Node, equivalent to the guide's pinned `npx skills@1.9.0` commands without repeatedly invoking npm. The replay prints commands and assertions; redirect output to a private log if needed. A nonzero exit, timeout, missing dependency, or unavailable network is **not** a PASS. Assertions must remain enabled (do not use Python `-O` or `PYTHONOPTIMIZE`). The CLI download itself is an explicit network dependency, not a model execution or billing path.
 
 ## Offline isolation controls
 

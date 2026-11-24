@@ -57,7 +57,7 @@ def main():
     sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cli", type=Path, required=True,
-                        help="skills 1.8.1 bin/cli.mjs, with dependencies installed")
+                        help="skills 1.9.0 bin/cli.mjs, with dependencies installed")
     args = parser.parse_args()
     cli = args.cli.resolve()
     if not cli.is_file():
