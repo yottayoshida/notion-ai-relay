@@ -86,6 +86,14 @@ class EvalFixtureTests(unittest.TestCase):
         self.assertEqual(payload(fixture.call("fetch", {"id": record}))["status"], "Ready")
         self.assertEqual(fixture.effects, [])
 
+    def test_the_example_case_serves_its_instructions_four_requests_and_a_slack_destination(self):
+        fixture = mock.Fixture(by_id("dry-run", "example-request-triage"))
+        self.assertIn("#ops-weekly", payload(fixture.call("fetch", {"id": "fixture://procedure"}))["text"])
+        self.assertEqual([record["status"] for record in payload(fixture.call("fetch", {"id": "fixture://items"}))["records"]],
+                         ["New", "New", "In progress", "New"])
+        self.assertIn("#ops-weekly", payload(fixture.call("access", {}))["send"])
+        self.assertEqual(payload(fixture.call("fetch", {"id": "fixture://R-103"}))["title"], "Bulk export")
+
     def test_a_search_without_a_query_lists_the_scope_and_a_query_matches_name_or_description(self):
         case = by_id("next-step", "agent-not-found")
         fixture = mock.Fixture(case)

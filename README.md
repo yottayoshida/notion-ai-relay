@@ -28,7 +28,7 @@ For a Custom Agent, its name or URL is enough when your connection can read the 
 List the Notion Custom Agents and Notion Skills I can access.
 ```
 
-Execution and dry-run examples:
+Execution and [dry-run](docs/dry-run-example.md) examples:
 
 ```text
 Carry out this Custom Agent's task.
@@ -64,7 +64,7 @@ This repository distributes instructions. It does not provide a production MCP s
 
 ## Docs
 
-[Troubleshooting](docs/troubleshooting.md), [file guide](docs/files.md).
+[Sample dry run](docs/dry-run-example.md), [troubleshooting](docs/troubleshooting.md), [file guide](docs/files.md).
 
 ## License
 

@@ -10,6 +10,8 @@ These synthetic cases test the result contract for issue #15. They are not runti
 4. Compare the effect log with `expected.mutations`. Check exact output and forbidden strings where specified. For normal execution, require the specified read after the update. Inspect every `expected.report` criterion against the final response and recorded reads. An empty mutation log without the required report is not a pass. Unknown cost, timeout, missing Skill reads, or missing evidence is incomplete, not success.
 5. Record candidate revision/content hashes, date, client, model/thinking, per-case results, skips, costs, and limitations. Keep raw traces and usage outside the distributed repository.
 
+`example-request-triage` is the case behind the [example dry run](../../docs/dry-run-example.md). That run loaded the Skill as a project Skill instead of following step 1, kept the 12-turn limit, and had no 180-second limit.
+
 The cases pair dry-run restrictions with ordinary authorized execution and output-only drafting. They cover partial retrieval, unavailable sending capability, missing authorization and destinations, representative previews, and nondisclosure. A count of six is merely a finite fixture for representative reporting, not a runtime batching threshold.
 
 ## Evidence boundary
