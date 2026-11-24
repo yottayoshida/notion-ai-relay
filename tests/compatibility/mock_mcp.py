@@ -4,6 +4,7 @@ import argparse
 import inspect
 from pathlib import Path
 import sys
+import time
 
 TESTS = str(Path(__file__).resolve().parents[1])
 if TESTS not in sys.path:
@@ -45,7 +46,23 @@ RUN_HISTORY_TOOLS = [
           "before_sequence": INTEGER}, ["session_url", "count"]),
     tool("read_session_event", "Read the full visible content of one saved Custom Agent session event.",
          {"session_url": SESSION_URL, "sequence": INTEGER}, ["session_url", "sequence"]),
+    tool("search_sessions", "Search past agent sessions by topic in a periodically refreshed index and return matching session URLs and "
+         "excerpts. Recently created or updated sessions may not appear; use query_sessions for recent sessions.",
+         {"question": {"type": "string", "description": "What you want to find in past sessions."},
+          "lookback": {"type": "string", "description": "How far back to search, such as \"30d\" or \"1y\". Leave it out to search the past year."}},
+         ["question"]),
 ]
+SKILL_TOOLS = [
+    tool("get_enabled_skills", "Use this tool to view the Notion skills the user has enabled for you and other external MCP clients, each with "
+         "a name and a description of when it should be used. If you choose to use one of these skills, mention to the user that you are "
+         "loading the skill from Notion first, then download them.", {}, []),
+]
+SKILL_BASE = {"get_access", "relay_file", "fetch", "search_pages", "write", "launch_session"}
+LOCAL_TOOLS = {"relay_file", "calculate"}
+TRACKING = {"skill": {"type": "string", "description": "For tracking only: the name of the agent skill you are following for this task, such as notion-meeting-prep. Omit if you are not following a skill."}}
+for item in TOOLS + RUN_HISTORY_TOOLS + SKILL_TOOLS:
+    if item["name"] not in LOCAL_TOOLS:
+        item["inputSchema"]["properties"].update(TRACKING)
 RUN_HISTORY_BASE = {"get_access", "relay_file", "fetch", "write", "launch_session"}
 RUN_HISTORY_HANDLED = {"get_access"} | {item["name"] for item in RUN_HISTORY_TOOLS}
 SPACE = "fixture-space"
@@ -62,32 +79,46 @@ RUN_PAGES = {
 }
 
 
-def session(session_id, creator, creator_type, trigger, version, when, title="Chat"):
+def session(session_id, creator, creator_type, trigger, version, when, title="Chat", emails=()):
     return {"object": "session", "id": session_id, "agent_id": AGENT, "title": "Weekly update" if trigger == "recurrence" else title,
             "status": "completed", "created_by": {"id": creator, "type": creator_type},
             "agent_version": None if version is None else {"id": f"version-{version}", "number": version, "published_at": "2026-11-01T00:00:00Z"},
-            "trigger_type": trigger, "type_labels": ["triggered" if trigger == "recurrence" else "chat"], "created_at": when, "updated_at": when}
+            "trigger_type": trigger, "type_labels": ["chat" if trigger == "chat" else "triggered"], "chat_user_emails": list(emails),
+            "created_at": when, "updated_at": when}
 
 
 OTHER_CHATS = [session("e1000000-0000-4000-8000-000000000001", OTHER, "user", "chat", 3, "2026-11-18T09:00:00Z",
-                       "Thistlewood supplier review"),
+                       "Thistlewood supplier review", ["wren.halloway@example.com"]),
                session("e1000000-0000-4000-8000-000000000002", OTHER, "user", "chat", 3, "2026-11-17T09:00:00Z",
-                       "Quillfeather budget questions")]
+                       "Quillfeather budget questions", ["wren.halloway@example.com"])]
+MENTION = session("e4000000-0000-4000-8000-000000000005", BOT, "bot", "slack.app.mention", 3, "2026-11-16T09:00:00Z",
+                  "Marrowgate invoice thread", ["corvin.ashby@example.com"])
+OTHER_RUNS = [*OTHER_CHATS, MENTION]
 SCHEDULED = session("e2000000-0000-4000-8000-000000000003", BOT, "bot", "recurrence", 3, "2026-11-15T00:00:00Z")
-OWN_CHAT = session("e3000000-0000-4000-8000-000000000004", SELF, "user", "chat", None, "2026-11-12T01:00:00Z")
-RUNS = {run["id"]: run for run in [*OTHER_CHATS, SCHEDULED, OWN_CHAT]}
+OWN_CHAT = session("e3000000-0000-4000-8000-000000000004", SELF, "user", "chat", None, "2026-11-12T01:00:00Z",
+                   emails=["fixture.user@example.com"])
+RUNS = {run["id"]: run for run in [*OTHER_RUNS, SCHEDULED, OWN_CHAT]}
 RECORDED = {"published": (PUBLISHED_PAGE, ["input"]), "draft": (EDITABLE_PAGE, [])}
-SESSION_PAGES = {None: ([], "cursor-1"), "cursor-1": (OTHER_CHATS, "cursor-2"), "cursor-2": ([SCHEDULED], "cursor-3"),
+SESSION_PAGES = {None: ([], "cursor-1"), "cursor-1": (OTHER_CHATS, "cursor-2"), "cursor-2": ([MENTION, SCHEDULED], "cursor-3"),
                  "cursor-3": ([OWN_CHAT], None)}
-CONFIGURATION_EVENT = 10
-EVENT_COUNT = 40
+# Do not drop your own chat from the matches: a search that finds only other people's runs is never worth calling.
+TOPIC_MATCHES = [{"session_url": f"session://{SPACE}/{run['id']}", "title": run["title"], "excerpt": excerpt}
+                 for run, excerpt in [(OTHER_CHATS[0], "Thistlewood supplier review: compared the two renewal quotes."),
+                                      (MENTION, "Marrowgate invoice thread: asked the Agent to total the open invoices."),
+                                      (OWN_CHAT, "Dry run: read input and returned the sum.")]]
+EVENT_COUNT = 140
+
+
+# Do not move your own chat's event back into the first 20: a reader that stops after one listing would pass.
+def configuration_event(session_id):
+    return 23 if session_id == OWN_CHAT["id"] else 10
 
 
 def run_events(session_id):
     trigger = RUNS[session_id]["trigger_type"]
     events = []
     for sequence in range(1, EVENT_COUNT + 1):
-        if sequence == CONFIGURATION_EVENT:
+        if sequence == configuration_event(session_id):
             summary = "The current custom agent definition and configuration (output of notion_load_agent)"
         elif sequence == 1:
             summary = "Run started" if trigger == "recurrence" else "User message"
@@ -112,10 +143,14 @@ class Fixture:
         self.bundle = bundle
         self.calls = []
         self.effects = []
+        self.clock = time.monotonic
+        self.limited_until = None
 
     def tools(self):
         if self.case["mode"] == "run-history":
             return [item for item in TOOLS if item["name"] in RUN_HISTORY_BASE] + RUN_HISTORY_TOOLS
+        if self.case["mode"] == "enabled-skills":
+            return [item for item in TOOLS if item["name"] in SKILL_BASE] + SKILL_TOOLS
         return [item for item in TOOLS if not (self.case["mode"] == "api-wrapper" and item["name"] in {"list_agents", "get_settings"})]
 
     def call(self, name, args):
@@ -137,8 +172,8 @@ class Fixture:
         if name == "get_access":
             return text({"capabilities": [item["name"] for item in self.tools()],
                          "connection": "ordinary-page-api-wrapper" if mode == "api-wrapper" else "synthetic-hosted-like",
-                         "agent_edit": mode != "run-only", "agent_discovery": mode != "api-wrapper",
-                         "agent_settings_read": mode != "api-wrapper", "instruction_page_read": mode != "run-only",
+                         "agent_edit": mode not in {"run-only", "enabled-skills"}, "agent_discovery": mode not in {"api-wrapper", "enabled-skills"},
+                         "agent_settings_read": mode not in {"api-wrapper", "enabled-skills"}, "instruction_page_read": mode != "run-only",
                          "notion_session_execution": True, "known_skill_management_location": None})
         if name == "list_agents":
             if mode in {"unconnected", "denied"}:
@@ -150,6 +185,9 @@ class Fixture:
             if mode == "partial-pages" and args["scope"] == "workspace":
                 value["nextCursor"] = "next-page"
             return text(value)
+        if name == "get_enabled_skills":
+            return text({"skills": [{"id": f"skill-{number:02d}", "name": f"Fixture skill {number:02d}", "description": "Synthetic Skill"}
+                                    for number in range(1, self.case["skill_count"] + 1)]})
         if name == "get_settings":
             return text({"agent_url": "agent://fixture/editor", "instructions_url": "agent-instructions", "version": "published", "agent_version": 1,
                          "settings_complete": True, "permissions": {"read": ["input", "delegate", "child", "attachment", "reference"], "write": ["approved"]}})
@@ -180,6 +218,12 @@ class Fixture:
                 pages["agent-instructions"]["text"] = "Independently read input and sum its values here. Separately delegate a review to Notion Skill delegate; write its result to approved only if all its required instructions are readable. The sum does not depend on the review."
                 pages["delegate"] = {"id": "delegate", "complete": False, "missing_content": True,
                                      "text": "Review procedure beginning.\n" + "Required rule omitted by transport.\n" * 200 + "[output truncated]"}
+            if mode == "rate-limited" and target == "input":
+                if self.limited_until is None:
+                    self.limited_until = self.clock() + self.case["retry_after_seconds"]
+                if self.clock() < self.limited_until:
+                    return text({"error": {"code": "rate_limited", "retry_after_seconds": max(1, round(self.limited_until - self.clock())),
+                                           "rate_limit_reason": "Too many requests for this integration"}}, True)
             if target not in pages:
                 return text({"error": "not_found", "retryable": False}, True)
             return text(pages[target])
@@ -204,6 +248,8 @@ class Fixture:
             runs, next_cursor = SESSION_PAGES[args.get("start_cursor")]
             return text({"object": "list", "type": "session", "results": runs,
                          "has_more": next_cursor is not None, "next_cursor": next_cursor})
+        if name == "search_sessions":
+            return text({"results": TOPIC_MATCHES})
         run = next((run for run in RUNS if session_key(run) == session_key(args.get("session_url", ""))), None)
         if run is None:
             return text({"error": "session_not_found", "retryable": False}, True)
@@ -218,7 +264,7 @@ class Fixture:
                 chosen = events[-count:]
             return text({"events": chosen})
         sequence = args.get("sequence")
-        if sequence != CONFIGURATION_EVENT:
+        if sequence != configuration_event(run):
             event = next((e for e in events if e["sequence"] == sequence), None)
             return text({**event, "content": "Loaded a business page."}) if event else text({"error": "event_not_found", "retryable": False}, True)
         version = "draft" if RUNS[run]["agent_version"] is None else "published"

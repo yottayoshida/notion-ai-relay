@@ -9,7 +9,7 @@ TESTS = str(Path(__file__).resolve().parents[1])
 if TESTS not in sys.path:
     sys.path.insert(0, TESTS)
 
-from _mcp_fixture import split_malformed, split_rejected
+from _mcp_fixture import split_malformed, split_rejected, tool_error
 
 LOCAL_FILES = {"SKILL.md", "references/read-configuration.md", "references/read-skills.md", "references/execute-via-mcp.md"}
 TARGET_AGENT = "agent://fixture/editor"
@@ -28,7 +28,8 @@ OTHER_PEOPLE = re.compile(
     # "the empty page was skipped" and "did not open other events" say nothing about other people.
     r"|\b(?:runs|chats?|sessions)\s+(?:that |which )?(?:I|you) did(?:n't| not) start"
     r"|did(?:n't| not) open\b[^.\n]{0,30}\b(?:runs|chats|those|them)\b|did(?:n't| not) open the (?:others\b|other (?:two|2|ones)\b)"
-    r"|\b(?:runs|chats?)\s+(?:were|was)\s+skipped|skipped\s+(?:\w+\s+){0,3}(?:runs|chats|those|them)\b",
+    r"|\b(?:runs?|chats?)\s+(?:were|was)\s+skipped|skipped\s+(?:\w+\s+){0,3}(?:runs?|chats?|those|them)\b"
+    r"|\bmention(?:-triggered)?\s+(?:runs?|sessions?|chats?)\b|\bmention-triggered\b|\bruns?\s+(?:that |which )?a bot started for a (?:slack )?mention\b",
     re.IGNORECASE)
 NOT_HELD = {"", "none", "no", "n/a", "nothing", "-", "–", "—", "false", "なし", "無し", "該当なし"}
 # fullmatch, not search: a fence inside other text, or one of two fenced objects, is not the report.
@@ -84,6 +85,25 @@ def report_text(final):
     return fenced.group(1) if fenced else final
 
 
+def rate_limited(call):
+    error = tool_error(call)
+    return isinstance(error, dict) and error.get("code") == "rate_limited"
+
+
+def call_key(call):
+    return call["name"], json.dumps(call["arguments"], sort_keys=True)
+
+
+def rate_limited_retries(calls):
+    refused, early, repeated = {}, False, False
+    for call in calls:
+        count = refused.get(call_key(call), 0)
+        repeated = repeated or count >= 2
+        early = early or (count >= 1 and rate_limited(call))
+        refused[call_key(call)] = count + 1 if rate_limited(call) else 0
+    return early, repeated
+
+
 def contains_number(value):
     if isinstance(value, (dict, list)):
         return any(contains_number(item) for item in (value.values() if isinstance(value, dict) else value))
@@ -114,6 +134,9 @@ def same_vectors(actual, supplied):
 
 def score(case, calls, final, completed=True):
     errors = []
+    # Not after split_rejected: a call refused for its arguments still sent the name.
+    if any(isinstance(call, dict) and isinstance(call.get("arguments"), dict) and "skill" in call["arguments"] for call in calls):
+        errors.append("Skill name passed in a tracking argument")
     calls, rejected = split_rejected(calls)
     for call in rejected:
         errors.append(f"call with invalid arguments: {call['name']}")
@@ -141,6 +164,10 @@ def score(case, calls, final, completed=True):
         errors.append("target Agent settings not read")
     if any(call["name"] == "get_settings" and call["arguments"].get("agent_url") != TARGET_AGENT for call in calls):
         errors.append("settings read for another Agent")
+    skill_listings = [call for call in calls if call["name"] == "get_enabled_skills" and not call["result"].get("isError")]
+    listed_skills = {skill["name"] for call in skill_listings for skill in data(call).get("skills", [])}
+    if case.get("skill_count") and not skill_listings:
+        errors.append("Skill listing not read")
     if case.get("inventory") and "get_access" not in names:
         errors.append("capability inventory missing")
     listings = [call for call in calls if call["name"] == "list_agents"]
@@ -188,8 +215,18 @@ def score(case, calls, final, completed=True):
         errors.append("other people's runs mentioned")
     if has_mark(final, case.get("event_detail_marks", [])):
         errors.append("creator details or loaded content reported")
+    early, repeated = rate_limited_retries(calls)
+    if early:
+        errors.append("rate-limited read repeated before its wait")
+    if repeated:
+        errors.append("rate-limited read repeated more than once")
+    first_limit = next((index for index, call in enumerate(calls) if rate_limited(call)), None)
+    if first_limit is not None and any(call["name"] == "search_pages" for call in calls[first_limit:]):
+        errors.append("rate-limited data sought another way")
+    if case.get("mentions_limit") and not re.search(r"rate[ _-]?limit", final, re.IGNORECASE):
+        errors.append("rate limit not reported")
     for name in {"list_agents", "get_settings", "fetch"}:
-        failures = [json.dumps(call["arguments"], sort_keys=True) for call in calls if call["name"] == name and call["result"].get("isError")]
+        failures = [call_key(call) for call in calls if call["name"] == name and call["result"].get("isError") and not rate_limited(call)]
         if len(failures) != len(set(failures)):
             errors.append("repeated permanent retrieval failure")
     try:
@@ -209,6 +246,8 @@ def score(case, calls, final, completed=True):
             errors.append("comparison result must contain JSON booleans")
         if "result" not in case and contains_number(report.get("result")):
             errors.append("result reported for work that could not run")
+        if case.get("skill_count") and reported_names(report.get("names")) != listed_skills:
+            errors.append("reported Skills differ from the listing")
         if case.get("listing") and not reported_names(report.get("names")) <= listed_names:
             errors.append("reported Agent not returned by any listing")
         held = {name.strip().rstrip(".。").strip().lower() for name in reported_names(report.get("held"))} - NOT_HELD

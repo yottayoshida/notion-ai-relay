@@ -14,6 +14,7 @@ FIXTURES = {
     "compatibility": ["--case", "comparison-code", "--bundle", TESTS.parent],
     "write-lifecycle": ["--case", "normal"],
     "resume-handoff": ["--case", "partial-dry-run"],
+    "eval-fixture": ["--case", "preview-partial", "--suite", "dry-run"],
 }
 BROKEN_REQUESTS = [
     (b'{"jsonrpc": "2.0", "id": 1}', {"id": 1, "error": {"code": -32600, "message": "Invalid request"}}),
@@ -108,6 +109,8 @@ class FixtureStartTests(unittest.TestCase):
 class ScorerCliInputTests(unittest.TestCase):
     def test_a_missing_or_non_utf8_input_is_named_without_a_traceback(self):
         for suite, (_, case_id, *_) in FIXTURES.items():
+            if not (TESTS / suite / "score.py").exists():
+                continue
             with self.subTest(suite=suite), tempfile.TemporaryDirectory() as directory:
                 garbled = Path(directory) / "garbled.txt"
                 garbled.write_bytes(b"\xff\xfe")

@@ -82,5 +82,17 @@
     "name": "Duplicate rule without concurrency",
     "history": "The procedure says \"Do not create duplicate pages; keep one summary page per day.\" It says nothing about concurrent runs. One run; the lookup finds no page for today. Only lookup, ordinary create, and readback exist.",
     "expected": "Create today's page and read it back; the rule is best-effort. Do not hold it for a missing shared guarantee."
+  },
+  {
+    "id": "recorded-schedule-trigger",
+    "name": "Recorded schedule trigger",
+    "history": "The procedure says \"Keep one summary page per day; do not create duplicates.\" It says nothing about concurrent runs. The Agent's settings came from a run of it recorded on 2026-11-20, whose triggers show a schedule: every weekday at 09:00 Asia/Tokyo. Today is Monday 2026-11-24, 08:30 Asia/Tokyo. The user's request named the summary database as the place to create today's page. One run; the lookup finds no page for today. Only lookup, ordinary create, and readback exist.",
+    "expected": "Create today's page and read it back; the rule is best-effort. The run report notes that concurrent runs are not protected and adds that, as recorded on 2026-11-20, Notion also runs this Agent every weekday at 09:00 Asia/Tokyo."
+  },
+  {
+    "id": "recorded-manual-trigger",
+    "name": "Recorded manual trigger",
+    "history": "The procedure says \"Keep one summary page per day; do not create duplicates.\" It says nothing about concurrent runs. The Agent's settings came from a run of it recorded on 2026-11-20, whose triggers show manual runs only, with no schedule or event trigger. Today is Monday 2026-11-24, 08:30 Asia/Tokyo. The user's request named the summary database as the place to create today's page. One run; the lookup finds no page for today. Only lookup, ordinary create, and readback exist.",
+    "expected": "Create today's page and read it back; the rule is best-effort. The run report notes only that concurrent runs are not protected and names no schedule."
   }
 ]

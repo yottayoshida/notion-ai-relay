@@ -9,7 +9,10 @@
 - [Installation maintenance](install-maintenance.md) covers finding the installed copy, updates, backups, rollback, and what to send for support.
 - [Security policy](../SECURITY.md) says what to report privately and where.
 - [Structural checks](structural-checks.md) covers the CI check. `scripts/` holds the check and the command CI runs.
+- [Troubleshooting](troubleshooting.md) lists what a stopped run usually needs from you. The Skill does not load it.
+- [Example dry run](dry-run-example.md) shows one unedited request, the tools called and the reply, from a synthetic local MCP.
 - Decision cases without a scorer are in `evals/`, where CI checks that each case has a unique `id` and a non-empty expected outcome; `tests/` keeps the suites whose scorers and fixtures CI runs. Each folder has its own replay steps. Neither is runtime instructions.
+- [Next-step cases](../evals/next-step/README.md) check what a stopped run's report tells the user to do, against a [local eval fixture](../tests/eval-fixture/mock_mcp.py) that also serves the [dry-run cases](../evals/dry-run/README.md).
 - [Security-boundary execution cases](../tests/security/README.md) provide a synthetic MCP fixture, attempted-call scoring, and separate host-denial tests.
 - [Write lifecycle execution cases](../tests/write-lifecycle/README.md) exercise synthetic writes, unknown outcomes, verification, stop, and resume through a fault-injecting MCP fixture.
 - [Resume-handoff cases](../tests/resume-handoff/README.md) check resuming interrupted work and the handoff returned when work stops.

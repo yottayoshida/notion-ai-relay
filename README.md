@@ -16,19 +16,19 @@ For manual installation, put this repository in your client's Skill directory as
 
 For installed-file version checks, safe updates, backups, and rollback, see [installation maintenance](docs/install-maintenance.md).
 
-Connect Notion MCP in your AI assistant separately. If a workflow uses another service, connect an MCP server that supports the required operations for that service.
+[Connect Notion MCP](https://developers.notion.com/docs/get-started-with-mcp) in your AI assistant separately. If a workflow uses another service, connect an MCP server that supports the required operations for that service.
 
 ## Use
 
-After your assistant loads the Skill, specify the target and the input for this run. You need not write in English: the [response-language rules](SKILL.md#response-language) set the language of replies and of content written to destinations.
+After your assistant loads the Skill, specify the target and the input for this run. You need not write in English; see the [response-language rules](SKILL.md#response-language).
 
-For a Custom Agent, its name or URL is enough when your connection can read the recorded settings of a chat you had with it or one of its scheduled runs, among its latest 60 runs: the Skill reads the Instructions page set in the Agent's settings if your chat recorded it, or else the newest published page recorded, and reports which page and run it used. Notion can cut a run's recorded settings short; the Skill then reports the missing settings as unknown, or asks for the page URL if the cut hides the page link. Otherwise give the Instructions page URL (the link in the Agent's settings) or paste the text. When instructions or settings come from a recorded run, the Skill lists the write destinations, except those you name in the request, and waits for your go-ahead before the first write. [Agent retrieval](docs/agent-retrieval.md) compares the routes.
+For a Custom Agent, its name or URL is enough when your connection can read the recorded settings of a chat you had with it or one of its scheduled runs, among its latest 60 runs: the Skill reads the Instructions page set in the Agent's settings if your chat recorded it, or else the newest published page recorded, and reports which page and run it used. Notion can cut a run's recorded settings short; the Skill then reports missing connections, permissions, or triggers as unknown, or asks for the page URL if the cut hides the page link. Otherwise give the Instructions page URL (the link in the Agent's settings) or paste the text. From a recorded run, the Skill shows writes to destinations you did not name, what each would write and from what, and the record's date, then awaits your go-ahead. [Agent retrieval](docs/agent-retrieval.md) compares the routes.
 
 ```text
 List the Notion Custom Agents and Notion Skills I can access.
 ```
 
-Execution and dry-run examples:
+Execution and [dry-run](docs/dry-run-example.md) examples:
 
 ```text
 Carry out this Custom Agent's task.
@@ -46,7 +46,7 @@ Input: <items to process>
 
 ## Requirements and limits
 
-The Skill maps each operation to the MCP tools and argument schemas exposed by your environment. It does not require Computer Use, browser automation, a particular operating system, or a client-specific automation API. When Notion MCP returns a download URL for a file in the same run, such as a file uploaded to a page, the Skill downloads it instead of asking you to paste it, in a client that can download it and, for an archive, extract it; no other URL is downloaded outside MCP.
+The Skill maps each operation to the MCP tools and argument schemas exposed by your environment. It does not require Computer Use, browser automation, a particular operating system, or a client-specific automation API. When Notion MCP returns a download URL for a file in the same run, the Skill downloads it instead of asking you to paste it, in a client that can download it and, for an archive, extract it; no other URL is downloaded outside MCP.
 
 | Operation | Required information or capability |
 |---|---|
@@ -58,13 +58,13 @@ The Skill maps each operation to the MCP tools and argument schemas exposed by y
 
 Some MCP connections cannot retrieve full Agent settings. The Skill then uses the Agent's runs as described under Use; failing that, provide an instruction-page URL, the instruction text, or the missing settings. Pasted text and the editable Instructions page are not treated as a verified current published version. Missing registration or enabled-state metadata does not prevent execution of an explicitly selected procedure when its instructions and required input are available.
 
-The Skill does not launch or drive Notion-side agents or AI sessions. External writes and messages remain subject to your request and the host's authorization requirements. A dry run does not update completion state.
+The Skill does not launch or drive Notion-side agents or AI sessions. A relayed run happens in your assistant, not in Notion: it does not appear in the Agent's Activity, and it neither uses nor adds to the Agent's Memories. External writes and messages remain subject to your request and the host's authorization requirements. A dry run does not update completion state.
 
-This repository distributes instructions. It does not provide a production MCP server or a persistent background process; synthetic fixture servers under `tests/` are evaluation-only. Skill loading and available MCP capabilities depend on the client; compatibility has not been verified across all clients. See the dated [compatibility matrix](docs/compatibility.md).
+This repository distributes instructions. It does not provide a production MCP server or a persistent background process; synthetic fixture servers under `tests/` are evaluation-only. See the dated [compatibility matrix](docs/compatibility.md).
 
-## Files
+## Docs
 
-See the [file guide](docs/files.md).
+[Sample dry run](docs/dry-run-example.md), [troubleshooting](docs/troubleshooting.md), [file guide](docs/files.md).
 
 ## License
 
