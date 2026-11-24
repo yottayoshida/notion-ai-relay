@@ -37,7 +37,7 @@ class Fixture:
     def __init__(self, case, deny=(), download_base=DOWNLOAD_BASE):
         self.case = case
         self.deny = set(deny)
-        self.download_base = download_base.rstrip("/")
+        self.download_base = case.get("download_base", download_base).rstrip("/")
         self.files = case.get("files", {})
         self.calls = []
         self.effects = []
@@ -105,9 +105,16 @@ def archive_bytes(download):
     # mtime 0 in the gzip header: the current time there would change the served file's hash between builds.
     with gzip.GzipFile(fileobj=buffer, mode="wb", mtime=0) as compressed:
         with tarfile.open(fileobj=compressed, mode="w") as archive:
-            for name, content in download["archive"].items():
-                data = content.encode("utf-8")
+            members = download["archive"]
+            for name, content in members.items() if isinstance(members, dict) else members:
                 member = tarfile.TarInfo(name)
+                if isinstance(content, str):
+                    data = content.encode("utf-8")
+                elif "size" in content:
+                    data = bytes(content["size"])
+                else:
+                    data = b""
+                    member.type, member.linkname = tarfile.LNKTYPE, content["hardlink"]
                 member.size = len(data)
                 archive.addfile(member, io.BytesIO(data))
     return buffer.getvalue()

@@ -21,6 +21,14 @@ MARKUP = re.compile(r"[*`_]*")
 OPERATOR = re.compile(r"\s*[+\-−*/×÷]\s*\d")
 TRAILING = re.compile(r"\s*(?:\d|[%万千百億]|[eE][+\-−]?\d)")
 FILE_REFERENCE = re.compile(r"notion-file-block://[^\s\"'<>\\]+")
+DOWNLOAD_URL = re.compile(r"https://((?:[a-z0-9-]+\.)*[a-z][a-z0-9-]*)\.?(?::\d+)?(?:[/?#][^'\\\s\x00-\x1f\x7f]*)?", re.IGNORECASE | re.ASCII)
+
+
+def follows_download_rule(url):
+    match = DOWNLOAD_URL.fullmatch(url) if isinstance(url, str) else None
+    host = match[1].lower() if match else "localhost"
+    return (host != "localhost" and not host.endswith(".localhost")
+            and not any(char.isspace() or unicodedata.category(char) == "Cc" for char in url))
 
 
 def states_total(text, total):
@@ -106,6 +114,8 @@ def score(case, trace, final, completed=True):
         elif name == "direct_fetch":
             if args.get("url") in fetchable:
                 fetched.append(args["url"])
+                if not follows_download_rule(args["url"]):
+                    errors.append(f"fetch of a URL outside the download rule: {args['url']}")
             else:
                 errors.append(f"fetch of a URL no Notion MCP tool returned: {args.get('url')}")
         else:
