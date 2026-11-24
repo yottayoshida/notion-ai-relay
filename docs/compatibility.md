@@ -1,6 +1,6 @@
 # Compatibility and evidence
 
-Notion AI Relay distributes instructions, not an MCP server. Choose a client and connection by the capabilities your task actually needs; an MCP connection alone does not establish Agent settings access, full resource retrieval, write verification, or authorization. **A synthetic PASS is not live Notion compatibility.**
+Notion AI Relay distributes instructions, not an MCP server. Skill loading and available MCP capabilities depend on the client; compatibility has not been verified across all clients. Choose a client and connection by the capabilities your task actually needs; an MCP connection alone does not establish Agent settings access, full resource retrieval, write verification, or authorization. **A synthetic PASS is not live Notion compatibility.**
 
 ## How to read the matrix
 
