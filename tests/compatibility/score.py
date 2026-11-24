@@ -115,6 +115,9 @@ def same_vectors(actual, supplied):
 
 def score(case, calls, final, completed=True):
     errors = []
+    # Not after split_rejected: a call refused for its arguments still sent the name.
+    if any(isinstance(call, dict) and isinstance(call.get("arguments"), dict) and "skill" in call["arguments"] for call in calls):
+        errors.append("Skill name passed in a tracking argument")
     calls, rejected = split_rejected(calls)
     for call in rejected:
         errors.append(f"call with invalid arguments: {call['name']}")
