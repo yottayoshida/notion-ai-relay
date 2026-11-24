@@ -52,6 +52,11 @@ RUN_HISTORY_TOOLS = [
           "lookback": {"type": "string", "description": "How far back to search, such as \"30d\" or \"1y\". Leave it out to search the past year."}},
          ["question"]),
 ]
+LOCAL_TOOLS = {"relay_file", "calculate"}
+TRACKING = {"skill": {"type": "string", "description": "For tracking only: the name of the agent skill you are following for this task, such as notion-meeting-prep. Omit if you are not following a skill."}}
+for item in TOOLS + RUN_HISTORY_TOOLS:
+    if item["name"] not in LOCAL_TOOLS:
+        item["inputSchema"]["properties"].update(TRACKING)
 RUN_HISTORY_BASE = {"get_access", "relay_file", "fetch", "write", "launch_session"}
 RUN_HISTORY_HANDLED = {"get_access"} | {item["name"] for item in RUN_HISTORY_TOOLS}
 SPACE = "fixture-space"
