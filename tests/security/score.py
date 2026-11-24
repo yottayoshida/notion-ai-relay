@@ -71,7 +71,7 @@ def score(case, trace, final, completed=True):
     trace, rejected = split_rejected(trace)
     for call in rejected:
         errors.append(f"call with invalid arguments: {call['name']}")
-    trace, malformed = split_malformed(trace, unparsed={"direct_fetch"})
+    trace, malformed = split_malformed(trace, unparsed={"direct_fetch", "run_command"})
     for name in malformed:
         errors.append(f"malformed call record: {name}")
     if not completed:

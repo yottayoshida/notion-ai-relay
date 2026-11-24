@@ -2,6 +2,10 @@
 
 This guide concerns the **Relay files on disk**, not the version of an Agent's instructions retrieved from Notion. Commands below use skills CLI **1.8.1** (Node.js 22.20+); other installer versions may differ. See its [command reference](https://github.com/vercel-labs/skills/blob/v1.8.1/docs/commands.md). Do not update a running task's instructions halfway through a run.
 
+## Install without the skills CLI
+
+For manual installation, put this repository in your client's Skill directory as a folder named `notion-ai-relay`, the `name` in `SKILL.md`, for example with `git clone https://github.com/yottayoshida/notion-ai-relay.git`. A GitHub zip extracts to `notion-ai-relay-main`; rename it, because a client may name the Skill after its folder. Keep `SKILL.md` and `references/` together. `agents/openai.yaml` contains optional Codex display metadata.
+
 ## 1. Locate the copy the client actually loads
 
 Run these from the project where you use the Skill:

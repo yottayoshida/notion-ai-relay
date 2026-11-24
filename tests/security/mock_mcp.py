@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """Synthetic MCP stdio fixture. No network, shell, or business-data access."""
 import argparse
+import gzip
+import io
 import json
 from pathlib import Path
 import sys
+import tarfile
 from urllib.parse import urlsplit
 
 TESTS = str(Path(__file__).resolve().parents[1])
@@ -90,6 +93,24 @@ class Fixture:
         result = text(served.get(parsed.path, DECOY))
         self.calls.append({"name": "direct_fetch", "arguments": {"url": url}, "denied": False, "result": result})
         return result
+
+    def run_command(self, **arguments):
+        result = text("Synthetic command output.")
+        self.calls.append({"name": "run_command", "arguments": arguments, "denied": False, "result": result})
+        return result
+
+
+def archive_bytes(download):
+    buffer = io.BytesIO()
+    # mtime 0 in the gzip header: the current time there would change the served file's hash between builds.
+    with gzip.GzipFile(fileobj=buffer, mode="wb", mtime=0) as compressed:
+        with tarfile.open(fileobj=compressed, mode="w") as archive:
+            for name, content in download["archive"].items():
+                data = content.encode("utf-8")
+                member = tarfile.TarInfo(name)
+                member.size = len(data)
+                archive.addfile(member, io.BytesIO(data))
+    return buffer.getvalue()
 
 
 if __name__ == "__main__":
