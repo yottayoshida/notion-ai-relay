@@ -23,12 +23,14 @@ def load(suite, name):
 
 
 def cases_of(suite):
-    value = json.loads((TESTS / suite / "cases.json").read_text(encoding="utf-8"))
-    return value["cases"] if isinstance(value, dict) else value
+    return json.loads((TESTS / suite / "cases.json").read_text(encoding="utf-8"))
 
 
 def case_with_id(cases, case_id):
-    return next(case for case in cases if case["id"] == case_id)
+    for case in cases:
+        if case["id"] == case_id:
+            return case
+    raise LookupError(f"unknown case {case_id!r}")
 
 
 def run(suite, script, arguments, stdin=""):
@@ -44,8 +46,12 @@ def stdio(suite, arguments, requests):
 
 
 def read_trace(path, case_id, server):
+    return parse_trace(Path(path).read_text(encoding="utf-8"), case_id, server)
+
+
+def parse_trace(text, case_id, server):
     records, errors = [], []
-    for number, line in enumerate(Path(path).read_text(encoding="utf-8").splitlines(), 1):
+    for number, line in enumerate(text.splitlines(), 1):
         try:
             record = json.loads(line)
         except ValueError:
@@ -70,21 +76,29 @@ def write_trace(path, case_id, server, calls):
     path.write_text("".join(json.dumps(record) + "\n" for record in [start_record(case_id, server), *calls]), encoding="utf-8")
 
 
-def scorer_cli(score, script, description, first_report=False):
+def read_input(parser, path):
+    try:
+        return Path(path).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as error:
+        parser.error(f"cannot read {path}: {error}")
+
+
+def scorer_cli(score, script, description, first_report=False, passed_key="passed"):
+    script = Path(script).resolve()
+    cases = cases_of(script.parent.name)
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument("case")
+    parser.add_argument("case", choices=[case["id"] for case in cases])
     parser.add_argument("trace", type=Path)
     parser.add_argument("final", type=Path)
     if first_report:
         parser.add_argument("--first-report", type=Path)
     parser.add_argument("--incomplete", action="store_true")
     args = parser.parse_args()
-    script = Path(script).resolve()
-    case = case_with_id(json.loads(script.with_name("cases.json").read_text(encoding="utf-8")), args.case)
-    trace, trace_errors = read_trace(args.trace, args.case, load(script.parent.name, "mock_mcp").SERVER)
-    options = {"first_report": args.first_report.read_text(encoding="utf-8") if args.first_report else None} if first_report else {}
-    result = score(case, trace, args.final.read_text(encoding="utf-8"), not args.incomplete, **options)
+    case = case_with_id(cases, args.case)
+    trace, trace_errors = parse_trace(read_input(parser, args.trace), args.case, load(script.parent.name, "mock_mcp").SERVER)
+    options = {"first_report": read_input(parser, args.first_report) if args.first_report else None} if first_report else {}
+    result = score(case, trace, read_input(parser, args.final), not args.incomplete, **options)
     if trace_errors:
-        result.update(passed=False, errors=trace_errors + result["errors"])
+        result.update({passed_key: False, "errors": trace_errors + result["errors"]})
     print(json.dumps(result, indent=2))
-    raise SystemExit(0 if result["passed"] else 1)
+    raise SystemExit(0 if result[passed_key] else 1)

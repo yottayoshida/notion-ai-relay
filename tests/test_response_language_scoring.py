@@ -47,14 +47,14 @@ class ResponseLanguageScoringTests(unittest.TestCase):
         for case_id, (output, languages) in EXAMPLES.items():
             with self.subTest(case=case_id):
                 result = grade(case_id, output, languages)
-                self.assertTrue(result["passed"], result)
+                self.assertEqual(result["errors"], [])
 
     def test_correct_alternative_wording_and_block_markup_are_accepted(self):
-        self.assertTrue(grade("japanese-request", "合計は十です。", {"reply": "Japanese"})["passed"])
-        self.assertTrue(grade("explicit-english", "The total is ten.", {"reply": "English"})["passed"])
+        self.assertEqual(grade("japanese-request", "合計は十です。", {"reply": "Japanese"})["errors"], [])
+        self.assertEqual(grade("explicit-english", "The total is ten.", {"reply": "English"})["errors"], [])
         output = "## **POST:**\r\nCompleted both tasks.\r\n## REPLY\r\n投稿内容を確認しました。\r\n"
-        self.assertTrue(grade("destination-language-unstated", output,
-                              {"post": "English", "reply": "Japanese"})["passed"])
+        self.assertEqual(grade("destination-language-unstated", output,
+                               {"post": "English", "reply": "Japanese"})["errors"], [])
 
     def test_post_preamble_is_allowed_and_its_language_is_judged_separately(self):
         body = "POST\nBoth tasks completed.\nREPLY\n投稿内容を確認しました。"
@@ -72,70 +72,16 @@ class ResponseLanguageScoringTests(unittest.TestCase):
         self.assertFalse(grade("destination-language-unstated", output,
                                {"post": "English", "reply": "Japanese"})["passed"])
 
-    def test_output_only_json_and_draft_still_reject_preambles(self):
-        outputs = {
-            "json-only": '{"status":"ok","source_id":"fixture-03","total":10,"summary":"Total 10"}',
-            "returned-required-language": "DRAFT\nDear Acme Paper, delivery is confirmed for November 20, 2026.",
-        }
-        for case_id, body in outputs.items():
-            with self.subTest(case=case_id):
-                result = grade(case_id, "以下が結果です。\n" + body,
-                               {"draft": "English", "preamble": "Japanese"})
-                self.assertFalse(result["automated_checks_passed"])
-                self.assertFalse(result["passed"])
-
-    def test_delegated_french_result_is_not_a_japanese_reply(self):
-        result = grade("delegated-french", "Le total est de 10.", {"reply": "French"})
-        self.assertFalse(result["passed"])
-        self.assertIn("wrong or unreviewed reply language: expected Japanese", result["errors"])
-
-    def test_post_and_reply_languages_are_scored_independently(self):
-        for case_id in ("destination-language-required", "destination-language-unstated"):
-            for output, languages, wrong_role in (
-                ("POST\n両方のタスクが完了しました。\nREPLY\n投稿内容を確認しました。",
-                 {"post": "Japanese", "reply": "Japanese"}, "post"),
-                ("POST\nBoth tasks completed.\nREPLY\nHere is the planned post.",
-                 {"post": "English", "reply": "English"}, "reply"),
-            ):
-                with self.subTest(case=case_id, wrong_role=wrong_role):
-                    result = grade(case_id, output, languages)
-                    self.assertFalse(result["passed"])
-                    self.assertTrue(any(f"{wrong_role} language" in error for error in result["errors"]))
-
     def test_required_draft_language_and_optional_note_are_separate(self):
         output = "DRAFT\nDear Acme Paper, delivery is confirmed for November 20, 2026.\nNOTE\n送信していません。"
-        self.assertTrue(grade("returned-required-language", output,
-                              {"draft": "English", "note": "Japanese"})["passed"])
-        wrong_outputs = (
-            ("DRAFT\nAcme Paper 様、2026年11月20日の納品を確認します。\nNOTE\n送信していません。",
-             {"draft": "Japanese", "note": "Japanese"}),
-            ("DRAFT\nDear Acme Paper, delivery is confirmed for November 20, 2026.\nNOTE\nNot sent.",
-             {"draft": "English", "note": "English"}),
-        )
-        for output, languages in wrong_outputs:
-            self.assertFalse(grade("returned-required-language", output, languages)["passed"])
+        self.assertEqual(grade("returned-required-language", output,
+                               {"draft": "English", "note": "Japanese"})["errors"], [])
 
     def test_json_language_is_unrestricted_but_schema_and_values_are_not(self):
         value = {"status": "ok", "source_id": "fixture-03", "total": 10, "summary": "The total is 10."}
         for summary in ("The total is 10.", "合計は10です。", "Le total est de 10."):
             output = json.dumps({**value, "summary": summary}, ensure_ascii=False)
-            self.assertTrue(grade("json-only", output)["passed"])
-        wrong_outputs = [
-            json.dumps({**value, "source_id": "translated-id"}),
-            json.dumps({**value, "status": "成功"}),
-            json.dumps({**value, "total": 6}),
-            json.dumps({**value, "summary": None}),
-            json.dumps({**value, "extra": "comment"}),
-            json.dumps({"状態": "ok", "source_id": "fixture-03", "total": 10, "summary": "total"}),
-            '```json\n' + json.dumps(value) + '\n```',
-            '{"status":"ok","status":"ok","source_id":"fixture-03","total":10,"summary":"Total 10"}',
-            '{"status":',
-        ]
-        for output in wrong_outputs:
-            with self.subTest(output=output):
-                result = grade("json-only", output)
-                self.assertFalse(result["automated_checks_passed"])
-                self.assertFalse(result["passed"])
+            self.assertEqual(grade("json-only", output)["errors"], [])
 
     def test_json_total_comparison_preserves_exact_numeric_values(self):
         for literal, expected_pass in (
@@ -152,30 +98,11 @@ class ResponseLanguageScoringTests(unittest.TestCase):
                 self.assertEqual(result["automated_checks_passed"], expected_pass, result)
                 self.assertEqual(result["passed"], expected_pass, result)
 
-    def test_format_checks_alone_or_stale_judgment_cannot_pass_a_case(self):
-        output = "合計は10です。"
-        result = scorer.score(CASES["japanese-request"], output)
-        self.assertTrue(result["automated_checks_passed"])
-        self.assertFalse(result["passed"])
-        stale = judgment("The total is 10.", {"reply": "Japanese"})
-        result = scorer.score(CASES["japanese-request"], output, stale)
-        self.assertIn("semantic assessment is not bound to this output", result["errors"])
-
-    def test_incorrect_total_meaning_or_unconfirmed_format_cannot_pass(self):
-        output = "合計は6です。"
-        for change in ({"total": 6}, {"meaning_ok": False}, {"format_ok": False}, {"languages": {}}):
-            with self.subTest(change=change):
-                assessment = {**judgment(output, {"reply": "Japanese"}), **change}
-                self.assertFalse(scorer.score(CASES["japanese-request"], output, assessment)["passed"])
-
     def test_missing_duplicate_or_empty_blocks_are_not_complete_outputs(self):
         for output in ("POST\nDraft only", "POST\n\nREPLY\n説明", "POST\nA\nPOST\nB\nREPLY\n説明"):
             with self.subTest(output=output):
                 self.assertFalse(grade("destination-language-required", output,
                                        {"post": "English", "reply": "Japanese"})["automated_checks_passed"])
-
-    def test_incomplete_runs_fail_even_with_valid_output_and_judgment(self):
-        self.assertFalse(grade("japanese-request", "合計は10です。", {"reply": "Japanese"}, completed=False)["passed"])
 
     def test_cli_exit_status_distinguishes_valid_wrong_language_and_pending_review(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -271,6 +198,28 @@ ONE_FAULT_ROWS = [
         languages={"draft": "Japanese"}),
     row("note in the wrong language", "returned-required-language", ["wrong or unreviewed note language: expected Japanese"],
         output="DRAFT\nDear Acme Paper.\nNOTE\nCheck the date.", languages={"draft": "English", "note": "English"}),
+    row("preamble before output-only JSON", "json-only", ["Expecting value: line 1 column 1 (char 0)"],
+        output="以下が結果です。\n" + json_output(summary="Total 10"), languages={"preamble": "Japanese"}),
+    row("preamble before the DRAFT block", "returned-required-language", ["expected DRAFT and optional NOTE blocks"],
+        output="以下が結果です。\nDRAFT\nDear Acme Paper, delivery is confirmed for November 20, 2026.",
+        languages={"draft": "English", "preamble": "Japanese"}),
+    row("delegated French result returned as is", "delegated-french", ["wrong or unreviewed reply language: expected Japanese"],
+        output="Le total est de 10.", languages={"reply": "French"}),
+    *[row(f"{role} in the wrong language for {case_id}", case_id, [f"wrong or unreviewed {role} language: expected {expected}"],
+          output=output, languages=languages)
+      for case_id in ("destination-language-required", "destination-language-unstated")
+      for role, expected, output, languages in [
+          ("post", "English", "POST\n両方のタスクが完了しました。\nREPLY\n投稿内容を確認しました。", {"post": "Japanese", "reply": "Japanese"}),
+          ("reply", "Japanese", "POST\nBoth tasks completed.\nREPLY\nHere is the planned post.", {"post": "English", "reply": "English"}),
+      ]],
+    row("JSON with an extra key", "json-only", ["incorrect JSON keys"], output=json_output(extra="comment")),
+    row("JSON keys translated", "json-only", ["incorrect JSON keys"],
+        output=json.dumps({"状態": "ok", "source_id": "fixture-03", "total": 10, "summary": "total"})),
+    row("JSON in a code fence", "json-only", ["Expecting value: line 1 column 1 (char 0)"], output="```json\n" + json_output() + "\n```"),
+    row("JSON cut off", "json-only", ["Expecting value: line 1 column 11 (char 10)"], output='{"status":'),
+    row("JSON summary null", "json-only", ["summary must be nonempty text"], output=json_output(summary=None)),
+    row("review records a wrong total", "japanese-request", ["incorrect or unreviewed total"], output="合計は6です。", total=6),
+    row("reply language not reviewed", "japanese-request", ["wrong or unreviewed reply language: expected Japanese"], languages={}),
 ]
 
 

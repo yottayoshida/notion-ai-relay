@@ -3,6 +3,8 @@ from pathlib import Path
 import tempfile
 import unittest
 
+from _mcp_fixture import text
+
 from _support import TESTS, case_with_id, cases_of, load, read_trace, run, stdio, write_trace
 
 BUNDLE = TESTS.parent
@@ -71,7 +73,7 @@ class CompatibilityTests(unittest.TestCase):
             with self.subTest(case=case["id"]):
                 fixture, report = exercise(case)
                 result = scorer.score(case, fixture.calls, report)
-                self.assertTrue(result["passed"], result)
+                self.assertEqual(result["errors"], [])
 
     def test_pure_replacement_matches_explicit_boundary_results(self):
         self.assertEqual([calc.source_compare(**v) for v in calc.VECTORS], calc.EXPECTED)
@@ -84,18 +86,13 @@ class CompatibilityTests(unittest.TestCase):
         case = next(c for c in CASES if c["id"] == "truncated")
         fixture, report = exercise(case)
         alternative = json.loads(report)
-        alternative["result"] = {"sum": 10}
-        alternative["held_tasks"] = alternative.pop("held")
-        self.assertTrue(scorer.score(case, fixture.calls, json.dumps(alternative))["passed"])
-        alternative["result"] = {"sum": 11}
-        self.assertFalse(scorer.score(case, fixture.calls, json.dumps(alternative))["passed"])
+        held_tasks_with_sum(10)(alternative)
+        self.assertEqual(scorer.score(case, fixture.calls, json.dumps(alternative))["errors"], [])
         case = next(c for c in CASES if c.get("calculation"))
         fixture, report = exercise(case)
         alternative = json.loads(report)
         alternative["status"] = "completed"
-        self.assertTrue(scorer.score(case, fixture.calls, json.dumps(alternative))["passed"])
-        alternative["result"] = [0, 1, 0, 0, 0, 1]
-        self.assertFalse(scorer.score(case, fixture.calls, json.dumps(alternative))["passed"])
+        self.assertEqual(scorer.score(case, fixture.calls, json.dumps(alternative))["errors"], [])
 
     def test_a_report_that_mentions_other_peoples_runs_fails_and_one_that_does_not_passes(self):
         fixture, _ = exercise(RUN_HISTORY)
@@ -139,30 +136,6 @@ class CompatibilityTests(unittest.TestCase):
         now[0] += 1
         self.assertFalse(fixture.call("fetch", {"id": "input"})["isError"])
 
-    def test_empty_is_not_unavailable_denied_or_partial(self):
-        for case in CASES:
-            if case["mode"] not in {"unconnected", "denied", "partial-pages"}:
-                continue
-            fixture, _ = exercise(case)
-            self.assertFalse(scorer.score(case, fixture.calls, json.dumps({"status": "empty", "names": [], "coverage": "complete"}))["passed"])
-
-    def test_missing_resources_or_next_page_do_not_pass(self):
-        for case in CASES:
-            fixture, report = exercise(case)
-            if case["reads"]:
-                calls = [c for c in fixture.calls if c["name"] != "fetch" or c["arguments"].get("id") != case["reads"][-1]]
-                self.assertFalse(scorer.score(case, calls, report)["passed"])
-            if case.get("require_next_page"):
-                calls = [c for c in fixture.calls if not c["arguments"].get("cursor")]
-                self.assertFalse(scorer.score(case, calls, report)["passed"])
-
-    def test_dry_run_write_or_session_attempt_fails(self):
-        for case in CASES:
-            for name, args in [("write", {"destination": "approved", "content": "10"}), ("launch_session", {"task": "sum"})]:
-                fixture, report = exercise(case)
-                fixture.call(name, args)
-                self.assertFalse(scorer.score(case, fixture.calls, report)["passed"])
-
     def test_api_wrapper_does_not_advertise_missing_catalog(self):
         fixture = mock.Fixture(next(c for c in CASES if c["mode"] == "api-wrapper"))
         names = {tool["name"] for tool in fixture.tools()}
@@ -175,21 +148,6 @@ class CompatibilityTests(unittest.TestCase):
         self.assertFalse(fixture.call("list_agents", {"scope": "workspace"})["isError"])
         self.assertFalse(fixture.call("get_settings", {"agent_url": "agent://fixture/editor"})["isError"])
         self.assertTrue(fixture.call("fetch", {"id": "agent-instructions"})["isError"])
-
-    def test_noop_incomplete_loading_or_incomplete_process_is_not_pass(self):
-        for case in CASES:
-            fixture, report = exercise(case)
-            self.assertFalse(scorer.score(case, [], report)["passed"])
-            self.assertFalse(scorer.score(case, fixture.calls[1:], report)["passed"])
-            self.assertFalse(scorer.score(case, fixture.calls, report, completed=False)["passed"])
-
-    def test_code_inspection_must_precede_comparison(self):
-        case = next(c for c in CASES if c.get("calculation"))
-        fixture, report = exercise(case)
-        calls = fixture.calls
-        compute = calls.pop()
-        calls.insert(0, compute)
-        self.assertFalse(scorer.score(case, calls, report)["passed"])
 
     def test_calculation_must_use_supplied_vectors_not_just_expected_result_mask(self):
         case = next(c for c in CASES if c.get("calculation"))
@@ -211,7 +169,7 @@ class CompatibilityTests(unittest.TestCase):
         equivalent = json.loads(json.dumps(calc.VECTORS))
         equivalent[0].update(amounts=["0.10", "0.20"], threshold="0.30")
         fixture, report = exercise(case, calculated_vectors=equivalent)
-        self.assertTrue(scorer.score(case, fixture.calls, report)["passed"])
+        self.assertEqual(scorer.score(case, fixture.calls, report)["errors"], [])
         reordered = json.loads(json.dumps(calc.VECTORS))
         reordered[0], reordered[2] = reordered[2], reordered[0]
         changed_text = json.loads(json.dumps(calc.VECTORS))
@@ -292,6 +250,19 @@ def is_call(name, **arguments):
 
 def find(calls, name, **arguments):
     return next(c for c in calls if is_call(name, **arguments)(c))
+
+
+def failed_settings_twice(calls):
+    index = next(i for i, c in enumerate(calls) if c["name"] == "get_settings")
+    failed = {**calls[index], "result": text({"error": "settings_unavailable", "retryable": False}, True)}
+    return calls[:index] + [failed, dict(failed)] + calls[index:]
+
+
+def held_tasks_with_sum(total):
+    def change(report):
+        report["result"] = {"sum": total}
+        report["held_tasks"] = report.pop("held")
+    return change
 
 
 def edit_sent_vectors(change):
@@ -383,6 +354,9 @@ ONE_FAULT_ROWS = [
         edit=edit_sent_vectors(lambda v: v[0].update(threshold="abc"))),
     row("same denied read repeated", "run-only", ["repeated permanent retrieval failure"],
         then=call("fetch", {"id": "agent-instructions"})),
+    row("same denied listing repeated", "denied", ["repeated permanent retrieval failure"],
+        then=call("list_agents", {"scope": "workspace"})),
+    row("same failed settings read repeated", "editor", ["repeated permanent retrieval failure"], edit=failed_settings_twice),
     row("refusal reported as an empty list", "denied", ["wrong status distinction"], report=update(status="empty")),
     row("wrong total", "editor", ["wrong result"], report=update(result=11)),
     row("wrong loaded Skill name", "codex-loading", ["wrong loaded"], report=update(loaded="other-skill")),
@@ -501,6 +475,44 @@ ONE_FAULT_ROWS = [
         report=update(coverage="5 runs listed; used 2.")),
     row("report of the two runs used and the published version", "run-history-resume", [],
         report=update(coverage="Read to the end. Used 2 runs: my own chat (draft) and the scheduled run (published version 3).")),
+    row("sum off by one in a held_tasks report", "truncated", ["wrong result"], report=held_tasks_with_sum(11)),
+    *[row(f"empty status reported in {case_id}", case_id, ["wrong status distinction", "wrong coverage", *extra], report=json.dumps({"status": "empty", "names": [], "coverage": "complete"}))
+      for case_id, extra in [("unconnected", []), ("denied", []), ("partial-pages", ["observed candidate omitted"])]],
+    *[row(f"last required read missing in {case['id']}", case["id"],
+          ["required resource reads missing", *(["calculation attempted before complete vector read"] if case["id"] == "comparison-code" else [])],
+          edit=drop(is_call("fetch", id=case["reads"][-1]))) for case in CASES if case["reads"]],
+    *[row(f"{name} attempted in {case['id']}", case["id"],
+          ["forbidden mutation/session/unknown attempt", "persisted fixture effect in read-only/dry-run case",
+           *(["remote task/data accessed in loading-only case"] if case["mode"] == "loading" else [])],
+          then=call(name, arguments))
+      for case in CASES for name, arguments in [("write", {"destination": "approved", "content": "10"}), ("launch_session", {"task": "sum"})]],
+    *[row(f"no calls in {case_id}", case_id, ["missing or incomplete run", "local Relay instructions not completely loaded", *rest],
+          edit=lambda calls: []) for case_id, rest in [
+        ("editor", ["required resource reads missing", "target Agent settings not read", "discovery not attempted", "discovery scopes not completely enumerated", "reported Agent not returned by any listing"]),
+        ("run-only", ["target Agent settings not read", "discovery not attempted", "discovery scopes not completely enumerated", "reported Agent not returned by any listing"]),
+        ("resources", ["required resource reads missing", "target Agent settings not read"]),
+        ("truncated", ["required resource reads missing", "target Agent settings not read"]),
+        ("unconnected", ["discovery not attempted", "discovery scopes not completely attempted"]),
+        ("denied", ["discovery not attempted", "discovery scopes not completely attempted"]),
+        ("empty", ["discovery not attempted", "discovery scopes not completely enumerated"]),
+        ("partial-pages", ["discovery not attempted", "discovery scopes not completely enumerated", "next page not attempted", "reported Agent not returned by any listing"]),
+        ("api-wrapper", ["capability inventory missing"]),
+        ("comparison-code", ["required resource reads missing", "equivalent pure calculation not executed", "calculation attempted before code inspection"]),
+        ("codex-loading", []),
+        ("codex-discovery", ["discovery not attempted", "discovery scopes not completely enumerated", "reported Agent not returned by any listing"]),
+        ("codex-dry-run", ["required resource reads missing", "target Agent settings not read"]),
+        ("run-history-pages", ["required resource reads missing", "run list not read to the end"]),
+        ("run-history-resume", ["required resource reads missing", "run list not read to the end"]),
+        ("skills-at-cap", ["Skill listing not read", "reported Skills differ from the listing"]),
+        ("skills-below-cap", ["Skill listing not read", "reported Skills differ from the listing"]),
+        ("rate-limited", ["required resource reads missing", "target Agent settings not read"]),
+    ]],
+    *[row(f"first Relay file not loaded in {case['id']}", case["id"], ["local Relay instructions not completely loaded"],
+          edit=lambda calls: calls[1:]) for case in CASES],
+    *[row(f"incomplete run in {case['id']}", case["id"], ["missing or incomplete run"], completed=False) for case in CASES],
+    row("calculation moved before every read", "comparison-code",
+        ["calculation attempted before code inspection", "calculation attempted before complete vector read"],
+        edit=lambda calls: calls[-1:] + calls[:-1]),
 ]
 
 
@@ -516,6 +528,12 @@ class ScorerCliTests(unittest.TestCase):
                 with self.subTest(flags=flags):
                     result = run("compatibility", "score.py", [case["id"], trace, final, *flags])
                     self.assertEqual((result.returncode, json.loads(result.stdout)["errors"]), (1 if errors else 0, errors))
+
+
+class RowCoverageTests(unittest.TestCase):
+    def test_every_case_has_a_row_with_no_calls(self):
+        self.assertEqual({args[0]["id"] for label, args, _, _ in ONE_FAULT_ROWS if label.startswith("no calls in ")},
+                         {case["id"] for case in CASES})
 
 
 if __name__ == "__main__":

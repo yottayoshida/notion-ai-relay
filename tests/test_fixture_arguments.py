@@ -3,7 +3,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from _mcp_fixture import TYPES, schema_error
+from _mcp_fixture import TYPES, as_declared, malformed, schema_error, tool_error
 from _support import TESTS, case_with_id, cases_of, load, read_trace, stdio
 
 SUITES = {
@@ -62,10 +62,8 @@ class FixtureArgumentTests(unittest.TestCase):
                 self.assertEqual([(call["name"], call["arguments"]) for call in recorded],
                                  [(name, call_arguments) for _, name, call_arguments, _ in bad_calls])
                 outcome = load(suite, "score").score(case_with_id(cases_of(suite), case_id), recorded, "")
-                self.assertFalse(outcome["passed"])
-                for _, name, _, error in bad_calls:
-                    if error == "invalid_arguments":
-                        self.assertIn(f"call with invalid arguments: {name}", outcome["errors"])
+                self.assertEqual([error for error in outcome["errors"] if error.startswith("call with invalid arguments")],
+                                 [f"call with invalid arguments: {name}" for _, name, _, error in bad_calls if error == "invalid_arguments"])
 
     def test_traces_are_ascii_whatever_the_arguments_contain(self):
         for suite, (case_id, arguments, bad_calls) in SUITES.items():
@@ -99,6 +97,41 @@ class FixtureArgumentTests(unittest.TestCase):
                 self.assertEqual([call["name"] for call in recorded], [{"x": 1}, None])
                 outcome = load(suite, "score").score(case_with_id(cases_of(suite), case_id), recorded, "")
                 self.assertIn("call with invalid arguments: None", outcome["errors"])
+
+    def test_a_value_outside_an_enum_is_rejected_and_a_listed_value_passes(self):
+        schema = {"type": "string", "enum": ["workspace", "favorites"]}
+        self.assertEqual(schema_error(schema, "everyone"), "arguments must be one of ['workspace', 'favorites']")
+        self.assertIsNone(schema_error(schema, "favorites"))
+
+    def test_an_integer_outside_its_range_is_rejected_and_the_bounds_pass(self):
+        schema = {"type": "integer", "minimum": 1, "maximum": 3}
+        for value, expected in [(0, "arguments is out of range"), (4, "arguments is out of range"), (1, None), (3, None)]:
+            with self.subTest(value=value):
+                self.assertEqual(schema_error(schema, value), expected)
+
+    def test_a_schema_without_a_type_accepts_any_value_and_a_string_is_not_an_integer(self):
+        self.assertIsNone(schema_error({}, 5))
+        self.assertEqual(schema_error({"type": "integer"}, "1"), "arguments must be integer")
+
+    def test_only_integer_schemas_turn_an_integral_number_into_an_integer(self):
+        self.assertEqual(as_declared({}, 1.5), 1.5)
+        converted = as_declared({"type": "array", "items": {"type": "integer"}}, [1.0])
+        self.assertEqual((converted, type(converted[0])), ([1], int))
+
+    def test_a_record_is_read_from_its_first_content_item(self):
+        result = {"isError": True, "content": [{"type": "text", "text": '{"error": "invalid_arguments"}'},
+                                               {"type": "image", "data": "x"}]}
+        call = {"name": "fetch", "arguments": {}, "result": result}
+        self.assertEqual(tool_error(call), "invalid_arguments")
+        for extra in ({"type": "image", "data": "x"}, "plain"):
+            with self.subTest(extra=extra):
+                self.assertFalse(malformed({**call, "result": {**result, "isError": False,
+                                                               "content": [{"type": "text", "text": "{}"}, extra]}}, ()))
+
+    def test_content_that_is_not_a_list_of_text_items_is_malformed(self):
+        for content in [{"text": "{}"}, ["plain"], []]:
+            with self.subTest(content=content):
+                self.assertTrue(malformed({"name": "fetch", "arguments": {}, "result": {"content": content}}, ()))
 
     def test_an_integral_number_counts_as_an_integer(self):
         self.assertIsNone(schema_error({"type": "integer", "minimum": 1}, 1.0))

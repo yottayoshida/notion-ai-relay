@@ -20,7 +20,7 @@ For installed-file version checks, safe updates, backups, and rollback, see [ins
 
 ## Use
 
-After your assistant loads the Skill, specify the target and the input for this run.
+After your assistant loads the Skill, specify the target and the input for this run. You need not write in English; see the [response-language rules](SKILL.md#response-language).
 
 For a Custom Agent, its name or URL is enough when your connection can read the recorded settings of a chat you had with it or one of its scheduled runs, among its latest 60 runs: the Skill reads the Instructions page set in the Agent's settings if your chat recorded it, or else the newest published page recorded, and reports which page and run it used. Notion can cut a run's recorded settings short; the Skill then reports missing connections, permissions, or triggers as unknown, or asks for the page URL if the cut hides the page link. Otherwise give the Instructions page URL (the link in the Agent's settings) or paste the text. From a recorded run, the Skill shows writes to destinations you did not name, what each would write and from what, and the record's date, then awaits your go-ahead. [Agent retrieval](docs/agent-retrieval.md) compares the routes.
 
@@ -60,7 +60,7 @@ Some MCP connections cannot retrieve full Agent settings. The Skill then uses th
 
 The Skill does not launch or drive Notion-side agents or AI sessions. A relayed run happens in your assistant, not in Notion: it does not appear in the Agent's Activity, and it neither uses nor adds to the Agent's Memories. External writes and messages remain subject to your request and the host's authorization requirements. A dry run does not update completion state.
 
-This repository distributes instructions. It does not provide a production MCP server or a persistent background process; synthetic fixture servers under `tests/` are evaluation-only. See the dated [compatibility matrix](docs/compatibility.md) for synthetic checks, historical live records, blockers and unverified environments.
+This repository distributes instructions. It does not provide a production MCP server or a persistent background process; synthetic fixture servers under `tests/` are evaluation-only. See the dated [compatibility matrix](docs/compatibility.md).
 
 ## Docs
 

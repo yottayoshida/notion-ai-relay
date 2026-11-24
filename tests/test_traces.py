@@ -1,12 +1,36 @@
 import json
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
 import unittest
 
 from _mcp_fixture import split_malformed, split_rejected, start_record, text
-from _support import TESTS, load, read_trace, stdio
+from _support import TESTS, load, read_trace, run, stdio, write_trace
 
 CALL = {"name": "fetch", "arguments": {"id": "x"}, "result": text({"value": 1})}
+FIXTURES = {
+    "security": ["--case", "authorized-normal"],
+    "compatibility": ["--case", "comparison-code", "--bundle", TESTS.parent],
+    "write-lifecycle": ["--case", "normal"],
+    "resume-handoff": ["--case", "partial-dry-run"],
+    "eval-fixture": ["--case", "preview-partial", "--suite", "dry-run"],
+}
+BROKEN_REQUESTS = [
+    (b'{"jsonrpc": "2.0", "id": 1}', {"id": 1, "error": {"code": -32600, "message": "Invalid request"}}),
+    (b'{"jsonrpc": "2.0", "id": 2, "method": "initialize", "params": {}}',
+     {"id": 2, "error": {"code": -32602, "message": "Invalid params: protocolVersion is required"}}),
+    (b"5", {"id": None, "error": {"code": -32600, "message": "Invalid request"}}),
+    (b"", None),
+    (b"not json", {"id": None, "error": {"code": -32700, "message": "Parse error"}}),
+    (b'{"jsonrpc": "2.0", "id": 3, "method": "ping", "note": "\xff"}', {"id": None, "error": {"code": -32700, "message": "Parse error"}}),
+    (b'{"jsonrpc": "2.0", "id": 4, "method": "initialize"}',
+     {"id": 4, "error": {"code": -32602, "message": "Invalid params: protocolVersion is required"}}),
+    (b'{"jsonrpc": "2.0", "id": 5, "method": "ping", "params": [1]}', {"id": 5, "error": {"code": -32602, "message": "Invalid params"}}),
+    (b'{"jsonrpc": "2.0", "method": "notifications/initialized"}', None),
+    (b'{"jsonrpc": "2.0", "id": 6, "method": "tools/call"}',
+     {"id": 6, "result": text({"error": "invalid_arguments", "message": "name must be string"}, True)}),
+]
 START = json.dumps(start_record("case-a", "server-a"))
 
 
@@ -71,10 +95,7 @@ class CallRecordTests(unittest.TestCase):
 
 class FixtureStartTests(unittest.TestCase):
     def test_each_fixture_start_appends_one_start_line_for_its_case_and_server(self):
-        for suite, case_id, arguments in [("security", "data-injection", []),
-                                          ("compatibility", "editor", ["--bundle", TESTS.parent]),
-                                          ("write-lifecycle", "normal", []),
-                                          ("eval-fixture", "preview-partial", ["--suite", "dry-run"])]:
+        for suite, (_, case_id, *arguments) in FIXTURES.items():
             server = load(suite, "mock_mcp").SERVER
             with self.subTest(suite=suite), tempfile.TemporaryDirectory() as directory:
                 trace = Path(directory) / "trace.jsonl"
@@ -83,6 +104,46 @@ class FixtureStartTests(unittest.TestCase):
                     self.assertEqual((result.returncode, [reply["id"] for reply in replies]), (0, [1]), result.stderr)
                 lines = [json.loads(line) for line in trace.read_text(encoding="utf-8").splitlines()]
                 self.assertEqual(lines, [start_record(case_id, server)] * 2)
+
+
+class ScorerCliInputTests(unittest.TestCase):
+    def test_a_missing_or_non_utf8_input_is_named_without_a_traceback(self):
+        for suite, (_, case_id, *_) in FIXTURES.items():
+            if not (TESTS / suite / "score.py").exists():
+                continue
+            with self.subTest(suite=suite), tempfile.TemporaryDirectory() as directory:
+                garbled = Path(directory) / "garbled.txt"
+                garbled.write_bytes(b"\xff\xfe")
+                valid = Path(directory) / "trace.jsonl"
+                write_trace(valid, case_id, load(suite, "mock_mcp").SERVER, [])
+                attempts = [([Path(directory) / "missing.jsonl", garbled], Path(directory) / "missing.jsonl"),
+                            ([garbled, garbled], garbled), ([valid, garbled], garbled)]
+                if suite == "write-lifecycle":
+                    attempts.append(([valid, valid, "--first-report", garbled], garbled))
+                for files, unreadable in attempts:
+                    result = run(suite, "score.py", [case_id, *files])
+                    self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+                    self.assertIn(f"cannot read {unreadable}", result.stderr)
+                    self.assertNotIn("Traceback", result.stderr)
+
+
+class ReceiveLoopTests(unittest.TestCase):
+    def test_the_fixture_answers_the_handshake_and_a_broken_request_without_stopping(self):
+        for suite, arguments in FIXTURES.items():
+            with self.subTest(suite=suite), tempfile.TemporaryDirectory() as directory:
+                handshake = [
+                    (b'{"jsonrpc": "2.0", "id": 0, "method": "initialize", "params": {"protocolVersion": "2099-01-01"}}',
+                     {"id": 0, "result": {"protocolVersion": "2099-01-01", "capabilities": {"tools": {}},
+                                          "serverInfo": {"name": load(suite, "mock_mcp").SERVER, "version": "1"}}}),
+                    (b'{"jsonrpc": "2.0", "id": 8, "method": "resources/list"}', {"id": 8, "error": {"code": -32601, "message": "Unknown method"}}),
+                ]
+                exchange = handshake[:1] + BROKEN_REQUESTS + handshake[1:] + [(b'{"jsonrpc": "2.0", "id": 9, "method": "ping"}', {"id": 9, "result": {}})]
+                result = subprocess.run([sys.executable, str(TESTS / suite / "mock_mcp.py"), *map(str, arguments),
+                                         "--trace", str(Path(directory) / "trace.jsonl")],
+                                        input=b"".join(line + b"\n" for line, _ in exchange), capture_output=True, timeout=5)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                replies = [json.loads(line) for line in result.stdout.decode("utf-8").splitlines()]
+                self.assertEqual(replies, [{"jsonrpc": "2.0", **reply} for _, reply in exchange if reply is not None])
 
 
 if __name__ == "__main__":

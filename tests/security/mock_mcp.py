@@ -93,12 +93,13 @@ class Fixture:
 
 
 if __name__ == "__main__":
+    from _support import case_with_id, cases_of
+    cases = cases_of(Path(__file__).parent.name)
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--case", required=True)
+    parser.add_argument("--case", required=True, choices=[case["id"] for case in cases])
     parser.add_argument("--trace", type=Path, required=True)
     parser.add_argument("--deny", action="append", default=[])
     parser.add_argument("--download-base", default=DOWNLOAD_BASE)
     args = parser.parse_args()
-    cases = json.loads(Path(__file__).with_name("cases.json").read_text(encoding="utf-8"))
-    case = next(case for case in cases if case["id"] == args.case)
+    case = case_with_id(cases, args.case)
     serve(Fixture(case, args.deny, args.download_base), args.trace, SERVER)
