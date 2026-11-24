@@ -1,18 +1,24 @@
 # Identify, update, and roll back an installed Relay
 
-This guide concerns the **Relay files on disk**, not the version of an Agent's instructions retrieved from Notion. Commands below use skills CLI **1.8.1** (Node.js 22.20+); other installer versions may differ. See its [command reference](https://github.com/vercel-labs/skills/blob/v1.8.1/docs/commands.md). Do not update a running task's instructions halfway through a run.
+This guide concerns the **Relay files on disk**, not the version of an Agent's instructions retrieved from Notion. Commands below use skills CLI **1.9.0** (Node.js 22.20+); other installer versions may differ. See its [command reference](https://github.com/vercel-labs/skills/blob/v1.9.0/docs/commands.md). Do not update a running task's instructions halfway through a run. The first section is the usual update; the rest is for a copy you cannot identify, a manual copy, and rollback.
+
+## Update the usual way
+
+1. List the releases: `git ls-remote --tags https://github.com/yottayoshida/notion-ai-relay` (or the [releases page](https://github.com/yottayoshida/notion-ai-relay/releases)). `npx skills check` does not report a newer release for a copy pinned to a tag.
+2. Install the newest tag with the scope and client options you used before, for example `npx skills add yottayoshida/notion-ai-relay@<tag>`, adding `-g` for a global copy; skills CLI 1.8.0 or later reads a version tag such as `@v1.2.3` as a pin. If `npx skills list --json` marks the copy `modified`, or you changed its files, back it up first as in [section 2](#2-inspect-and-back-up-before-changing-anything).
+3. Start a new session and ask the Skill which Relay version it is; [section 5](#5-confirm-reload-and-diagnose-without-secrets) shows which files it loaded.
 
 ## Install without the skills CLI
 
-For manual installation, put this repository in your client's Skill directory as a folder named `notion-ai-relay`, the `name` in `SKILL.md`, for example with `git clone https://github.com/yottayoshida/notion-ai-relay.git`. A GitHub zip extracts to `notion-ai-relay-main`; rename it, because a client may name the Skill after its folder. Keep `SKILL.md` and `references/` together. `agents/openai.yaml` contains optional Codex display metadata.
+For manual installation, put this repository in your client's Skill directory as a folder named `notion-ai-relay`, the `name` in `SKILL.md`, for example with `git clone --branch <release tag> https://github.com/yottayoshida/notion-ai-relay.git`. A GitHub zip extracts to a folder named after the repository and the tag or branch; rename it, because a client may name the Skill after its folder. Keep `SKILL.md` and `references/` together. `agents/openai.yaml` contains optional Codex display metadata.
 
 ## 1. Locate the copy the client actually loads
 
 Run these from the project where you use the Skill:
 
 ```bash
-npx skills@1.8.1 list --json
-npx skills@1.8.1 list -g --json
+npx skills@1.9.0 list --json
+npx skills@1.9.0 list -g --json
 ```
 
 The output includes each installed `path`, scope, and client. Inspect the selected client's Skill inventory too: a project copy can coexist with a global copy. Common paths are `.claude/skills/notion-ai-relay` for Claude Code and `.agents/skills/notion-ai-relay` for Codex, relative to the project or home directory. These are examples, not proof of which copy loaded. Other clients have different discovery rules. Resolve symlinks before comparing or backing up files:
@@ -28,7 +34,7 @@ For manual installs, find the folder through the client's inventory/configured S
 
 | Installation | Evidence to inspect | What it establishes |
 |---|---|---|
-| skills CLI, project scope | `skills-lock.json` in the project; entry `skills["notion-ai-relay"]`, plus `list --json` status | `source` and `ref` record the requested source. A full commit ref pins it; `main` or a tag alone is not an immutable revision. `tracked` means installed content matches the lock hash, not that a client loaded it. |
+| skills CLI, project scope | `skills-lock.json` in the project; entry `skills["notion-ai-relay"]`, plus `list --json` status | `source` and `ref` record the requested source, and skills CLI 1.9.0 also records `commit`, the commit it installed. A full commit ref pins it; `main` or a tag alone is not an immutable revision. `tracked` means installed content matches the lock hash, not that a client loaded it. |
 | skills CLI, global scope | `list -g --json`, installation receipt, and comparison with a pinned snapshot below | Do not infer a commit from the directory name or assume the project lock describes a global copy. |
 | Dedicated Git clone | Commands below | HEAD identifies the checkout; a dirty checkout is that revision **plus local changes**. |
 | ZIP or manual copy | Saved full commit/download URL and comparison with a pinned snapshot | A branch-named ZIP or copied folder without provenance has **unknown revision** until checked. Matching files establishes content equivalence, not unique commit identity. |
@@ -47,7 +53,7 @@ To check a claimed commit independently, download/extract its archive as in sect
 diff -ru --exclude=.git "$snapshot" "$skill"
 ```
 
-Here `snapshot` is the extracted `notion-ai-relay-<full-commit>` directory. Exit 0 means equal files; exit 1 means differences to inspect. Installers may omit files such as `metadata.json` or Git internals; do not dismiss changes in `SKILL.md`, `references/`, or `agents/`. An old or absent CLI lock cannot reconstruct a lost commit. Record `unknown` rather than inventing a version. The YAML `name` and Notion configuration versions are not Relay revision identifiers.
+Here `snapshot` is the extracted `notion-ai-relay-<full-commit>` directory. Exit 0 means equal files; exit 1 means differences to inspect. Installers may omit files such as `metadata.json` or Git internals; do not dismiss changes in `SKILL.md`, `references/`, or `agents/`. An old or absent CLI lock cannot reconstruct a lost commit. Record `unknown` rather than inventing a version. `metadata.version` in `SKILL.md` names the release only for a copy installed from that release's tag; a copy of `main` carries the version of the last release before it. The YAML `name` and Notion configuration versions are not Relay revision identifiers.
 
 ## 2. Inspect and back up before changing anything
 
@@ -73,9 +79,9 @@ Choose and review a full commit first; do not paste the placeholder literally:
 
 ```bash
 target='<reviewed-full-commit>'
-npx skills@1.8.1 add "yottayoshida/notion-ai-relay@$target" \
+npx skills@1.9.0 add "yottayoshida/notion-ai-relay@$target" \
   --skill notion-ai-relay -a claude-code --copy -y
-npx skills@1.8.1 list --json
+npx skills@1.9.0 list --json
 ```
 
 `-y` permits replacement without another prompt: use it only **after** the backup and diff review above. Check the exit status, installed path, content, and lock `ref`, not just the success banner. To roll back, run the same `add` command with the previously recorded full commit. Then compare with its snapshot and perform section 5 again. If local edits were part of the old installation, a commit rollback does not restore them: recover/review them from the backup separately.
@@ -126,7 +132,7 @@ Disk verification and client loading are separate checks:
 3. Inspect its Skill inventory, then explicitly invoke `notion-ai-relay` for a **read-only diagnostic with no Notion access or external writes**: ask it to read the installed `SKILL.md` and a local reference and identify their paths. Use file-read/tool traces to confirm the resolved paths and contents match the snapshot. A claimed version in the assistant's answer alone is not proof. This check needs no MCP connection.
 4. If the client cannot expose loaded paths/content, mark reload **unverified**. Report that limitation rather than claiming compatibility. Live MCP operation requires a separate, authorized test; file loading does not prove connectivity or write/read-back support.
 
-For support, provide only client name/version, model identifier, Relay full commit (or unknown/modified), scope, installer version, whether fresh-session loading was observed, and the connection's **capabilities** (for example, listing, full-page reads, writes, and read-after-write). Redact usernames/private paths. Do not send tokens, credential stores, business page contents, or complete conversation logs.
+For support, provide only client name/version, model identifier, Relay version and full commit (or unknown/modified), scope, installer version, whether fresh-session loading was observed, and the connection's **capabilities** (for example, listing, full-page reads, writes, and read-after-write). Redact usernames/private paths. Do not send tokens, credential stores, business page contents, or complete conversation logs.
 
 ## Validation and limits
 

@@ -1,6 +1,7 @@
 # Files
 
 - [SKILL.md](../SKILL.md) defines target selection, configuration retrieval, MCP execution, and result verification.
+- [CHANGELOG.md](../CHANGELOG.md) records each release.
 - [Read Custom Agent settings](../references/read-configuration.md) covers discovery, configuration versions, and resume state.
 - [Read Notion Skills](../references/read-skills.md) covers instruction pages and supporting resources.
 - [Execute through MCP](../references/execute-via-mcp.md) covers tool mapping and execution checks.

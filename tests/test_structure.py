@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -16,6 +17,22 @@ REPOSITORY = Path(__file__).resolve().parents[1]
 REQUIRED = ("SKILL.md", "README.md", "LICENSE", "agents/openai.yaml", "references/read-configuration.md",
             "references/read-skills.md", "references/execute-via-mcp.md", "docs/agent-retrieval.md")
 
+
+def release_versions(skill, readme, changelog):
+    metadata, body = frontmatter(skill)
+    found = {
+        "SKILL.md metadata": [(metadata.get("metadata") or {}).get("version")],
+        "SKILL.md release name": re.findall(r"Notion AI Relay (\d+\.\d+\.\d+)", body),
+        "README.md install": re.findall(r"notion-ai-relay@v(\d+\.\d+\.\d+)", readme),
+        "CHANGELOG.md newest release": re.findall(r"^## \[(\d+\.\d+\.\d+)\]", changelog, re.M)[:1],
+        "CHANGELOG.md Unreleased link": re.findall(r"^\[Unreleased\]: \S+/compare/v(\d+\.\d+\.\d+)\.\.\.HEAD$", changelog, re.M),
+        "CHANGELOG.md release link": re.findall(r"^\[(\d+\.\d+\.\d+)\]: \S+/releases/tag/v\1$", changelog, re.M)[:1],
+    }
+    return {place: set(values) for place, values in found.items()}
+
+
+def one_release(found):
+    return all(found.values()) and len(set().union(*found.values())) == 1
 
 def run_check_structure(*arguments, cwd=None):
     # Not strict, for the same reason as _support.run.
@@ -500,6 +517,24 @@ class SuiteWarningTests(unittest.TestCase):
             warnings.warn("synthetic deprecation", DeprecationWarning)
         self.assertEqual([str(warning.message) for warning in caught], ["synthetic deprecation"])
 
+
+class ReleaseVersionTests(unittest.TestCase):
+    def setUp(self):
+        self.skill, self.readme, self.changelog = ((REPOSITORY / name).read_text(encoding="utf-8")
+                                                   for name in ("SKILL.md", "README.md", "CHANGELOG.md"))
+
+    def test_skill_readme_and_changelog_name_one_release(self):
+        found = release_versions(self.skill, self.readme, self.changelog)
+        self.assertTrue(one_release(found), found)
+
+    def test_a_place_naming_another_version_or_none_is_caught(self):
+        version = next(iter(release_versions(self.skill, self.readme, self.changelog)["SKILL.md metadata"]))
+        pinned = f"notion-ai-relay@v{version}"
+        self.assertEqual(self.readme.count(pinned), 1)
+        for label, replacement in (("another version", "notion-ai-relay@v9.9.9"), ("no version", "notion-ai-relay")):
+            with self.subTest(label):
+                readme = self.readme.replace(pinned, replacement)
+                self.assertFalse(one_release(release_versions(self.skill, readme, self.changelog)))
 
 if __name__ == "__main__":
     unittest.main()
