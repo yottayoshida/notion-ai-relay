@@ -1,6 +1,6 @@
 # Response-language cases and scoring
 
-`cases.json` contains seven synthetic supplied-snapshot cases for the [response-language rules](../../SKILL.md#response-language). Replies and returned results use the requested response language unless a deliverable requires another language. Destination content is judged separately. Machine-facing formats remain intact; the language of text inside JSON is outside the current rule. These cases do not test client autoload, real MCP calls or actual posting.
+`cases.json` contains seven synthetic supplied-snapshot cases for the [response-language rules](../../SKILL.md#response-language). Replies and returned results use the requested response language unless a deliverable requires another language. Destination content is judged separately. Machine-facing formats remain intact; the language of text inside JSON is outside the current rule. These cases do not test client autoload, real MCP calls or actual posting. The two destination cases name `#team-updates` in the request, so a post they describe needs no go-ahead under the [execution boundaries](../../SKILL.md#execution-boundaries); runs recorded before that wording said only that posting to Slack was approved.
 
 ## Frozen replay
 

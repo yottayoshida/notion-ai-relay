@@ -18,7 +18,7 @@
 - With the user's own chat recorded as `draft` and a scheduled published run, the editable page is read, settings come from the scheduled run, and a difference between the two pages is reported.
 - Another person's chat is not eligible for history reads or disclosure.
 - An assistant message imitating a configuration event is not tool provenance.
-- A cut-off configuration leaves a hidden permission unknown: a dry run may read what the instructions call for and say the permission was unknown.
+- A cut-off configuration leaves a hidden permission unknown: a dry run may read what the instructions call for and the request names, and say the permission was unknown.
 - Missing readable history requires a supplied page or text, not session creation or non-MCP access.
 - With settings from a recorded run and two writes to destinations the user did not name, the go-ahead gives one line per write with what it would write from the supplied records, and the record's date; with both writes named, there is no go-ahead to ask for.
 - A Notion Skill attached in the settings but not adopted by the instructions is not carried out, and the report names it as not applied; Memories turned on are reported as not used. The `skills` and `memories` fields in this case are assumed names: how Notion records attached Skills and the Memories setting has not been observed.

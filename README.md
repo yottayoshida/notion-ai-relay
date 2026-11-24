@@ -22,7 +22,7 @@ For installed-file version checks, safe updates, backups, and rollback, see [ins
 
 After your assistant loads the Skill, specify the target and the input for this run. You need not write in English; see the [response-language rules](SKILL.md#response-language).
 
-For a Custom Agent, its name or URL is enough when your connection can read the recorded settings of a chat you had with it or one of its scheduled runs, among its latest 60 runs: the Skill reads the Instructions page set in the Agent's settings if your chat recorded it, or else the newest published page recorded, and reports which page and run it used. Notion can cut a run's recorded settings short; the Skill then reports missing connections, permissions, or triggers as unknown, or asks for the page URL if the cut hides the page link. Otherwise give the Instructions page URL (the link in the Agent's settings) or paste the text. From a recorded run, the Skill shows writes to destinations you did not name, what each would write and from what, and the record's date, then awaits your go-ahead. [Agent retrieval](docs/agent-retrieval.md) compares the routes.
+For a Custom Agent, its name or URL is enough when your connection can read the recorded settings of a chat you had with it or one of its scheduled runs, among its latest 60 runs: the Skill reads the Instructions page set in the Agent's settings if your chat recorded it, or else the newest published page recorded, and reports which page and run it used. Notion can cut a run's recorded settings short; the Skill then reports missing connections, permissions, or triggers as unknown, or asks for the page URL if the cut hides the page link. Otherwise give the Instructions page URL (the link in the Agent's settings) or paste the text. [Agent retrieval](docs/agent-retrieval.md) compares the routes.
 
 ```text
 List the Notion Custom Agents and Notion Skills I can access.
@@ -46,7 +46,7 @@ Input: <items to process>
 
 ## Requirements and limits
 
-The Skill maps each operation to the MCP tools and argument schemas exposed by your environment. It does not require Computer Use, browser automation, a particular operating system, or a client-specific automation API. When Notion MCP returns a download URL for a file in the same run, the Skill downloads it instead of asking you to paste it, in a client that can download it and, for an archive, extract it; no other URL is downloaded outside MCP.
+The Skill maps each operation to the MCP tools and argument schemas exposed by your environment. It does not require Computer Use, browser automation, a particular operating system, or a client-specific automation API. When Notion MCP returns a download URL for a file in the same run, such as a file uploaded to a page, the Skill downloads it instead of asking you to paste it, in a client that can download it and, for an archive, extract it; no other URL is downloaded outside MCP. Apart from reading its own files and handling these downloads, before the first write, message, non-Notion connection, local file or command you did not name, the Skill lists them, with what each write would contain, from what, and any recorded run's date, and waits for your go-ahead.
 
 | Operation | Required information or capability |
 |---|---|
@@ -56,9 +56,9 @@ The Skill maps each operation to the MCP tools and argument schemas exposed by y
 | Carry out a Notion Skill's task | Its instruction page, required references and attachments, current input, and the necessary MCP operations |
 | Run on a schedule | A separately configured scheduler or event receiver |
 
-Some MCP connections cannot retrieve full Agent settings. The Skill then uses the Agent's runs as described under Use; failing that, provide an instruction-page URL, the instruction text, or the missing settings. Pasted text and the editable Instructions page are not treated as a verified current published version. Missing registration or enabled-state metadata does not prevent execution of an explicitly selected procedure when its instructions and required input are available.
+Without full Agent settings from MCP, the Skill uses the routes under Use or settings you supply. Pasted text and the editable Instructions page are not treated as a verified current published version. Missing registration or enabled-state metadata does not prevent execution of an explicitly selected procedure when its instructions and required input are available.
 
-The Skill does not launch or drive Notion-side agents or AI sessions. A relayed run happens in your assistant, not in Notion: it does not appear in the Agent's Activity, and it neither uses nor adds to the Agent's Memories. External writes and messages remain subject to your request and the host's authorization requirements. A dry run does not update completion state.
+The Skill does not launch or drive Notion-side agents or AI sessions. A relayed run happens in your assistant, not in Notion, with your assistant's access under your host's permission rules: it does not appear in the Agent's Activity, and it neither uses nor adds to the Agent's Memories. Whoever can edit the instructions decides what it reads, sends and asks for. A dry run does not update completion state.
 
 This repository distributes instructions. It does not provide a production MCP server or a persistent background process; synthetic fixture servers under `tests/` are evaluation-only. See the dated [compatibility matrix](docs/compatibility.md).
 
