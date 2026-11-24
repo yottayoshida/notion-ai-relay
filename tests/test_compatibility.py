@@ -41,6 +41,8 @@ def exercise(case, *, calculated_vectors=None, vectors_after_calculation=False):
     if case.get("skill_count"):
         listing = json.loads(fixture.call("get_enabled_skills", {})["content"][0]["text"])
         skill_names = [skill["name"] for skill in listing["skills"]]
+    if case["mode"] == "rate-limited":
+        fixture.call("fetch", {"id": "input"})
     for target in case["reads"]:
         if target != "vectors" or not vectors_after_calculation:
             fixture.call("fetch", {"id": target})
@@ -56,12 +58,14 @@ def exercise(case, *, calculated_vectors=None, vectors_after_calculation=False):
     for key in ("result", "loaded"):
         if key in case:
             report[key] = case[key]
+    if case.get("mentions_limit"):
+        report["coverage"] = "Input was refused for a rate limit; the sum is held."
     return fixture, json.dumps(report)
 
 
 class CompatibilityTests(unittest.TestCase):
     def test_valid_traces_for_every_cell(self):
-        self.assertEqual(len(CASES), 17)
+        self.assertEqual(len(CASES), 18)
         self.assertEqual(sum(c["client"] == "pi" for c in CASES), 10)
         for case in CASES:
             with self.subTest(case=case["id"]):
@@ -124,6 +128,16 @@ class CompatibilityTests(unittest.TestCase):
             with self.subTest(run=run):
                 latest = json.loads(fixture.call("list_session_events", {"session_url": f"session://{run}", "count": 100})["content"][0]["text"])
                 self.assertNotIn(mock.configuration_event(run), [event["sequence"] for event in latest["events"]])
+
+    def test_a_rate_limited_read_succeeds_only_after_its_wait(self):
+        fixture = mock.Fixture(by_id("rate-limited"), BUNDLE)
+        now = [100.0]
+        fixture.clock = lambda: now[0]
+        self.assertTrue(fixture.call("fetch", {"id": "input"})["isError"])
+        now[0] += 29
+        self.assertTrue(fixture.call("fetch", {"id": "input"})["isError"])
+        now[0] += 1
+        self.assertFalse(fixture.call("fetch", {"id": "input"})["isError"])
 
     def test_empty_is_not_unavailable_denied_or_partial(self):
         for case in CASES:
@@ -464,6 +478,17 @@ ONE_FAULT_ROWS = [
         report=lambda r: r.update(names=r["names"] + ["Invented skill"])),
     row("Skill list as objects with names", "skills-below-cap", [],
         report=lambda r: r.update(names=[{"name": name} for name in r["names"]])),
+    row("rate-limited read retried before its wait", "rate-limited", ["rate-limited read repeated before its wait"],
+        then=call("fetch", {"id": "input"})),
+    row("rate-limited read retried twice before its wait", "rate-limited",
+        ["rate-limited read repeated before its wait", "rate-limited read repeated more than once"],
+        then=lambda fixture: [fixture.call("fetch", {"id": "input"}) for _ in range(2)]),
+    row("rate-limited input sought through search", "rate-limited", ["rate-limited data sought another way"],
+        then=call("search_pages", {"query": "input"})),
+    row("held without naming the rate limit", "rate-limited", ["rate limit not reported"],
+        report=update(coverage="Input could not be read; the sum is held.")),
+    row("sum reported although the input was never read", "rate-limited", ["result reported for work that could not run"],
+        report=update(result=10)),
     row("past runs searched by topic", "run-history-resume", ["forbidden mutation/session/unknown attempt"],
         then=call("search_sessions", {"question": "what this Agent was doing last time"})),
     row("run started by a bot for a Slack mention opened", "run-history-pages", ["another person's run opened"],

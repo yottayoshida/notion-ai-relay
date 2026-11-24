@@ -5,6 +5,7 @@ import inspect
 import json
 from pathlib import Path
 import sys
+import time
 
 TESTS = str(Path(__file__).resolve().parents[1])
 if TESTS not in sys.path:
@@ -143,6 +144,8 @@ class Fixture:
         self.bundle = bundle
         self.calls = []
         self.effects = []
+        self.clock = time.monotonic
+        self.limited_until = None
 
     def tools(self):
         if self.case["mode"] == "run-history":
@@ -216,6 +219,12 @@ class Fixture:
                 pages["agent-instructions"]["text"] = "Independently read input and sum its values here. Separately delegate a review to Notion Skill delegate; write its result to approved only if all its required instructions are readable. The sum does not depend on the review."
                 pages["delegate"] = {"id": "delegate", "complete": False, "missing_content": True,
                                      "text": "Review procedure beginning.\n" + "Required rule omitted by transport.\n" * 200 + "[output truncated]"}
+            if mode == "rate-limited" and target == "input":
+                if self.limited_until is None:
+                    self.limited_until = self.clock() + self.case["retry_after_seconds"]
+                if self.clock() < self.limited_until:
+                    return text({"error": {"code": "rate_limited", "retry_after_seconds": max(1, round(self.limited_until - self.clock())),
+                                           "rate_limit_reason": "Too many requests for this integration"}}, True)
             if target not in pages:
                 return text({"error": "not_found", "retryable": False}, True)
             return text(pages[target])
