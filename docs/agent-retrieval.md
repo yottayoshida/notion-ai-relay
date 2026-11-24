@@ -60,7 +60,7 @@ Give the Agent's name, as described under Use in the [README](../README.md#use).
 - What makes a chat run record `draft` or `published`.
 - When Notion cuts the configuration output short.
 - Runs started by mentions or page events, and whether their configuration event has the same form.
-- How Skills attached to an Agent under Tools and access, and an Agent's Memories, appear in the recorded configuration, and whether their contents can be read through MCP. On 2026-11-24 the configuration recorded in a chat of the user's own with one Agent was cut off in the connections, before any such field could appear; the run list's `tool_types` field for some of the user's chats included `connections.skills.loadSkill`.
+- How Skills attached to an Agent under Tools and access, and an Agent's Memories, appear in the recorded configuration, and whether their contents can be read through MCP. On 2026-11-24 the configuration recorded in a chat of the user's own with one Agent was cut off in the connections, before any such field could appear; the run list's `tool_types` field for some of the user's chats included `connections.skills.loadSkill`. The Skill reports attached Skills and the Memories setting only when a record shows them, under names it does not know in advance; a complete record that shows neither is not taken to mean the Agent has none.
 - Whether `notion-fetch` truncates a long Instructions page.
 - Agent instructions that hand off to a Notion Skill.
 - Page and block reads through the Notion REST API.
