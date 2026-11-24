@@ -12,9 +12,7 @@ Install with the [skills CLI](https://github.com/vercel-labs/skills):
 npx skills add yottayoshida/notion-ai-relay
 ```
 
-For manual installation, put this repository in your client's Skill directory as a folder named `notion-ai-relay`, the `name` in `SKILL.md`, for example with `git clone https://github.com/yottayoshida/notion-ai-relay.git`. A GitHub zip extracts to `notion-ai-relay-main`; rename it, because a client may name the Skill after its folder. Keep `SKILL.md` and `references/` together. `agents/openai.yaml` contains optional Codex display metadata.
-
-For installed-file version checks, safe updates, backups, and rollback, see [installation maintenance](docs/install-maintenance.md).
+For manual installation, installed-file version checks, safe updates, backups, and rollback, see [installation maintenance](docs/install-maintenance.md#install-without-the-skills-cli).
 
 [Connect Notion MCP](https://developers.notion.com/docs/get-started-with-mcp) in your AI assistant separately. If a workflow uses another service, connect an MCP server that supports the required operations for that service.
 
@@ -46,7 +44,7 @@ Input: <items to process>
 
 ## Requirements and limits
 
-The Skill maps each operation to the MCP tools and argument schemas exposed by your environment. It does not require Computer Use, browser automation, a particular operating system, or a client-specific automation API. When Notion MCP returns a download URL for a file in the same run, such as a file uploaded to a page, the Skill downloads it instead of asking you to paste it, in a client that can download it and, for an archive, extract it; no other URL is downloaded outside MCP. Apart from reading its own files and handling these downloads, before the first write, message, non-Notion connection, local file or command you did not name, the Skill lists them, with what each write would contain, from what, and any recorded run's date, and waits for your go-ahead.
+The Skill maps each operation to the MCP tools and argument schemas exposed by your environment. It does not require Computer Use, browser automation, a particular operating system, or a client-specific automation API. When Notion MCP returns a download URL for a file in the same run, such as a file uploaded to a page, the Skill downloads it instead of asking you to paste it, in a client that can download it and, for an archive, extract it; no other URL is downloaded outside MCP, except by a script you approve. Apart from reading its own files and handling these downloads, before the first write, message, non-Notion connection, local file or command you did not name, the Skill lists them, with what each write would contain, from what, and any recorded run's date, and waits for your go-ahead. Code from the instructions, their files or the data runs on this machine only if you ask for that script and approve the command you are shown, and then with your access, network included; otherwise its calculation is reproduced by reading it, or reported when it cannot be.
 
 | Operation | Required information or capability |
 |---|---|
