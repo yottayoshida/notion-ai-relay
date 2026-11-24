@@ -6,7 +6,7 @@ The [execution boundaries](../SKILL.md#execution-boundaries) apply throughout.
 
 Identify only the operations needed by the current branch. A configured connection does not make its use mandatory. Inspect the exposed MCP tool inventory, descriptions, and schemas for connection identity, access scope, and retrieval completeness. Read a service-specific Skill when required and available.
 
-For a standalone Notion Skill, map its text, supporting resources, and current input to operations. When an Agent calls a Skill, respect both sets of restrictions. Arrange each step as input, operation and target, MCP tool, and expected result.
+For a standalone Notion Skill, map its text, supporting resources, and current input to operations. When an Agent's instructions call a Skill, respect both sets of restrictions. Arrange each step as input, operation and target, MCP tool, and expected result.
 
 | Required operation | Mapping checks |
 |---|---|
