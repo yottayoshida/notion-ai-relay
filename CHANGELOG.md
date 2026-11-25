@@ -7,6 +7,7 @@ Notable changes to Notion AI Relay. The format follows [Keep a Changelog](https:
 ### Changed
 
 - The README now opens with what Relay does and why: your assistant does the work instead of Notion running the Agent on its creator's Select credits, then the workspace's if an owner allows it. It lists requirements before installing, including the Notion plan Custom Agents need, gives three steps for running an Agent, by name, by its Instructions page or by pasted text, and calls this Skill Relay ([#65](https://github.com/yottayoshida/notion-ai-relay/issues/65)).
+- The README's limits are now stated as what Relay tells your assistant to do, with only the client's permission settings able to stop a call, and it gives Claude Code settings that deny the session tools Relay is told not to call, tested on a local fixture in four permission modes. It says that writes use each connection's account, that the Agent's own schedule keeps running, and to try a dry run first; [permissions](docs/permissions.md) holds the details ([#66](https://github.com/yottayoshida/notion-ai-relay/issues/66)).
 
 ## [0.1.0] - 2026-11-25
 

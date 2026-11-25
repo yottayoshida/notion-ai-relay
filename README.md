@@ -26,11 +26,11 @@ Ask Relay for its version, exact for a release-tag install. For newer releases, 
 
 ## Use
 
-Once Relay is loaded, give the target and this run's input. You need not write in English; see the [response-language rules](SKILL.md#response-language).
+Once Relay is loaded, give the target and this run's input. You need not write in English ([response-language rules](SKILL.md#response-language)).
 
 For a Custom Agent:
 
-1. Give its name or URL. Relay reads the instructions and settings from Notion's record of a chat you had with the Agent or of its scheduled runs, among its latest 60. If you stop running the Agent in Notion, Relay still uses those records, but they stay as of its last run, instructions too unless your chat recorded the Instructions page ([details](docs/agent-retrieval.md#what-the-run-history-route-assumes)).
+1. Give its name or URL. Relay has your assistant read the instructions and settings from Notion's record of a chat you had with the Agent or of its scheduled runs, among its latest 60. If you stop running the Agent in Notion, those records still serve, but they stay as of its last run, instructions too unless your chat recorded the Instructions page ([details](docs/agent-retrieval.md#what-the-run-history-route-assumes)).
 2. If Relay asks for it, give the Instructions page URL from the Agent's settings.
 3. If that fails too, paste the instructions.
 
@@ -40,9 +40,13 @@ For a Notion Skill, give its name if it is enabled for external MCP clients ("Us
 List the Notion Custom Agents and Notion Skills I can access.
 ```
 
-Execution and [dry-run](docs/dry-run-example.md) examples:
+Try a [dry run](docs/dry-run-example.md) first:
 
 ```text
+Dry-run this agent's task without writing to external services.
+Agent: <name or URL>
+Input: <items to process>
+
 Carry out this Custom Agent's task.
 Agent: <name or URL>
 Input: <target page, time period, and other required input>
@@ -50,19 +54,29 @@ Input: <target page, time period, and other required input>
 Use this Notion Skill to process the supplied material.
 Notion Skill: <name or page URL>
 Material: <document URL or text>
-
-Dry-run this agent's task without writing to external services.
-Agent: <name or URL>
-Input: <items to process>
 ```
 
 ## Limits
 
-Relay uses the MCP tools and argument schemas your environment exposes, and needs no Computer Use, browser automation, particular operating system, or client-specific API. When Notion MCP returns a download URL for a file in the same run, Relay downloads it over `https` from a host name, never `localhost` or an IP address, instead of asking you to paste it, in a client that can save it outside your project and Relay's folder, and extract an archive there: from a tar archive of at most 100 members it takes regular files up to 1 MB, and it reports a redirect, other archives (Office files included) and anything beyond these limits. No other URL is downloaded outside MCP, except by a script you approve. Apart from reading its own files and handling these downloads, before the first write, message, non-Notion connection, local file or command you did not name, Relay lists them, with what each write would contain, from what, and any recorded run's date, and waits for your go-ahead. Code from the instructions, their files or the data runs on this machine only if you ask for that script and approve the command you are shown, and then with your access, network included; otherwise its calculation is reproduced by reading it, or reported when it cannot be.
+Relay tells your assistant to:
 
-Relay does not launch or drive Notion-side agents or AI sessions: a relayed run happens in your assistant, with its access under your host's permission rules, does not appear in the Agent's Activity, and neither uses nor adds to the Agent's Memories. Whoever can edit the instructions decides what it reads, sends and asks for. A dry run does not update completion state.
+- list each write, message, non-Notion connection, local file or command you did not name (besides reading its files and Notion downloads), with what each write would contain and from what, and wait for your go-ahead;
+- run code from the instructions or their files only if you ask for that script and approve its command;
+- download only files Notion MCP returns ([rules](docs/permissions.md));
+- start, message, wait on or stop no Notion AI session, and leave the Agent's schedule and triggers alone unless you ask;
+- leave completion state alone in a dry run.
 
-This repository distributes instructions, not a production MCP server or background process; fixture servers under `tests/` are for evaluation only. See the dated [compatibility matrix](docs/compatibility.md).
+These are instructions the model is asked to follow. Only your client's permission settings stop a call, and they act per tool or command, not per rule above. For Claude Code, add these to `permissions.deny` in your project's `.claude/settings.json` to deny Notion's session-control tools:
+
+```json
+{"permissions": {"deny": ["mcp__*__notion-spawn-session", "mcp__*__notion-send-message-to-session", "mcp__*__notion-stop-session", "mcp__*__notion-wait-session", "mcp__*__notion-search-sessions"]}}
+```
+
+In a local `claude -p` test (2.1.331, 2026-11-25) it stopped those calls in the default, `dontAsk`, `acceptEdits` and `auto` modes; bypass mode was not tested. Approve writes, messages and commands one at a time, and for a dry run deny the write tools ([dry runs](docs/permissions.md#dry-runs)).
+
+Writes use each connection's account and access; Notion's MCP tools "act with your full Notion permissions" ([Notion's help](https://www.notion.com/help/notion-mcp)). The Agent keeps its own schedule, so it and a relayed run can act on the same day; pause it if that matters. A relayed run takes place in your assistant: it does not appear in the Agent's Activity and, by Notion's description, neither uses nor adds to the Agent's Memories (inferred, not observed). Whoever can edit the instructions decides what Relay reads, sends and asks for.
+
+This repository distributes instructions, not a production MCP server or background process; fixture servers under `tests/` are for evaluation only ([compatibility matrix](docs/compatibility.md)).
 
 ## Docs
 
