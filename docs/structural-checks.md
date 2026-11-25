@@ -15,4 +15,4 @@ Checks cover YAML syntax (including duplicate keys), required files, a `cases.js
 
 The unit tests also check that `SKILL.md`, `README.md` and `CHANGELOG.md` give one release version. They catch a release raised in some of these places only, not one raised in none.
 
-**A structural PASS is not a model-execution or Notion-compatibility PASS.** It does not prove that a client loads the Skill, that an assistant follows the instructions, or that MCP access is available. GitHub-hosted CI execution must be confirmed separately from a local run.
+**A structural PASS is not a model-execution or Notion-compatibility PASS.** It does not prove that a client loads Relay, that an assistant follows the instructions, or that MCP access is available. GitHub-hosted CI execution must be confirmed separately from a local run.

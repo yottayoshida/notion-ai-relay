@@ -1,6 +1,6 @@
 # Troubleshooting
 
-When a run cannot go on, its report says what to do next: inside the output format you or the procedure fixed, if that format has a place for it, or else in its first lines. This page lists the usual causes behind those reports. The Skill does not load it.
+When a run cannot go on, its report says what to do next: inside the output format you or the procedure fixed, if that format has a place for it, or else in its first lines. This page lists the usual causes behind those reports. Relay does not load it.
 
 Notion's plans and settings below were checked against Notion's own pages on 2026-11-24 and can change.
 
@@ -8,7 +8,7 @@ Notion's plans and settings below were checked against Notion's own pages on 202
 |---|---|---|
 | The assistant has no Notion tools | Notion MCP is not connected in this assistant | Connect it as described in [Connect to Notion MCP](https://developers.notion.com/docs/get-started-with-mcp), then ask again |
 | Agent tools, such as the Agent search, are missing | The connection lacks the "View sessions and interact with agents" capability | Disconnect and reconnect Notion, or enable the capability in the integration's settings and authorize again ([tools reference](https://developers.notion.com/guides/mcp/tools-skills-agents-reference)) |
-| An Agent tool is refused, with a link | Custom Agents need a Business or Enterprise plan ([Notion help](https://www.notion.com/help/custom-agents)), and the tools need Notion AI access and access to Custom Agents ([tools reference](https://developers.notion.com/guides/mcp/tools-skills-agents-reference)) | The report passes on the refusal's link with the tool that refused and the site the link goes to; open it if it goes to Notion. The Skill does not change settings for you unless you ask |
+| An Agent tool is refused, with a link | Custom Agents need a Business or Enterprise plan ([Notion help](https://www.notion.com/help/custom-agents)), and the tools need Notion AI access and access to Custom Agents ([tools reference](https://developers.notion.com/guides/mcp/tools-skills-agents-reference)) | The report passes on the refusal's link with the tool that refused and the site the link goes to; open it if it goes to Notion. Relay does not change settings for you unless you ask |
 | The Agent is not found | It is not shared with you, or its name differs | Check in Notion that the Agent is shared with you and how it is named, or give its URL |
 | A Notion Skill is missing from the list | The hosted Notion MCP lists only Skills enabled for external MCP clients | Give the Skill's page URL: a Skill named by URL runs without registration or enabled-state data when its instructions and input can be read |
 | It asks for the Instructions page link or the text | No reader for Agent settings, and no usable chat of yours or scheduled run ([Agent retrieval](agent-retrieval.md)) | In Notion, open the Agent's settings and copy the link to its Instructions page, or paste the instructions |
