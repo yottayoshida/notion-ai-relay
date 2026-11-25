@@ -54,6 +54,30 @@ Obtain authorization for model calls. Freeze the Skill revision and hashes, fixt
 
 `fixture/stop` and `fixture/resume` are host control requests, **not exposed tools**. Model clients must not be allowed to call them. Each server trace event includes arguments, result/error, phase and before/after state. The stop control event is named `__user_stop__` and is not counted as a model operation.
 
+`stop` and `partial-resume` need a driver that keeps one fixture process for the whole attempt and can write these controls to its input. A client that starts the server itself, with no such driver between them, cannot send them: it owns the server's input. Each `claude -p` call also starts its own fixture process, so a second turn in a new call starts from the case's initial state, without the first turn's effects.
+
+For the other cases in Claude Code, put the four Relay files in `.claude/skills/notion-ai-relay/` of an otherwise empty directory and run from it. Keep `fixture.json`, which starts `mock_mcp.py` as the only MCP server, named `fixture`, and the trace outside that directory: under `dontAsk` the client allows reads inside its working directory and refuses the rest, so nothing there should reveal the case or the expected results.
+
+```bash
+claude -p "$PROMPT" --setting-sources project --strict-mcp-config --mcp-config /path/outside/fixture.json \
+  --tools "Skill,Read" --permission-mode dontAsk --no-session-persistence --model "$MODEL" --max-budget-usd 2 \
+  --allowedTools mcp__fixture__fetch mcp__fixture__lookup mcp__fixture__create mcp__fixture__update \
+    mcp__fixture__checkpoint mcp__fixture__delete Skill \
+  --output-format stream-json --verbose
+```
+
+`$PROMPT` is the task above between these lines:
+
+```text
+Load the notion-ai-relay Skill first with the Skill tool, then read references/read-configuration.md, references/read-skills.md and references/execute-via-mcp.md from its folder completely with the Read tool. These are local Skill files, not Notion pages; the page IDs below are remote Notion pages reached through MCP. Then follow the Skill for this task.
+
+Task: <the task above>
+
+Return only the JSON object as your final message.
+```
+
+Before a scored run, check with a different trace path that the `init` event lists only the fixture's tools, `Skill` and `Read`, and that the Skill tool's result names this directory's copy as its base directory; another installed copy of Relay with the same name must not be the one loaded. Discard a run without the Skill call and the three complete reads. The task names both A and B, but the inputs of `write-timeout`, `read-rate-limit` and `no-readback` list only A and that of `concurrent-edit` only B; a report that also lists the key missing from the input as not executed or held fails those cases.
+
 ## Non-model validation
 
 ```bash
