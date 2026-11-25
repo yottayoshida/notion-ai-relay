@@ -6,7 +6,7 @@ This guide concerns the **Relay files on disk**, not the version of an Agent's i
 
 1. List the releases: `git ls-remote --tags https://github.com/yottayoshida/notion-ai-relay` (or the [releases page](https://github.com/yottayoshida/notion-ai-relay/releases)). `npx skills check` does not report a newer release for a copy pinned to a tag.
 2. Install the newest tag with the scope and client options you used before, for example `npx skills add yottayoshida/notion-ai-relay@<tag>`, adding `-g` for a global copy; skills CLI 1.8.0 or later reads a version tag such as `@v1.2.3` as a pin. If `npx skills list --json` marks the copy `modified`, or you changed its files, back it up first as in [section 2](#2-inspect-and-back-up-before-changing-anything).
-3. Start a new session and ask the Skill which Relay version it is; [section 5](#5-confirm-reload-and-diagnose-without-secrets) shows which files it loaded.
+3. Start a new session and ask Relay which version it is; [section 5](#5-confirm-reload-and-diagnose-without-secrets) shows which files it loaded.
 
 ## Install without the skills CLI
 
@@ -14,7 +14,7 @@ For manual installation, put this repository in your client's Skill directory as
 
 ## 1. Locate the copy the client actually loads
 
-Run these from the project where you use the Skill:
+Run these from the project where you use Relay:
 
 ```bash
 npx skills@1.9.0 list --json
@@ -39,7 +39,7 @@ For manual installs, find the folder through the client's inventory/configured S
 | Dedicated Git clone | Commands below | HEAD identifies the checkout; a dirty checkout is that revision **plus local changes**. |
 | ZIP or manual copy | Saved full commit/download URL and comparison with a pinned snapshot | A branch-named ZIP or copied folder without provenance has **unknown revision** until checked. Matching files establishes content equivalence, not unique commit identity. |
 
-Only run these Git commands after confirming the Skill directory itself is the clone root; otherwise Git may report the containing project's HEAD:
+Only run these Git commands after confirming Relay's directory itself is the clone root; otherwise Git may report the containing project's HEAD:
 
 ```bash
 git -C "$skill" rev-parse --show-toplevel

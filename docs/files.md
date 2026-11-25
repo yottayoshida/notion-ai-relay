@@ -5,12 +5,12 @@
 - [Read Custom Agent settings](../references/read-configuration.md) covers discovery, configuration versions, and resume state.
 - [Read Notion Skills](../references/read-skills.md) covers instruction pages and supporting resources.
 - [Execute through MCP](../references/execute-via-mcp.md) covers tool mapping and execution checks.
-- [Agent retrieval](agent-retrieval.md) compares ways to read Custom Agent instructions and settings and records test runs. It is reference material, not part of the Skill's instructions.
+- [Agent retrieval](agent-retrieval.md) compares ways to read Custom Agent instructions and settings and records test runs. It is reference material, not part of Relay's instructions.
 - [Compatibility and evidence](compatibility.md) is the dated matrix of synthetic checks, historical live records, blockers, and unverified environments.
 - [Installation maintenance](install-maintenance.md) covers finding the installed copy, updates, backups, rollback, and what to send for support.
 - [Security policy](../SECURITY.md) says what to report privately and where.
 - [Structural checks](structural-checks.md) covers the CI check. `scripts/` holds the check and the command CI runs.
-- [Troubleshooting](troubleshooting.md) lists what a stopped run usually needs from you. The Skill does not load it.
+- [Troubleshooting](troubleshooting.md) lists what a stopped run usually needs from you. Relay does not load it.
 - [Example dry run](dry-run-example.md) shows one unedited request, the tools called and the reply, from a synthetic local MCP.
 - Decision cases without a scorer are in `evals/`, where CI checks that each case has a unique `id` and a non-empty expected outcome; `tests/` keeps the suites whose scorers and fixtures CI runs. Each folder has its own replay steps. Neither is runtime instructions.
 - [Next-step cases](../evals/next-step/README.md) check what a stopped run's report tells the user to do, against a [local eval fixture](../tests/eval-fixture/mock_mcp.py) that also serves the [dry-run cases](../evals/dry-run/README.md).

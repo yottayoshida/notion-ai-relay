@@ -9,7 +9,7 @@ Notion AI Relay is a set of instructions that an AI assistant reads. Its boundar
 
 ## Out of scope
 
-- A jailbreak that works the same without this Skill, and anything the host's own permissions allow. Report those to the client or model provider.
+- A jailbreak that works the same without Relay, and anything the host's own permissions allow. Report those to the client or model provider.
 - Vulnerabilities in Notion, an MCP client, or a model. Report those to their providers.
 - Other wrong results from a fixture or scorer, and mistakes in the documentation. Open a public issue.
 

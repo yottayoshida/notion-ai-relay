@@ -1,4 +1,4 @@
 interface:
   display_name: "Notion AI Relay"
-  short_description: "Run Notion agents and skills through MCP"
+  short_description: "Your assistant does the work of Notion Custom Agents and Skills"
   default_prompt: "$notion-ai-relay List the Notion Custom Agents and Notion Skills I can access."

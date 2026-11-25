@@ -47,6 +47,10 @@ MINIMAL_CODEX = """interface:
 """
 
 
+def short_description(openai_yaml):
+    return re.search(r'short_description: "([^"]*)"', openai_yaml).group(1)
+
+
 def minimal_skill(path, body):
     for relative in REQUIRED:
         (path / relative).parent.mkdir(parents=True, exist_ok=True)
@@ -301,7 +305,7 @@ class StructureTests(unittest.TestCase):
     def test_invalid_display_metadata_and_skill_reference(self):
         path = self.root / "agents/openai.yaml"
         original = path.read_text(encoding="utf-8")
-        short = "Run Notion agents and skills through MCP"
+        short = short_description(original)
         for text, message in [
             ("interface: []", "openai.yaml requires interface metadata"),
             (original.replace('"Notion AI Relay"', "42"), "openai.yaml requires interface.display_name"),
@@ -331,11 +335,13 @@ class StructureTests(unittest.TestCase):
     def test_display_metadata_boundaries_and_quoting_that_pass(self):
         path = self.root / "agents/openai.yaml"
         original = path.read_text(encoding="utf-8")
-        for text in [original.replace("Run Notion agents and skills through MCP", "x" * 25),
-                     original.replace("Run Notion agents and skills through MCP", "x" * 64),
+        short = short_description(original)
+        for text in [original.replace(short, "x" * 25),
+                     original.replace(short, "x" * 64),
                      original.replace('"Notion AI Relay"', "'Notion AI Relay'"),
                      original + "  count: 3\n"]:
             with self.subTest(text=text[-40:]):
+                self.assertNotEqual(text, original)
                 path.write_text(text, encoding="utf-8")
                 validate(self.root)
 

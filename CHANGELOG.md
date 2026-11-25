@@ -4,6 +4,10 @@ Notable changes to Notion AI Relay. The format follows [Keep a Changelog](https:
 
 ## [Unreleased]
 
+### Changed
+
+- The README now opens with what Relay does and why: your assistant does the work instead of Notion running the Agent on its creator's Select credits, then the workspace's if an owner allows it. It lists requirements before installing, including the Notion plan Custom Agents need, gives three steps for running an Agent, by name, by its Instructions page or by pasted text, and calls this Skill Relay ([#65](https://github.com/yottayoshida/notion-ai-relay/issues/65)).
+
 ## [0.1.0] - 2026-11-25
 
 First tagged release. Earlier installs followed `main` and carry no version; for what changed since a given commit, compare it with this tag.

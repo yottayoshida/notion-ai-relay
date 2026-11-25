@@ -215,6 +215,14 @@ Rebuilding that old environment is not required to replay the synthetic suite. N
 
 ## Choosing an environment
 
+| Operation | Required information or capability |
+|---|---|
+| List Custom Agents | An MCP agent-listing capability. Results cover the scope exposed by the connection |
+| List Notion Skills | An MCP Skill-listing capability, or a known Skill page or database. The hosted Notion MCP lists only Skills enabled for external MCP clients |
+| Carry out a Custom Agent's task | Its instructions, a verified or user-supplied link to the target, required settings and input, and the necessary MCP operations |
+| Carry out a Notion Skill's task | Its instruction page, required references and attachments, current input, and the necessary MCP operations |
+| Run on a schedule | A separately configured scheduler or event receiver |
+
 For discovery, require a real catalog capability or an explicitly known page or database listing Skills. For execution, require readable current adopted instructions, complete necessary resources, allowed tools and task authorization; do not infer these from discovery visibility or edit rights. For dry runs, retain read/coverage limitations and do not mutate messages, completion ledgers or local resume state.
 
 If the native client/model or connection is blocked, resolve that specific prerequisite through the client's configuration/authentication interface and obtain any missing evaluation authorization. Do not substitute another model or a different client and label its result as the blocked cell's PASS. Credentials and business content do not belong in compatibility reports.
