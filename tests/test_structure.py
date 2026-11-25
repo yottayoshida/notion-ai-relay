@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 import re
@@ -522,6 +523,35 @@ class SuiteWarningTests(unittest.TestCase):
         with warnings.catch_warnings(record=True) as caught:
             warnings.warn("synthetic deprecation", DeprecationWarning)
         self.assertEqual([str(warning.message) for warning in caught], ["synthetic deprecation"])
+
+
+def readme_denied_tools(readme):
+    return set(json.loads(re.search(r"```json\n(.*?)\n```", readme, re.S).group(1))["permissions"]["deny"])
+
+
+def session_tools_named_by_execution_boundaries(skill):
+    rule = next(line for line in skill.splitlines() if "Do not launch or drive Notion-side agents" in line)
+    return set(re.findall(r"`(notion-[a-z-]+)`", rule))
+
+
+class ReadmeSettingsTests(unittest.TestCase):
+    def setUp(self):
+        self.readme = (REPOSITORY / "README.md").read_text(encoding="utf-8")
+        skill = (REPOSITORY / "SKILL.md").read_text(encoding="utf-8")
+        self.expected = {"mcp__*__" + name for name in session_tools_named_by_execution_boundaries(skill)}
+
+    def test_readme_settings_deny_every_session_tool_the_execution_boundaries_name(self):
+        self.assertTrue(self.expected)
+        self.assertEqual(readme_denied_tools(self.readme), self.expected)
+
+    def test_a_session_tool_missing_from_the_readme_settings_fails(self):
+        block = re.search(r"```json\n(.*?)\n```", self.readme, re.S).group(1)
+        for missing in sorted(self.expected):
+            with self.subTest(missing=missing):
+                settings = json.loads(block)
+                settings["permissions"]["deny"].remove(missing)
+                trimmed = self.readme.replace(block, json.dumps(settings))
+                self.assertNotEqual(readme_denied_tools(trimmed), self.expected)
 
 
 class ReleaseVersionTests(unittest.TestCase):
