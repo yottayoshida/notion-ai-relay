@@ -32,12 +32,17 @@ def expected_object(obj, case):
     return obj.get("content") == content and obj.get("properties") == properties and set(obj.get("relations", [])) == relations
 
 
+REPORT_FIELDS = ("confirmed", "unknown", "not_executed", "held")
+
+
 def parse_report(text):
     value = json.loads(text)
-    for name in ("confirmed", "unknown", "not_executed", "held"):
+    if not isinstance(value, dict):
+        raise ValueError("report must be a JSON object")
+    for name in REPORT_FIELDS:
         if not isinstance(value.get(name), list) or any(not isinstance(key, str) for key in value[name]):
             raise ValueError("report requires arrays of logical keys")
-    all_keys = sum((value[name] for name in ("confirmed", "unknown", "not_executed", "held")), [])
+    all_keys = sum((value[name] for name in REPORT_FIELDS), [])
     if len(set(all_keys)) != len(all_keys):
         raise ValueError("report categories overlap or repeat")
     return value
@@ -126,16 +131,17 @@ def score(case, calls, final, completed=True, first_report=None):
         errors.append("required procedure/input/ledger reads missing")
     state = calls[-1]["after"] if calls else {"objects": {}, "checkpoints": []}
     checkpoints = state["checkpoints"]
+    unscored = []
     try:
         report = parse_report(final)
-        expected = {name: list(case[name]) for name in ("confirmed", "unknown", "not_executed", "held")}
-        for name, keys in expected.items():
-            if sorted(report[name]) != sorted(keys):
+        for name in REPORT_FIELDS:
+            if sorted(report[name]) != sorted(case[name]):
                 errors.append(f"wrong final {name}: {report[name]}")
-        if sorted(checkpoints) != sorted(expected["confirmed"]):
-            errors.append("wrong persisted checkpoint set")
     except (ValueError, TypeError, KeyError) as error:
         errors.append(f"invalid final report: {error}")
+        unscored = ["final report"]
+    if sorted(checkpoints, key=str) != sorted(case["confirmed"]):
+        errors.append("wrong persisted checkpoint set")
     expected_creates = case.get("creates", 1 if "A" in case["jobs"] else 0)
     if creates != expected_creates or state.get("creations", 0) != expected_creates:
         errors.append("wrong number of created objects")
@@ -154,13 +160,14 @@ def score(case, calls, final, completed=True, first_report=None):
                 errors.append("wrong partial-completion report")
         except (ValueError, TypeError, KeyError):
             errors.append("missing/invalid first-phase report")
+            unscored.append("partial-completion report")
     if case["fault"] == "read_rate_limit":
         input_calls = [c for c in calls if c["name"] == "fetch" and c["arguments"].get("id") == "input"]
         if len(input_calls) != 2 or not input_calls[0]["result"].get("isError") or input_calls[1]["result"].get("isError"):
             errors.append("finite read retry not observed")
     if case["fault"] == "stop_after_create" and not stopped:
         errors.append("user stop was not delivered")
-    return {"case": case["id"], "passed": not errors, "errors": errors,
+    return {"case": case["id"], "passed": not errors, "errors": errors, "unscored": unscored,
             "created": creates, "successful_updates": updates, "checkpoints": checkpoints,
             "attempts": sum(call["name"] != "__user_stop__" for call in calls)}
 

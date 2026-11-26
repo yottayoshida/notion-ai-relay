@@ -12,7 +12,7 @@ CREATE = {"key": "A", "content": "Created A", "properties": {"status": "done"}, 
 
 
 def report(case):
-    return json.dumps({key: case[key] for key in ("confirmed", "unknown", "not_executed", "held")})
+    return json.dumps({key: case[key] for key in scorer.REPORT_FIELDS})
 
 
 def delayed_read(case, delayed):
@@ -71,6 +71,27 @@ def exercise(case):
 
 
 class LifecycleTests(unittest.TestCase):
+    def test_a_report_that_cannot_be_read_still_has_its_checkpoints_checked(self):
+        case = by_id("normal")
+        fixture, final, _ = exercise(case)
+        result = scorer.score(case, fixture.calls[:-1], "```json\n" + final + "\n```")
+        self.assertEqual([error.split(":")[0] for error in result["errors"]], ["invalid final report", "wrong persisted checkpoint set"])
+        self.assertEqual(result["unscored"], ["final report"])
+        self.assertEqual(scorer.score(case, fixture.calls[:-1], final)["unscored"], [])
+
+    def test_a_report_that_is_json_but_not_an_object_is_reported_instead_of_stopping_the_scorer(self):
+        case = by_id("normal")
+        fixture, _, _ = exercise(case)
+        for final in ("[]", "10", "null", '"done"'):
+            with self.subTest(final=final):
+                result = scorer.score(case, fixture.calls, final)
+                self.assertEqual(result["errors"], ["invalid final report: report must be a JSON object"])
+                self.assertEqual(result["unscored"], ["final report"])
+        case = by_id("partial-resume")
+        fixture, final, _ = exercise(case)
+        result = scorer.score(case, fixture.calls, final, first_report="[]")
+        self.assertEqual((result["errors"], result["unscored"]), (["missing/invalid first-phase report"], ["partial-completion report"]))
+
     def test_valid_traces_cover_all_cases(self):
         for case in CASES:
             with self.subTest(case=case["id"]):
@@ -254,6 +275,9 @@ ONE_FAULT_ROWS = [
     row("held A not reported", "no-readback", ["wrong final held: []"], final=update(held=[])),
     row("B never checkpointed", "normal", ["wrong persisted checkpoint set"], edit=lambda calls: calls[:-1]),
     row("report is not JSON", "normal", ["invalid final report: Expecting value: line 1 column 1 (char 0)"], final="all done"),
+    row("report is a JSON array, not an object", "normal", ["invalid final report: report must be a JSON object"], final="[]"),
+    row("persisted checkpoint that is not a logical key", "normal", ["wrong persisted checkpoint set"],
+        edit=lambda calls: calls[:-1] + [{**calls[-1], "after": {**calls[-1]["after"], "checkpoints": [*calls[-1]["after"]["checkpoints"], 7]}}]),
     row("report category is not a list", "normal", ["invalid final report: report requires arrays of logical keys"],
         final=update(confirmed="A")),
     row("report puts A in two categories", "verification-failure", ["invalid final report: report categories overlap or repeat"],
