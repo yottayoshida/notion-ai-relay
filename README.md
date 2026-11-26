@@ -10,7 +10,7 @@ Notion AI Relay (Relay) is an independent, unofficial Agent Skill that tells you
 - A [Notion MCP](https://developers.notion.com/docs/get-started-with-mcp) connection, and an MCP server for any other service a workflow uses.
 - For Custom Agents: a Notion Business or Enterprise plan; to list Agents or give one by name or URL, Notion AI and Custom Agents access and a connection showing Notion's Agent tools ([tools reference](https://developers.notion.com/guides/mcp/tools-skills-agents-reference)).
 - For Notion Skills: access to the Skill's page.
-- Your own scheduler for scheduled runs.
+- Your own scheduler for [scheduled runs](docs/scheduling.md).
 
 What each operation needs: [choosing an environment](docs/compatibility.md#choosing-an-environment).
 
