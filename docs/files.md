@@ -2,8 +2,9 @@
 
 - [SKILL.md](../SKILL.md) defines target selection, configuration retrieval, MCP execution, and result verification.
 - [CHANGELOG.md](../CHANGELOG.md) records each release.
-- [Read Custom Agent settings](../references/read-configuration.md) covers discovery, configuration versions, and resume state.
-- [Read Notion Skills](../references/read-skills.md) covers instruction pages and supporting resources.
+- [Discover](../references/discover.md) holds the rules for listing Custom Agents, and `SKILL.md` sends an Agent listing there. Its section on retrieval completeness is a test-checked copy of the execution procedure's. Rules for every read, such as rate limits, stay in the execution procedure.
+- [Read Custom Agent settings](../references/read-configuration.md) covers finding an Agent, configuration versions, and resume state.
+- [Read Notion Skills](../references/read-skills.md) covers listing and finding Notion Skills, instruction pages, and supporting resources.
 - [Execute through MCP](../references/execute-via-mcp.md) covers tool mapping and execution checks.
 - [Agent retrieval](agent-retrieval.md) compares ways to read Custom Agent instructions and settings and records test runs. It is reference material, not part of Relay's instructions.
 - [Compatibility and evidence](compatibility.md) is the dated matrix of synthetic checks, historical live records, blockers, and unverified environments.

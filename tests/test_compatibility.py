@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import shutil
 import tempfile
 import unittest
 
@@ -225,6 +226,56 @@ class CompatibilityTests(unittest.TestCase):
         fixture = mock.Fixture(by_id("editor"), BUNDLE)
         self.assertTrue(fixture.call("relay_file", {"path": "../../AGENTS.md"})["isError"])
         self.assertTrue(fixture.call("relay_file", {"path": "/etc/passwd"})["isError"])
+
+    def test_a_runtime_without_reference_files_cannot_be_served_or_scored(self):
+        self.assertIn("references/discover.md", mock.runtime_files(BUNDLE))
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "SKILL.md").write_text("# Relay\n", encoding="utf-8")
+            with self.assertRaises(ValueError):
+                mock.Fixture(by_id("editor"), Path(directory))
+
+    def test_a_bundle_missing_a_reference_its_skill_names_cannot_be_served(self):
+        with tempfile.TemporaryDirectory() as directory:
+            bundle = Path(directory)
+            for name in mock.LOCAL_FILES:
+                if name != "references/discover.md":
+                    (bundle / name).parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(BUNDLE / name, bundle / name)
+            with self.assertRaises(ValueError) as caught:
+                mock.Fixture(by_id("editor"), bundle)
+            self.assertIn("references/discover.md", str(caught.exception))
+
+    def test_an_older_bundle_is_served_and_scored_by_its_own_files(self):
+        case = by_id("codex-loading")
+        report = json.dumps({"status": "ok", "names": [], "coverage": "complete", "held": [], "loaded": "notion-ai-relay"})
+        with tempfile.TemporaryDirectory() as directory:
+            bundle = Path(directory)
+            for name in scorer.LEGACY_FILES[1:]:
+                (bundle / name).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(BUNDLE / name, bundle / name)
+            (bundle / "SKILL.md").write_text("".join(f"[{name}]({name})\n" for name in scorer.LEGACY_FILES[1:]), encoding="utf-8")
+            fixture = mock.Fixture(case, bundle)
+            description = next(item["description"] for item in fixture.tools() if item["name"] == "relay_file")
+            self.assertNotIn("references/discover.md", description)
+            self.assertTrue(fixture.call("relay_file", {"path": "references/discover.md"})["isError"])
+            for name in fixture.local_files:
+                fixture.call("relay_file", {"path": name})
+            self.assertEqual(scorer.score(case, fixture.calls, report)["errors"], [])
+            partial = mock.Fixture(case, bundle)
+            for name in fixture.local_files[:-1]:
+                partial.call("relay_file", {"path": name})
+            self.assertIn("local Relay instructions not completely loaded", scorer.score(case, partial.calls, report)["errors"])
+
+    def test_a_trace_from_before_the_fixture_reported_its_files_is_scored_against_the_original_four(self):
+        case = by_id("codex-loading")
+        report = json.dumps({"status": "ok", "names": [], "coverage": "complete", "held": [], "loaded": "notion-ai-relay"})
+        fixture = mock.Fixture(case, BUNDLE)
+        for name in scorer.LEGACY_FILES:
+            fixture.call("relay_file", {"path": name})
+        legacy = [{**call, "result": text({key: value for key, value in json.loads(call["result"]["content"][0]["text"]).items()
+                                            if key != "files"})} for call in fixture.calls]
+        self.assertEqual(scorer.score(case, legacy, report)["errors"], [])
+        self.assertIn("local Relay instructions not completely loaded", scorer.score(case, fixture.calls, report)["errors"])
 
     def test_stdio_initialize_tools_and_partial_page_fault(self):
         with tempfile.TemporaryDirectory() as directory:

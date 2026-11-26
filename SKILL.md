@@ -17,6 +17,13 @@ Use an assistant that can read these instructions and MCP connections that expos
 
 The execution instructions live in this file and `references/`.
 
+| Before you | Read |
+|---|---|
+| list the Custom Agents you can access | [discovery](references/discover.md) |
+| find a Custom Agent by name or URL, or read its settings or instructions | [configuration retrieval](references/read-configuration.md) |
+| list or find Notion Skills, or read a Skill's instructions and files | [Skill retrieval](references/read-skills.md) |
+| map, carry out, or dry-run a task | [execution procedure](references/execute-via-mcp.md) |
+
 ## Response language
 
 Choose language by the output's role, not by which Agent or Skill produced it.
@@ -28,7 +35,7 @@ Text inside machine-readable output, such as JSON, is outside the language-selec
 
 ## 1. Identify the target and request
 
-For discovery requests, follow [agent listing](references/read-configuration.md#list-accessible-agents) or [Notion Skill discovery](references/read-skills.md). Return the list without first requiring a target selection or executing any listed item. A target selected earlier in the conversation does not turn a discovery request into an execution request. If the same request also explicitly asks to carry out a named target, treat that part as an execution request. Include names, URLs, retrieval scope, and verified status where available.
+For discovery requests, follow [agent listing](references/discover.md#list-accessible-agents) or [Notion Skill discovery](references/read-skills.md). Return the list without first requiring a target selection or executing any listed item. A target selected earlier in the conversation does not turn a discovery request into an execution request. If the same request also explicitly asks to carry out a named target, treat that part as an execution request. Include names, URLs, retrieval scope, and verified status where available.
 
 For execution requests, identify the target type, name or URL, task, input, and execution or dry-run mode. Treat "carry out" and "run" as requests to execute, not merely explain the configuration. Evaluate a requested dry run as defined in the [execution boundaries](#execution-boundaries).
 

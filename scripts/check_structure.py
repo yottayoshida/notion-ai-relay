@@ -20,7 +20,7 @@ import yaml
 SKILL_NAME = "notion-ai-relay"
 REQUIRED = (
     "SKILL.md", "README.md", "LICENSE", "agents/openai.yaml",
-    "references/read-configuration.md", "references/read-skills.md",
+    "references/discover.md", "references/read-configuration.md", "references/read-skills.md",
     "references/execute-via-mcp.md", "docs/agent-retrieval.md",
 )
 FRONTMATTER_FIELDS = {"name", "description", "license", "compatibility", "metadata", "allowed-tools"}

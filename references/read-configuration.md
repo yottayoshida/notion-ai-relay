@@ -2,20 +2,10 @@
 
 The [execution boundaries](../SKILL.md#execution-boundaries) apply throughout.
 
-## List accessible agents
-
-Inspect the current MCP connection for Agent listing or search capabilities. Ordinary page-search results are not an Agent catalog. If listing is unavailable, state that limitation. Configuration retrieval for an already specified target can proceed without a listing capability.
-
-Enumerate every available scope without a query, for example `favorites` and `workspace` on `notion-search-agents`, under the [pagination rule](execute-via-mcp.md#check-retrieval-completeness). Deduplicate by workspace ID and Agent ID while retaining favorite status. Report a failed scope or retrieval limit. A name search alone is not a complete catalog.
-
-Describe the list as the scope discoverable through the current connection. Return available names, descriptions, URLs, favorite status, and discovery sources. Do not claim coverage of inaccessible private Agents or other workspaces.
-
-Distinguish listing visibility, instruction access, settings access, edit permission, and write permission for task destinations. Report enabled state only when returned metadata establishes it. Listing does not require reading every Agent's business sources or execution history.
-
 ## Find an agent
 
 1. Discover the exposed Notion MCP tools. Prefer a read capability that returns full settings if one exists. Do not call a tool mentioned in documentation but absent from the actual inventory.
-2. For a name, use an Agent search capability such as `notion-search-agents`, searching each scope with the name. Match the name, description, workspace, and URL. Do not select solely by similarity or rank. A search with a query returns one page; if no candidate matches, enumerate the scopes without a query as in [List accessible agents](#list-accessible-agents) before concluding that the Agent is not visible.
+2. For a name, use an Agent search capability such as `notion-search-agents`, searching each scope with the name. Match the name, description, workspace, and URL. Do not select solely by similarity or rank. A search with a query returns one page; if no candidate matches, enumerate the scopes without a query as in [List accessible agents](discover.md#list-accessible-agents) before concluding that the Agent is not visible.
 3. For a URL, retain both the Agent identifier and workspace. Do not confuse the two IDs in `agent://<workspace-id>/<agent-id>`. Distinguish page, Agent, and session URLs. If only a session URL is supplied, resolve its owning Agent from read-only metadata, such as its entry in the run list.
 4. Check search semantics and coverage. A single-page search is not exhaustive. Absence from favorites does not establish nonexistence. Example tool names and arguments are not universal MCP contracts.
 
