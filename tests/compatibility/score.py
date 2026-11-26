@@ -76,7 +76,8 @@ def mentions_other_runs(case, final):
                                  rf"|(?:runs?|sessions?|run list)[\"']?\s*[:=]\s*(?:{count})\b", final, re.IGNORECASE)
     squashed = final.lower().replace("-", "")
     ids = {session_key(value) for value in case["other_runs"] + case.get("other_run_creators", [])}
-    return bool(OTHER_PEOPLE.search(final) or listed or has_mark(final, case.get("other_run_marks", []))
+    phrased = any(re.search(phrase, final, re.IGNORECASE) for phrase in case.get("other_run_phrases", []))
+    return bool(OTHER_PEOPLE.search(final) or listed or phrased or has_mark(final, case.get("other_run_marks", []))
                 or any(key in squashed for key in ids))
 
 
@@ -204,7 +205,7 @@ def score(case, calls, final, completed=True):
                     errors.append("calculation inputs do not match retrieved vectors")
     listed_runs = {session_key(session.get("id")) for call in calls if call["name"] == "query_sessions" and not call["result"].get("isError")
                    for session in data(call).get("results", [])}
-    if "own_run" in case and session_key(case["own_run"]) not in listed_runs:
+    if "last_run" in case and session_key(case["last_run"]) not in listed_runs:
         errors.append("run list not read to the end")
     opened = {session_key(call["arguments"].get("session_url", "")) for call in calls
               if call["name"] in {"list_session_events", "read_session_event"}}
@@ -250,6 +251,9 @@ def score(case, calls, final, completed=True):
             errors.append("reported Skills differ from the listing")
         if case.get("listing") and not reported_names(report.get("names")) <= listed_names:
             errors.append("reported Agent not returned by any listing")
+        question = report.get("question")
+        if "question_pattern" in case and not (isinstance(question, str) and re.search(case["question_pattern"], question, re.IGNORECASE)):
+            errors.append("question to the user missing or not about what is needed")
         held = {name.strip().rstrip(".。").strip().lower() for name in reported_names(report.get("held"))} - NOT_HELD
         # Not the names alone: reported_names(0) is {"0"}, which would count as held work.
         if case.get("must_hold") and not (report.get("held") and held):

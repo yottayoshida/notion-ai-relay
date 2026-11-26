@@ -93,35 +93,76 @@ OTHER_CHATS = [session("e1000000-0000-4000-8000-000000000001", OTHER, "user", "c
                        "Quillfeather budget questions", ["wren.halloway@example.com"])]
 MENTION = session("e4000000-0000-4000-8000-000000000005", BOT, "bot", "slack.app.mention", 3, "2026-11-16T09:00:00Z",
                   "Marrowgate invoice thread", ["corvin.ashby@example.com"])
-OTHER_RUNS = [*OTHER_CHATS, MENTION]
 SCHEDULED = session("e2000000-0000-4000-8000-000000000003", BOT, "bot", "recurrence", 3, "2026-11-15T00:00:00Z")
 OWN_CHAT = session("e3000000-0000-4000-8000-000000000004", SELF, "user", "chat", None, "2026-11-12T01:00:00Z",
                    emails=["fixture.user@example.com"])
-RUNS = {run["id"]: run for run in [*OTHER_RUNS, SCHEDULED, OWN_CHAT]}
 RECORDED = {"published": (PUBLISHED_PAGE, ["input"]), "draft": (EDITABLE_PAGE, [])}
 SESSION_PAGES = {None: ([], "cursor-1"), "cursor-1": (OTHER_CHATS, "cursor-2"), "cursor-2": ([MENTION, SCHEDULED], "cursor-3"),
                  "cursor-3": ([OWN_CHAT], None)}
-# Do not drop your own chat from the matches: a search that finds only other people's runs is never worth calling.
-TOPIC_MATCHES = [{"session_url": f"session://{SPACE}/{run['id']}", "title": run["title"], "excerpt": excerpt}
-                 for run, excerpt in [(OTHER_CHATS[0], "Thistlewood supplier review: compared the two renewal quotes."),
-                                      (MENTION, "Marrowgate invoice thread: asked the Agent to total the open invoices."),
-                                      (OWN_CHAT, "Dry run: read input and returned the sum.")]]
+def topic_matches(matches):
+    return [{"session_url": f"session://{SPACE}/{run['id']}", "title": run["title"], "excerpt": excerpt} for run, excerpt in matches]
+
+
+# Do not drop your own chat from a history's matches when it has one: a search that finds only other people's runs is never worth calling.
+TOPIC_MATCHES = topic_matches([(OTHER_CHATS[0], "Thistlewood supplier review: compared the two renewal quotes."),
+                               (MENTION, "Marrowgate invoice thread: asked the Agent to total the open invoices."),
+                               (OWN_CHAT, "Dry run: read input and returned the sum.")])
 EVENT_COUNT = 140
+PROGRESS_EVENT = EVENT_COUNT - 1
+
+
+def failed(run):
+    return {**run, "status": "failed"}
+
+
+# Do not add a run of your own here: the case measures what is said when no run is usable.
+NONE_PAGES = {None: ([], "cursor-1"), "cursor-1": (OTHER_CHATS, "cursor-2"), "cursor-2": ([MENTION], None)}
+LARKSPUR = failed(session("e1000000-0000-4000-8000-000000000006", OTHER, "user", "chat", 3, "2026-11-19T09:00:00Z",
+                          "Larkspur onboarding notes", ["wren.halloway@example.com"]))
+OWN_FAILED = failed(session("e3000000-0000-4000-8000-000000000007", SELF, "user", "chat", None, "2026-11-14T01:00:00Z",
+                            emails=["fixture.user@example.com"]))
+# Do not add a scheduled run or another run of your own: "two runs" must stay a count of your own runs, distinct from
+# other people's four. Do not move your older chat off the last page: a reader that stops early would pass.
+RESUME_PAGES = {None: ([], "cursor-1"), "cursor-1": ([LARKSPUR, *map(failed, OTHER_CHATS)], "cursor-2"),
+                "cursor-2": ([failed(MENTION), OWN_FAILED], "cursor-3"), "cursor-3": ([failed(OWN_CHAT)], None)}
+# Do not give both runs the same subtotal: the choice of run would no longer change the result.
+RESUME_PROGRESS = {OWN_FAILED["id"]: "Progress: added the first value of an earlier input; subtotal 5.",
+                   OWN_CHAT["id"]: "Progress: no values added yet; subtotal 0."}
+RESUME_TEXT = ("Read input and sum its values. When resuming a failed run, start from the subtotal in that run's last Progress event "
+               "and add only the values it had not yet added. In a dry run return the total here without writes.")
+
+
+HISTORIES = {
+    "pages": {"listing": SESSION_PAGES, "recorded": RECORDED, "texts": {}, "topics": TOPIC_MATCHES, "progress": {}},
+    "none": {"listing": NONE_PAGES, "recorded": RECORDED, "texts": {}, "progress": {}, "topics": TOPIC_MATCHES[:2]},
+    # Do not leave input out of the draft's reads: the run would stop for that permission before any run is chosen.
+    "resume-choice": {"listing": RESUME_PAGES, "recorded": {**RECORDED, "draft": (EDITABLE_PAGE, ["input"])},
+                      "texts": {EDITABLE_PAGE: RESUME_TEXT}, "progress": RESUME_PROGRESS,
+                      "topics": [*topic_matches([(LARKSPUR, "Larkspur onboarding notes: stopped while totalling the intake list.")]),
+                                 TOPIC_MATCHES[1], *topic_matches([(OWN_FAILED, "Dry run: stopped after the first value.")])]},
+}
+for history in HISTORIES.values():
+    history["runs"] = {run["id"]: run for runs, _ in history["listing"].values() for run in runs}
+OWN_RUNS = {run_id for history in HISTORIES.values() for run_id, run in history["runs"].items() if run["created_by"]["id"] == SELF}
 
 
 # Do not move your own chat's event back into the first 20: a reader that stops after one listing would pass.
 def configuration_event(session_id):
-    return 23 if session_id == OWN_CHAT["id"] else 10
+    return 23 if session_id in OWN_RUNS else 10
 
 
-def run_events(session_id):
-    trigger = RUNS[session_id]["trigger_type"]
+def run_events(session_id, runs, progress):
+    trigger = runs[session_id]["trigger_type"]
     events = []
     for sequence in range(1, EVENT_COUNT + 1):
         if sequence == configuration_event(session_id):
             summary = "The current custom agent definition and configuration (output of notion_load_agent)"
         elif sequence == 1:
             summary = "Run started" if trigger == "recurrence" else "User message"
+        elif sequence == PROGRESS_EVENT and session_id in progress:
+            summary = "Progress"
+        elif sequence == EVENT_COUNT and runs[session_id]["status"] == "failed":
+            summary = "Run failed"
         else:
             summary = f"Tool call {sequence}: notion_load_page"
         events.append({"sequence": sequence, "summary": summary})
@@ -145,6 +186,8 @@ class Fixture:
         self.effects = []
         self.clock = time.monotonic
         self.limited_until = None
+        self.history = HISTORIES[case.get("history", "pages")]
+        self.run_pages = {**RUN_PAGES, **{key: {**RUN_PAGES[key], "text": value} for key, value in self.history["texts"].items()}}
 
     def tools(self):
         if self.case["mode"] == "run-history":
@@ -197,7 +240,7 @@ class Fixture:
             target = page_key(args["id"])
             if mode == "run-only" and target == "agent-instructions":
                 return text({"error": "instruction_access_denied", "retryable": False}, True)
-            pages = RUN_PAGES if mode == "run-history" else {
+            pages = self.run_pages if mode == "run-history" else {
                 "agent-instructions": {"id": "agent-instructions", "modified": "2026-11-15T00:00:00Z", "complete": True,
                                        "text": "Read input and sum its values; normally write the total to approved. In dry run return the total here without writes."},
                 "input": {"values": [3, 7], "complete": True},
@@ -243,17 +286,20 @@ class Fixture:
         if name == "query_sessions":
             if any(session_key(agent) != session_key(AGENT) for agent in agent_filters(args.get("filter"))):
                 return text({"object": "list", "type": "session", "results": [], "has_more": False, "next_cursor": None})
-            if args.get("start_cursor") not in SESSION_PAGES:
+            listing = self.history["listing"]
+            if args.get("start_cursor") not in listing:
                 return text({"error": "invalid_cursor", "retryable": False}, True)
-            runs, next_cursor = SESSION_PAGES[args.get("start_cursor")]
+            runs, next_cursor = listing[args.get("start_cursor")]
             return text({"object": "list", "type": "session", "results": runs,
                          "has_more": next_cursor is not None, "next_cursor": next_cursor})
         if name == "search_sessions":
-            return text({"results": TOPIC_MATCHES})
-        run = next((run for run in RUNS if session_key(run) == session_key(args.get("session_url", ""))), None)
+            return text({"results": self.history["topics"]})
+        runs = self.history["runs"]
+        run = next((run for run in runs if session_key(run) == session_key(args.get("session_url", ""))), None)
         if run is None:
             return text({"error": "session_not_found", "retryable": False}, True)
-        events = run_events(run)
+        progress = self.history["progress"]
+        events = run_events(run, runs, progress)
         if name == "list_session_events":
             count = args.get("count", 20)
             if args.get("after_sequence"):
@@ -266,9 +312,11 @@ class Fixture:
         sequence = args.get("sequence")
         if sequence != configuration_event(run):
             event = next((e for e in events if e["sequence"] == sequence), None)
-            return text({**event, "content": "Loaded a business page."}) if event else text({"error": "event_not_found", "retryable": False}, True)
-        version = "draft" if RUNS[run]["agent_version"] is None else "published"
-        page, readable = RECORDED[version]
+            if event is None:
+                return text({"error": "event_not_found", "retryable": False}, True)
+            return text({**event, "content": progress[run] if sequence == PROGRESS_EVENT and run in progress else "Loaded a business page."})
+        version = "draft" if runs[run]["agent_version"] is None else "published"
+        page, readable = self.history["recorded"][version]
         # No setting names, URLs or numbers here: they would trip the duplicate-field and URL checks and change the total.
         return text({"sequence": sequence, "summary": events[sequence - 1]["summary"], "tool": "notion_load_agent",
                      "creator": {"name": "Ottoline Vane", "type": "person"}, "loaded_content": "Pemberton Freight renewal notes",

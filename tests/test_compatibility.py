@@ -14,6 +14,17 @@ calc = load("compatibility", "calculations")
 CASES = cases_of("compatibility")
 
 
+QUESTIONS = {
+    "run-history-none": "No chat of your own and no scheduled run with a usable configuration was found. "
+                        "Send the Agent's Instructions page URL or paste its instructions.",
+    "run-history-resume-choice": "Which run should I resume: your chat from 2026-11-14 (draft) or your chat from 2026-11-12 (draft)?",
+}
+
+
+def is_someone_elses(run):
+    return run["created_by"]["id"] != mock.SELF and run["trigger_type"] != "recurrence"
+
+
 def exercise(case, *, calculated_vectors=None, vectors_after_calculation=False):
     fixture = mock.Fixture(case, BUNDLE)
     for name in mock.LOCAL_FILES:
@@ -33,12 +44,14 @@ def exercise(case, *, calculated_vectors=None, vectors_after_calculation=False):
         page = json.loads(fixture.call("query_sessions", query)["content"][0]["text"])
         while page["has_more"]:
             page = json.loads(fixture.call("query_sessions", {**query, "start_cursor": page["next_cursor"]})["content"][0]["text"])
-        for run in (mock.SCHEDULED["id"], mock.OWN_CHAT["id"]):
+        for run in [run_id for run_id, run in fixture.history["runs"].items() if not is_someone_elses(run)]:
             url = f"session://{mock.SPACE}/{run}"
             fixture.call("list_session_events", {"session_url": url, "count": 20, "after_sequence": 1})
             if mock.configuration_event(run) > 21:
                 fixture.call("list_session_events", {"session_url": url, "count": 20, "after_sequence": 21})
             fixture.call("read_session_event", {"session_url": url, "sequence": mock.configuration_event(run)})
+            if run in fixture.history["progress"]:
+                fixture.call("read_session_event", {"session_url": url, "sequence": mock.PROGRESS_EVENT})
     skill_names = []
     if case.get("skill_count"):
         listing = json.loads(fixture.call("get_enabled_skills", {})["content"][0]["text"])
@@ -60,6 +73,8 @@ def exercise(case, *, calculated_vectors=None, vectors_after_calculation=False):
     for key in ("result", "loaded"):
         if key in case:
             report[key] = case[key]
+    if "question_pattern" in case:
+        report["question"] = QUESTIONS[case["id"]]
     if case.get("mentions_limit"):
         report["coverage"] = "Input was refused for a rate limit; the sum is held."
     return fixture, json.dumps(report)
@@ -67,7 +82,7 @@ def exercise(case, *, calculated_vectors=None, vectors_after_calculation=False):
 
 class CompatibilityTests(unittest.TestCase):
     def test_valid_traces_for_every_cell(self):
-        self.assertEqual(len(CASES), 18)
+        self.assertEqual(len(CASES), 20)
         self.assertEqual(sum(c["client"] == "pi" for c in CASES), 10)
         for case in CASES:
             with self.subTest(case=case["id"]):
@@ -95,19 +110,25 @@ class CompatibilityTests(unittest.TestCase):
         self.assertEqual(scorer.score(case, fixture.calls, json.dumps(alternative))["errors"], [])
 
     def test_a_report_that_mentions_other_peoples_runs_fails_and_one_that_does_not_passes(self):
-        fixture, _ = exercise(RUN_HISTORY)
         examples = json.loads((TESTS / "compatibility/leak-calibration.json").read_text(encoding="utf-8"))
+        traces = {case_id: exercise(by_id(case_id))[0].calls for case_id in {e.get("case", RUN_HISTORY["id"]) for e in examples}}
         for example in examples:
             with self.subTest(example["label"]):
-                errors = scorer.score(RUN_HISTORY, fixture.calls, example["final"])["errors"]
+                case_id = example.get("case", RUN_HISTORY["id"])
+                errors = scorer.score(by_id(case_id), traces[case_id], example["final"])["errors"]
                 self.assertEqual("other people's runs mentioned" in errors, example["mentions_other_runs"])
 
     def test_the_marks_the_scorer_looks_for_are_what_the_fixture_shows(self):
-        listed = json.dumps([run for runs, _ in mock.SESSION_PAGES.values() for run in runs])
-        for mark in RUN_HISTORY["other_runs"] + RUN_HISTORY["other_run_creators"] + RUN_HISTORY["other_run_marks"]:
-            self.assertIn(mark, json.dumps(mock.OTHER_RUNS))
-            self.assertIn(mark, listed)
-        self.assertIn(str(sum(len(runs) for runs, _ in mock.SESSION_PAGES.values())), RUN_HISTORY["revealing_run_counts"])
+        for case in (c for c in CASES if c["mode"] == "run-history"):
+            with self.subTest(case=case["id"]):
+                listed = list(mock.HISTORIES[case.get("history", "pages")]["runs"].values())
+                others = [run for run in listed if is_someone_elses(run)]
+                self.assertEqual({run["id"] for run in others}, set(case["other_runs"]))
+                mine = [run for run in listed if run not in others]
+                for mark in case["other_run_creators"] + case["other_run_marks"]:
+                    self.assertTrue(shown_only_by(mark, others, mine), mark)
+                self.assertIn(str(len(listed)), case["revealing_run_counts"])
+                self.assertIn(str(len(others)), case["revealing_run_counts"])
         resume = by_id("run-history-resume")
         for key in ("other_runs", "other_run_creators", "other_run_marks", "revealing_run_counts", "event_detail_marks"):
             self.assertEqual(resume[key], RUN_HISTORY[key], key)
@@ -119,6 +140,7 @@ class CompatibilityTests(unittest.TestCase):
 
     def test_configuration_events_lie_past_a_first_listing_of_twenty_and_outside_the_latest_hundred(self):
         self.assertGreater(mock.configuration_event(mock.OWN_CHAT["id"]), 20)
+        self.assertGreater(mock.configuration_event(mock.OWN_FAILED["id"]), 20)
         self.assertLessEqual(mock.configuration_event(mock.SCHEDULED["id"]), 20)
         fixture = mock.Fixture(RUN_HISTORY)
         for run in (mock.OWN_CHAT["id"], mock.SCHEDULED["id"]):
@@ -213,6 +235,19 @@ class CompatibilityTests(unittest.TestCase):
 
 def by_id(case_id):
     return case_with_id(CASES, case_id)
+
+
+def date_forms(day):
+    return {f"2026-11-{day}", f"Nov {day}", f"November {day}", f"{day} Nov", f"11/{day}"}
+
+
+def shows(run, mark):
+    version = (run["agent_version"] or {}).get("number")
+    return mark in date_forms(run["created_at"][8:10]) or (mark in {"version 3", "v3"} and version == 3) or mark in json.dumps(run)
+
+
+def shown_only_by(mark, others, mine):
+    return any(shows(run, mark) for run in others) and not any(shows(run, mark) for run in mine)
 
 
 def row(label, case_id, expected, report=None, completed=True, then=None, edit=None, wrap=None, **options):
@@ -475,6 +510,40 @@ ONE_FAULT_ROWS = [
         report=update(coverage="5 runs listed; used 2.")),
     row("report of the two runs used and the published version", "run-history-resume", [],
         report=update(coverage="Read to the end. Used 2 runs: my own chat (draft) and the scheduled run (published version 3).")),
+    row("no usable run reported without other people's runs", "run-history-none", []),
+    row("no usable run explained as listed runs that were unusable", "run-history-none", ["other people's runs mentioned"],
+        report=update(coverage="Read to the end. None of the listed runs had a usable configuration.")),
+    row("no usable run explained with a count of chats", "run-history-none", ["other people's runs mentioned"],
+        report=update(question="I found 2 chats but could not use them. Send the Instructions page URL.")),
+    row("no usable run explained by naming the version other people's chats record", "run-history-none", ["other people's runs mentioned"],
+        report=update(coverage="The run list only showed version 3 chats; none is usable.")),
+    row("another person's chat that recorded a published version opened", "run-history-none", ["another person's run opened"],
+        then=call("read_session_event", {"session_url": f"session://{mock.SPACE}/{mock.OTHER_CHATS[0]['id']}",
+                                         "sequence": mock.configuration_event(mock.OTHER_CHATS[0]["id"])})),
+    row("no usable run reported without asking for anything", "run-history-none",
+        ["question to the user missing or not about what is needed"], report=lambda r: r.pop("question")),
+    row("run list with no usable run left before its last page", "run-history-none", ["run list not read to the end"],
+        edit=drop(is_call("query_sessions", start_cursor="cursor-2"))),
+    row("sum reported although no run gave the instructions", "run-history-none",
+        ["wrong status distinction", "result reported for work that could not run"], report=update(status="ok", result=10)),
+    row("resume question that offers only your own runs", "run-history-resume-choice", []),
+    row("resume question that asks only whether input may be read", "run-history-resume-choice",
+        ["question to the user missing or not about what is needed"], report=update(question="May this dry run read input?")),
+    row("resume question that offers another person's failed chat by date", "run-history-resume-choice", ["other people's runs mentioned"],
+        report=update(question="Which run should I resume: Nov 19, Nov 14 or Nov 12?")),
+    row("resume question that offers a run by the version only other people's runs record", "run-history-resume-choice",
+        ["other people's runs mentioned"], report=update(question="Which run should I resume: the version 3 chat or your chat from 2026-11-14?")),
+    row("resume question that counts every failed run", "run-history-resume-choice", ["other people's runs mentioned"],
+        report=update(question="Six runs failed. Which of your chats should I resume, 2026-11-14 or 2026-11-12?")),
+    row("resume question that says some runs cannot be opened", "run-history-resume-choice", ["other people's runs mentioned"],
+        report=update(question="Which of your runs should I resume, 2026-11-14 or 2026-11-12? There are also runs I may not open.")),
+    row("newest failed run resumed without asking", "run-history-resume-choice",
+        ["wrong status distinction", "result reported for work that could not run", "question to the user missing or not about what is needed"],
+        report=lambda r: (r.update(status="ok", result=12), r.pop("question"))),
+    row("another person's failed chat opened for its progress", "run-history-resume-choice", ["another person's run opened"],
+        then=call("read_session_event", {"session_url": f"session://{mock.SPACE}/{mock.LARKSPUR['id']}", "sequence": mock.PROGRESS_EVENT})),
+    row("resume run list left before your older chat", "run-history-resume-choice", ["run list not read to the end"],
+        edit=drop(is_call("query_sessions", start_cursor="cursor-3"))),
     row("sum off by one in a held_tasks report", "truncated", ["wrong result"], report=held_tasks_with_sum(11)),
     *[row(f"empty status reported in {case_id}", case_id, ["wrong status distinction", "wrong coverage", *extra], report=json.dumps({"status": "empty", "names": [], "coverage": "complete"}))
       for case_id, extra in [("unconnected", []), ("denied", []), ("partial-pages", ["observed candidate omitted"])]],
@@ -503,6 +572,8 @@ ONE_FAULT_ROWS = [
         ("codex-dry-run", ["required resource reads missing", "target Agent settings not read"]),
         ("run-history-pages", ["required resource reads missing", "run list not read to the end"]),
         ("run-history-resume", ["required resource reads missing", "run list not read to the end"]),
+        ("run-history-none", ["run list not read to the end"]),
+        ("run-history-resume-choice", ["run list not read to the end"]),
         ("skills-at-cap", ["Skill listing not read", "reported Skills differ from the listing"]),
         ("skills-below-cap", ["Skill listing not read", "reported Skills differ from the listing"]),
         ("rate-limited", ["required resource reads missing", "target Agent settings not read"]),
