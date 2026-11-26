@@ -11,12 +11,52 @@ import warnings
 
 import yaml
 
-from scripts.check_structure import check_eval_cases, frontmatter, load_yaml, stage, validate
+from scripts.check_structure import (MARKDOWN, check_eval_cases, frontmatter, load_yaml, local_target, markdown_info,
+                                    stage, validate)
 
 
 REPOSITORY = Path(__file__).resolve().parents[1]
-REQUIRED = ("SKILL.md", "README.md", "LICENSE", "agents/openai.yaml", "references/read-configuration.md",
-            "references/read-skills.md", "references/execute-via-mcp.md", "docs/agent-retrieval.md")
+REQUIRED = ("SKILL.md", "README.md", "LICENSE", "agents/openai.yaml", "references/discover.md",
+            "references/read-configuration.md", "references/read-skills.md", "references/execute-via-mcp.md",
+            "docs/agent-retrieval.md")
+
+
+DISCOVER = "references/discover.md"
+COPIED = ("## Check retrieval completeness", "references/execute-via-mcp.md")
+
+
+def read_repository(relative):
+    return (REPOSITORY / relative).read_text(encoding="utf-8")
+
+
+def section(text, heading):
+    title, level = heading.lstrip("# "), f"h{heading.index(' ')}"
+    lines, start = text.split("\n"), None
+    tokens = MARKDOWN.parse(text)
+    for index, token in enumerate(tokens):
+        if token.type != "heading_open":
+            continue
+        if start is None and token.tag == level and tokens[index + 1].content == title:
+            start = token.map[0]
+        elif start is not None and token.tag <= level:
+            return "\n".join(lines[start:token.map[0]]).strip()
+    return "\n".join(lines[start:]).strip()
+
+
+def link_targets(source, text):
+    targets = (local_target(REPOSITORY, REPOSITORY / source, url) for url in markdown_info(text)[1])
+    return {target.relative_to(REPOSITORY).as_posix() for target in targets if target is not None}
+
+
+def skill_table(skill):
+    return {line.split("|")[1].strip(): link_targets("SKILL.md", line)
+            for line in skill.splitlines() if line.startswith("| ") and "](references/" in line}
+
+
+def agent_listing_targets(skill):
+    paragraph = re.search(r"\[agent listing\]\([^)]*\)", skill)
+    row = skill_table(skill).get("list the Custom Agents you can access")
+    return (link_targets("SKILL.md", paragraph.group(0)) if paragraph else set()) | (row or set())
 
 
 def release_versions(skill, readme, changelog):
@@ -173,10 +213,10 @@ class StructureTests(unittest.TestCase):
             root = minimal_skill(Path(directory) / "notion-ai-relay",
                                  "[local](README.md)\n[license](LICENSE)\n[external](https://example.invalid/x)\n[mail](mailto:a@example.invalid)\n"
                                  "[relative to protocol](//example.invalid/x)\n<a href>no target</a>\n")
-            self.assertEqual(validate(root), (6, 1, 2))
+            self.assertEqual(validate(root), (7, 1, 2))
             result = run_check_structure("--skill-dir", root)
             self.assertEqual((result.returncode, result.stdout),
-                             (0, "PASS: 6 Markdown files, 1 YAML files, 2 local references; structure only\n"), result.stderr)
+                             (0, "PASS: 7 Markdown files, 1 YAML files, 2 local references; structure only\n"), result.stderr)
 
     def test_valid_boundary_lengths_and_optional_fields(self):
         self.skill("name: notion-ai-relay\ndescription: " + "x" * 1024
@@ -552,6 +592,50 @@ class ReadmeSettingsTests(unittest.TestCase):
                 settings["permissions"]["deny"].remove(missing)
                 trimmed = self.readme.replace(block, json.dumps(settings))
                 self.assertNotEqual(readme_denied_tools(trimmed), self.expected)
+
+
+class ListingRulesTests(unittest.TestCase):
+    def setUp(self):
+        self.skill, self.discover = read_repository("SKILL.md"), read_repository(DISCOVER)
+
+    def test_the_skill_table_names_every_reference_file(self):
+        files = {f"references/{path.name}" for path in (REPOSITORY / "references").glob("*.md")}
+        self.assertEqual(set().union(*skill_table(self.skill).values()), files)
+
+    def test_a_reference_file_missing_from_the_skill_table_fails(self):
+        row = next(line for line in self.skill.splitlines() if line.startswith("| ") and "(references/read-skills.md)" in line)
+        self.assertNotIn("references/read-skills.md", set().union(*skill_table(self.skill.replace(row + "\n", "")).values()))
+
+    def test_the_skill_sends_agent_listing_requests_to_discover_only(self):
+        self.assertEqual(agent_listing_targets(self.skill), {DISCOVER})
+
+    def test_an_agent_listing_link_to_another_reference_fails(self):
+        moved = self.skill.replace("(references/discover.md#list-accessible-agents)", "(references/read-configuration.md)")
+        self.assertNotEqual(moved, self.skill)
+        self.assertEqual(agent_listing_targets(moved), {DISCOVER, "references/read-configuration.md"})
+
+    def test_discover_links_only_to_the_skill_and_itself(self):
+        self.assertLessEqual(link_targets(DISCOVER, self.discover), {"SKILL.md", DISCOVER})
+
+    def test_a_discover_link_into_the_execution_procedure_fails(self):
+        moved = self.discover.replace("(#check-retrieval-completeness)", "(execute-via-mcp.md#check-retrieval-completeness)", 1)
+        self.assertNotEqual(moved, self.discover)
+        self.assertIn("references/execute-via-mcp.md", link_targets(DISCOVER, moved))
+
+    def test_discover_copies_the_retrieval_completeness_section_word_for_word(self):
+        heading, source = COPIED
+        self.assertEqual(section(self.discover, heading), section(read_repository(source), heading),
+                         f"{DISCOVER} copies this section of {source}; change both together")
+
+    def test_a_copy_that_differs_from_its_original_fails(self):
+        heading, source = COPIED
+        original = section(read_repository(source), heading)
+        self.assertIn("### Check consistency across pages", original)
+        changed = self.discover.replace("keep reading until", "read until", 1)
+        self.assertNotEqual(changed, self.discover)
+        self.assertNotEqual(section(changed, heading), original)
+        grown = read_repository(source).replace(original, original + "\n\nA new paragraph.")
+        self.assertNotEqual(section(self.discover, heading), section(grown, heading))
 
 
 class ReleaseVersionTests(unittest.TestCase):

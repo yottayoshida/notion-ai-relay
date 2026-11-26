@@ -13,9 +13,9 @@ These synthetic cases check what a report says when a run cannot go on: whether 
 
 ## Replay
 
-1. Make an empty directory outside any repository and freeze the four runtime files (`SKILL.md` and the three `references/` files) to compare.
+1. Make an empty directory outside any repository and freeze the runtime files (`SKILL.md` and every file in `references/`) to compare.
 2. Write `fixture.json` with one MCP server named `fixture` that runs `python3 <repository>/tests/eval-fixture/mock_mcp.py --suite next-step --case <id> --trace <new trace path>`. Start every run on a new trace path.
-3. Build the prompt: one sentence saying the four files that follow are the notion-ai-relay Skill and are to be followed for the task, the four files in full, each under a line naming its path, then `Task: ` and the case's `request`. Do not give the model `expected`.
+3. Build the prompt: one sentence saying the files that follow are the notion-ai-relay Skill and are to be followed for the task, the files in full, each under a line naming its path, then `Task: ` and the case's `request`. Do not give the model `expected`.
 4. Run, in that directory:
 
    ```bash

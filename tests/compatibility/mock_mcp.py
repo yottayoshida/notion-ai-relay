@@ -3,6 +3,7 @@
 import argparse
 import inspect
 from pathlib import Path
+import re
 import sys
 import time
 
@@ -17,18 +18,28 @@ from score import page_key, session_key
 SERVER = "relay-compatibility-fixture"
 
 
+def runtime_files(root):
+    references = {f"references/{path.name}" for path in (Path(root) / "references").glob("*.md")}
+    named = set(re.findall(r"\]\((references/[^)#\s]+\.md)", (Path(root) / "SKILL.md").read_text(encoding="utf-8")))
+    if not references or named - references:
+        raise ValueError(f"{root} lacks references/*.md that its SKILL.md names: {sorted(named - references) or 'all'}")
+    return ("SKILL.md", *sorted(references))
+
+
+LOCAL_FILES = runtime_files(Path(__file__).resolve().parents[2])
+RELAY_FILE = "Read a complete local Relay instruction file from an explicitly frozen bundle, never arbitrary host files. Paths: "
+
 TOOLS = [
     tool("get_access", "Inspect this MCP connection's exposed capability and permission map once per run.", {}, []),
     tool("list_agents", "List accessible Custom Agents by workspace or favorites scope. Follow nextCursor until absent.", {"scope": {"type": "string", "enum": ["workspace", "favorites"]}, "cursor": STRING}, ["scope"]),
     tool("get_settings", "Read full current Custom Agent configuration by Agent URL through MCP.", {"agent_url": STRING}, ["agent_url"]),
     tool("fetch", "Read a Notion page or supporting child/attachment/reference file by ID through MCP. Inspect completeness metadata.", {"id": STRING}, ["id"]),
     tool("search_pages", "Search ordinary pages; not an Agent or Skill catalog.", {"query": STRING}, ["query"]),
-    tool("relay_file", "Read a complete local Relay instruction file from an explicitly frozen bundle, never arbitrary host files. Paths: SKILL.md and the three references/*.md.", {"path": STRING}, ["path"]),
+    tool("relay_file", RELAY_FILE + ", ".join(LOCAL_FILES) + ".", {"path": STRING}, ["path"]),
     tool("calculate", "Pure numeric/text comparison on supplied decimal strings; implementation is the equivalent Fraction-based function in comparison-code. No I/O or state changes.", {"vectors": {"type": "array", "items": {"type": "object", "properties": {"amounts": {"type": "array", "items": STRING}, "threshold": STRING, "label": STRING, "expected_label": STRING}, "required": ["amounts", "threshold", "label", "expected_label"], "additionalProperties": False}}}, ["vectors"]),
     tool("write", "Persist content to a Notion destination or completion ledger through MCP.", {"destination": STRING, "content": STRING}, ["destination", "content"]),
     tool("launch_session", "Launch a Notion AI session to carry out delegated work.", {"task": STRING}, ["task"]),
 ]
-LOCAL_FILES = ["SKILL.md", "references/read-configuration.md", "references/read-skills.md", "references/execute-via-mcp.md"]
 INTEGER = {"type": "integer", "minimum": 1}
 SESSION_URL = {"type": "string", "description": "Use the complete session_url returned by session tools, unchanged. Format: session://<spaceId>/<sessionId>. "
                "Shorthand session://<sessionId> and thread://<sessionId> use the connected workspace."}
@@ -182,6 +193,7 @@ class Fixture:
     def __init__(self, case, bundle=None):
         self.case = case
         self.bundle = bundle
+        self.local_files = runtime_files(bundle) if bundle is not None else LOCAL_FILES
         self.calls = []
         self.effects = []
         self.clock = time.monotonic
@@ -190,6 +202,10 @@ class Fixture:
         self.run_pages = {**RUN_PAGES, **{key: {**RUN_PAGES[key], "text": value} for key, value in self.history["texts"].items()}}
 
     def tools(self):
+        description = RELAY_FILE + ", ".join(self.local_files) + "."
+        return [dict(item, description=description) if item["name"] == "relay_file" else item for item in self._tools()]
+
+    def _tools(self):
         if self.case["mode"] == "run-history":
             return [item for item in TOOLS if item["name"] in RUN_HISTORY_BASE] + RUN_HISTORY_TOOLS
         if self.case["mode"] == "enabled-skills":
@@ -207,9 +223,9 @@ class Fixture:
             return text({"error": "unknown_tool"}, True)
         if name == "relay_file":
             path = args["path"]
-            if path not in LOCAL_FILES or self.bundle is None:
+            if path not in self.local_files or self.bundle is None:
                 return text({"error": "outside_frozen_bundle"}, True)
-            return text({"path": path, "complete": True, "text": (self.bundle / path).read_text(encoding="utf-8")})
+            return text({"path": path, "complete": True, "text": (self.bundle / path).read_text(encoding="utf-8"), "files": list(self.local_files)})
         if mode == "run-history" and name in RUN_HISTORY_HANDLED:
             return self._run_history(name, args)
         if name == "get_access":

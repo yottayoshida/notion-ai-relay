@@ -11,7 +11,9 @@ if TESTS not in sys.path:
 
 from _mcp_fixture import split_malformed, split_rejected, tool_error
 
-LOCAL_FILES = {"SKILL.md", "references/read-configuration.md", "references/read-skills.md", "references/execute-via-mcp.md"}
+# Not the repository's current files: a trace from a fixture that did not yet report its bundle's files was made
+# against these, and rescoring it against today's files would fail every one.
+LEGACY_FILES = ("SKILL.md", "references/read-configuration.md", "references/read-skills.md", "references/execute-via-mcp.md")
 TARGET_AGENT = "agent://fixture/editor"
 LOADING_TOOLS = {"relay_file", "get_access"}
 BASE_TOOLS = {"relay_file", "get_access", "list_agents", "get_settings", "fetch", "search_pages", "calculate"}
@@ -146,8 +148,9 @@ def score(case, calls, final, completed=True):
         errors.append(f"malformed call record: {name}")
     if not completed or not calls:
         errors.append("missing or incomplete run")
-    loaded = {call["arguments"].get("path") for call in calls if call["name"] == "relay_file" and not call["result"].get("isError") and data(call).get("complete")}
-    if loaded != LOCAL_FILES:
+    reads = [call for call in calls if call["name"] == "relay_file" and not call["result"].get("isError") and data(call).get("complete")]
+    offered = next((data(call)["files"] for call in reads if data(call).get("files")), LEGACY_FILES)
+    if {call["arguments"].get("path") for call in reads} != set(offered):
         errors.append("local Relay instructions not completely loaded")
     reads = {page_key(call["arguments"].get("id")) for call in calls if call["name"] == "fetch" and not call["result"].get("isError")}
     if not {page_key(target) for target in case["reads"]}.issubset(reads):
