@@ -134,7 +134,7 @@ def same_vectors(actual, supplied):
 
 
 def score(case, calls, final, completed=True):
-    errors = []
+    errors, unscored = [], []
     # Not after split_rejected: a call refused for its arguments still sent the name.
     if any(isinstance(call, dict) and isinstance(call.get("arguments"), dict) and "skill" in call["arguments"] for call in calls):
         errors.append("Skill name passed in a tracking argument")
@@ -267,7 +267,8 @@ def score(case, calls, final, completed=True):
             errors.append("valid empty result misreported")
     except (ValueError, TypeError, AttributeError):
         errors.append("invalid JSON report")
-    return {"case": case["id"], "passed": not errors, "errors": errors,
+        unscored = ["report"]
+    return {"case": case["id"], "passed": not errors, "errors": errors, "unscored": unscored,
             "service_attempts": sum(call["name"] != "relay_file" for call in calls)}
 
 

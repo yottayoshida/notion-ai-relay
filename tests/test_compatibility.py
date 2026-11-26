@@ -90,6 +90,15 @@ class CompatibilityTests(unittest.TestCase):
                 result = scorer.score(case, fixture.calls, report)
                 self.assertEqual(result["errors"], [])
 
+    def test_an_unreadable_report_leaves_its_checks_unscored_while_the_trace_checks_still_run(self):
+        fixture, report = exercise(RUN_HISTORY)
+        calls = drop(is_call("fetch", id="input"))(fixture.calls)
+        wrong_total = json.dumps({**json.loads(report), "result": 9})
+        unreadable = scorer.score(RUN_HISTORY, calls, "Total: 9\n" + wrong_total)
+        self.assertEqual((unreadable["errors"], unreadable["unscored"]), (["required resource reads missing", "invalid JSON report"], ["report"]))
+        readable = scorer.score(RUN_HISTORY, calls, wrong_total)
+        self.assertEqual((readable["errors"], readable["unscored"]), (["required resource reads missing", "wrong result"], []))
+
     def test_pure_replacement_matches_explicit_boundary_results(self):
         self.assertEqual([calc.source_compare(**v) for v in calc.VECTORS], calc.EXPECTED)
         self.assertEqual([calc.equivalent_compare(**v) for v in calc.VECTORS], calc.EXPECTED)
