@@ -9,6 +9,7 @@
 - [Agent retrieval](agent-retrieval.md) compares ways to read Custom Agent instructions and settings and records test runs. It is reference material, not part of Relay's instructions.
 - [Compatibility and evidence](compatibility.md) is the dated matrix of synthetic checks, historical live records, blockers, and unverified environments.
 - [Installation maintenance](install-maintenance.md) covers finding the installed copy, updates, backups, rollback, and what to send for support.
+- [Scheduled runs](scheduling.md) shows how to run an Agent's task from your own scheduler with no one present, and what such a run writes and holds.
 - [Permissions and client settings](permissions.md) lists what Relay tells your assistant to do and which client settings stop which calls, as measured.
 - [Security policy](../SECURITY.md) says what to report privately and where.
 - [Structural checks](structural-checks.md) covers the CI check. `scripts/` holds the check and the command CI runs.

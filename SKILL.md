@@ -7,7 +7,7 @@ metadata:
   version: "0.1.0"
 ---
 
-# Run Notion agents and skills through MCP
+# Notion AI Relay
 
 Read the target's settings or instructions from Notion at runtime and have the current assistant carry out the work. Distinguish Notion Skills, which are pages and supporting resources in Notion, from this local Skill.
 
@@ -76,7 +76,7 @@ Open the report with one to three plain sentences, before any heading, list, or 
 
 If the user or the procedure requires the reply to be output only or in another fixed format, that format replaces this report on normal success, with nothing added outside it. When work stops or is held, or material uncertainty must be disclosed, put it, with the next step, where the format records held work or reasons; if the format has no such place, give the opening lines before the output.
 
-When work stops or is held, the next step is what would let it continue, for example connecting a missing MCP server, checking that the target is shared with the user or giving its URL, giving the Instructions page link from the Agent's settings, or getting edit access to a destination. When an MCP tool refuses access, permission, or a connection and its result gives recovery steps or a link that need the user's action or a change to settings, permissions, or connections, pass them on as that step, naming the tool and the site each link goes to; carrying them out is a separate operation that needs the user's request. A result that only calls for reading again or retrying later is not such a refusal.
+When work stops or is held, the next step is what would let it continue, for example connecting a missing MCP server, checking that the target is shared with the user or giving its URL, giving the Instructions page link from the Agent's settings, or getting edit access to a destination. In a run with no user present, for an operation held only because the request did not name it, other than running code, that step is the user checking the operation and its destination and naming them in the request for a later run. When an MCP tool refuses access, permission, or a connection and its result gives recovery steps or a link that need the user's action or a change to settings, permissions, or connections, pass them on as that step, naming the tool and the site each link goes to; carrying them out is a separate operation that needs the user's request. A result that only calls for reading again or retrying later is not such a refusal.
 
 Distinguish planned dry-run counts from actual updates. For a dry run, follow the [preview report](references/execute-via-mcp.md#report-a-dry-run). For interrupted or partially completed work, return a [resumable handoff](references/execute-via-mcp.md#return-a-resumable-handoff) from the information already available. Retrieving a configuration alone is not task completion.
 
