@@ -1,4 +1,4 @@
-"""Validate the distributed Skill, not model behavior or MCP compatibility."""
+"""Validate the distributed Skill folder and the repository's documents, not model behavior or MCP compatibility."""
 
 import argparse
 from contextlib import contextmanager
@@ -18,11 +18,13 @@ import yaml
 
 
 SKILL_NAME = "notion-ai-relay"
+SKILL_DIR = Path("skills") / SKILL_NAME
 REQUIRED = (
-    "SKILL.md", "README.md", "LICENSE", "agents/openai.yaml",
+    "SKILL.md", "LICENSE", "agents/openai.yaml",
     "references/discover.md", "references/read-configuration.md", "references/read-skills.md",
-    "references/execute-via-mcp.md", "docs/agent-retrieval.md",
+    "references/execute-via-mcp.md",
 )
+REPOSITORY_REQUIRED = ("README.md", "LICENSE", "docs/agent-retrieval.md")
 FRONTMATTER_FIELDS = {"name", "description", "license", "compatibility", "metadata", "allowed-tools"}
 MARKDOWN = MarkdownIt("commonmark")
 
@@ -128,13 +130,13 @@ def markdown_text(path):
     return frontmatter(text)[1] if path.name == "SKILL.md" else text
 
 
-def local_target(root, source, url):
+def local_target(root, source, url, boundary="Skill directory"):
     parsed = urlsplit(url)
     if parsed.scheme or parsed.netloc:
         return None
     target = (source.parent / unquote(parsed.path)).resolve() if parsed.path else source.resolve()
     if not target.is_relative_to(root.resolve()):
-        raise ValueError(f"local reference escapes Skill directory: {url}")
+        raise ValueError(f"local reference escapes {boundary}: {url}")
     if not target.exists():
         raise ValueError(f"missing local reference: {url}")
     if parsed.fragment:
@@ -177,33 +179,53 @@ def check_eval_cases(root):
     return len(folders)
 
 
-def validate(root):
-    # Not resolve(): a copy reached through a symlink must keep the name it was installed under.
-    root = Path(os.path.abspath(root))
-    for relative in REQUIRED:
+def require(root, relatives):
+    for relative in relatives:
         if not (root / relative).is_file():
             raise ValueError(f"missing required file: {relative}")
-    with about("SKILL.md"):
-        name = check_skill_metadata(root)
+
+
+def check_yaml_files(root):
     yamls = sorted(set(root.rglob("*.yaml")) | set(root.rglob("*.yml")))
     for path in yamls:
         with about(path.relative_to(root)):
             load_yaml(path.read_text(encoding="utf-8"))
-    with about("agents/openai.yaml"):
-        check_codex_metadata(root, name)
+    return len(yamls)
 
-    if (root / "evals").is_dir():
-        check_eval_cases(root)
 
+def check_markdown_links(root, boundary):
     markdowns = sorted(root.rglob("*.md"))
     link_count = 0
     for path in markdowns:
         with about(path.relative_to(root)):
             _, links = markdown_info(markdown_text(path))
             for url in links:
-                if local_target(root, path, url) is not None:
+                if local_target(root, path, url, boundary) is not None:
                     link_count += 1
-    return len(markdowns), len(yamls), link_count
+    return len(markdowns), link_count
+
+
+def validate(root):
+    # Not resolve(): a copy reached through a symlink must keep the name it was installed under.
+    root = Path(os.path.abspath(root))
+    require(root, REQUIRED)
+    with about("SKILL.md"):
+        name = check_skill_metadata(root)
+    yaml_count = check_yaml_files(root)
+    with about("agents/openai.yaml"):
+        check_codex_metadata(root, name)
+    markdown_count, link_count = check_markdown_links(root, "Skill directory")
+    return markdown_count, yaml_count, link_count
+
+
+def validate_repository(root):
+    root = Path(os.path.abspath(root))
+    require(root, REPOSITORY_REQUIRED)
+    yaml_count = check_yaml_files(root)
+    if (root / "evals").is_dir():
+        check_eval_cases(root)
+    markdown_count, link_count = check_markdown_links(root, "repository")
+    return markdown_count, yaml_count, link_count
 
 
 def check_skill_metadata(root):
@@ -261,8 +283,7 @@ def check_codex_metadata(root, name):
 
 
 def repository_files(source):
-    # Not a fixed list of folders: `npx skills add` installs the whole checkout,
-    # so any folder left off a list would ship without being checked.
+    # Not a fixed list of folders: a folder left off it would ship, or stay in the repository, unchecked.
     try:
         listing = subprocess.run(
             ["git", "-C", str(source), "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
@@ -273,8 +294,8 @@ def repository_files(source):
     return [os.fsdecode(name) for name in listing.split(b"\0") if name]
 
 
-def stage(source, destination):
-    for name in repository_files(source):
+def stage(source, destination, names=None):
+    for name in repository_files(source) if names is None else names:
         path = source / name
         # Skip what is not a regular file in the working tree (a deletion not yet
         # committed, a submodule); copying it would fail. Skip metadata.json too:
@@ -286,12 +307,23 @@ def stage(source, destination):
         shutil.copy2(path, target)
 
 
-def validate_staged(source, name):
+def listed_by_git(source):
+    try:
+        return repository_files(source)
+    except ValueError:
+        return []
+
+
+def validate_staged(source, name, names=None):
     with tempfile.TemporaryDirectory() as temp:
         destination = Path(temp) / name
         destination.mkdir()
-        stage(source, destination)
+        stage(source, destination, names)
         return validate(destination)
+
+
+def describe(counts):
+    return f"{counts[0]} Markdown files, {counts[1]} YAML files, {counts[2]} local references"
 
 
 def main():
@@ -301,13 +333,20 @@ def main():
     try:
         if args.skill_dir:
             root = Path(os.path.abspath(args.skill_dir))
-            # Not rglob over a checkout: it reaches .venv and .claude, which an install never copies.
-            counts = validate_staged(root, root.name) if (root / ".git").exists() else validate(root)
+            # Not rglob over a checkout: it reaches .venv and .claude, which an install never copies. Not a test
+            # for root/.git either: the Skill folder sits below the top of its checkout.
+            names = listed_by_git(root)
+            summary = describe(validate_staged(root, root.name, names) if names else validate(root))
         else:
-            counts = validate_staged(Path(__file__).resolve().parents[1], SKILL_NAME)
+            with tempfile.TemporaryDirectory() as temp:
+                staged = Path(temp) / "repository"
+                staged.mkdir()
+                stage(Path(__file__).resolve().parents[1], staged)
+                summary = (f"distribution {describe(validate(staged / SKILL_DIR))}; "
+                           f"repository {describe(validate_repository(staged))}")
     except (ValueError, yaml.YAMLError, OSError, TypeError) as error:
         parser.exit(1, f"FAIL: {error}\n")
-    print(f"PASS: {counts[0]} Markdown files, {counts[1]} YAML files, {counts[2]} local references; structure only")
+    print(f"PASS: {summary}; structure only")
 
 
 if __name__ == "__main__":

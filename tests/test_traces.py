@@ -6,12 +6,12 @@ import tempfile
 import unittest
 
 from _mcp_fixture import split_malformed, split_rejected, start_record, text
-from _support import TESTS, load, read_trace, run, stdio, write_trace
+from _support import SKILL, TESTS, load, read_trace, run, stdio, write_trace
 
 CALL = {"name": "fetch", "arguments": {"id": "x"}, "result": text({"value": 1})}
 FIXTURES = {
     "security": ["--case", "authorized-normal"],
-    "compatibility": ["--case", "comparison-code", "--bundle", TESTS.parent],
+    "compatibility": ["--case", "comparison-code", "--bundle", SKILL],
     "write-lifecycle": ["--case", "normal"],
     "resume-handoff": ["--case", "partial-dry-run"],
     "eval-fixture": ["--case", "preview-partial", "--suite", "dry-run"],

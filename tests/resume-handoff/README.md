@@ -1,6 +1,6 @@
 # Resume-handoff cases
 
-These synthetic cases exercise [resumable handoffs](../../references/execute-via-mcp.md#return-a-resumable-handoff), not live Notion compatibility. The fixture does not contain business data, credentials, or a real connection. Its tool names describe capabilities, not a required MCP schema.
+These synthetic cases exercise [resumable handoffs](../../skills/notion-ai-relay/references/execute-via-mcp.md#return-a-resumable-handoff), not live Notion compatibility. The fixture does not contain business data, credentials, or a real connection. Its tool names describe capabilities, not a required MCP schema.
 
 ## Replay protocol
 

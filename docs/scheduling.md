@@ -1,10 +1,10 @@
 # Scheduled runs
 
-Relay has no scheduler. To carry out an Agent's task on a schedule, have your own scheduler start your assistant in its non-interactive mode with a saved request. An event trigger, such as a comment or a page added to a database, needs something that delivers the event to your assistant; a time schedule does not replace it ([unsupported work](../references/execute-via-mcp.md#report-unsupported-work)).
+Relay has no scheduler. To carry out an Agent's task on a schedule, have your own scheduler start your assistant in its non-interactive mode with a saved request. An event trigger, such as a comment or a page added to a database, needs something that delivers the event to your assistant; a time schedule does not replace it ([unsupported work](../skills/notion-ai-relay/references/execute-via-mcp.md#report-unsupported-work)).
 
 ## What a run with no one present does
 
-Such a run does not wait for a go-ahead on the writes its saved request names, and it holds and reports everything else that the [Limits](../README.md#limits) say waits for one ([execution boundaries](../SKILL.md#execution-boundaries)). A named write can still be held for the reasons any run holds one, such as missing input or a possible duplicate. To let a held write happen in later runs, check it and name it in the saved request: a go-ahead covers one run only, and whoever can edit the instructions decides what they ask for ([Limits](../README.md#limits)). Code from the instructions does not run with no one present, named or not.
+Such a run does not wait for a go-ahead on the writes its saved request names, and it holds and reports everything else that the [Limits](../README.md#limits) say waits for one ([execution boundaries](../skills/notion-ai-relay/SKILL.md#execution-boundaries)). A named write can still be held for the reasons any run holds one, such as missing input or a possible duplicate. To let a held write happen in later runs, check it and name it in the saved request: a go-ahead covers one run only, and whoever can edit the instructions decides what they ask for ([Limits](../README.md#limits)). Code from the instructions does not run with no one present, named or not.
 
 ## Write the saved request
 

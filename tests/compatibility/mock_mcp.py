@@ -12,6 +12,7 @@ if TESTS not in sys.path:
     sys.path.insert(0, TESTS)
 
 from _mcp_fixture import STRING, checked, serve, text, tool
+from _support import SKILL
 from calculations import VECTORS, equivalent_compare, source_compare
 from score import page_key, session_key
 
@@ -26,7 +27,7 @@ def runtime_files(root):
     return ("SKILL.md", *sorted(references))
 
 
-LOCAL_FILES = runtime_files(Path(__file__).resolve().parents[2])
+LOCAL_FILES = runtime_files(SKILL)
 RELAY_FILE = "Read a complete local Relay instruction file from an explicitly frozen bundle, never arbitrary host files. Paths: "
 
 TOOLS = [

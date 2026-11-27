@@ -10,6 +10,7 @@ Notable changes to Notion AI Relay. The format follows [Keep a Changelog](https:
 
 ### Changed
 
+- The Skill now lives in `skills/notion-ai-relay/`, and an install of a revision with this change holds only that folder; tests, fixture MCP servers, scorers, scripts and docs stay in the repository ([files](docs/files.md)). Reinstalling with `add` empties the installed folder first, so back up any local edits; manual installs and clones change as [installation maintenance](docs/install-maintenance.md) describes. The README's install command now names clients with `-a` ([#45](https://github.com/yottayoshida/notion-ai-relay/issues/45)).
 - The rule against mentioning runs other people started now has its own section and applies wherever the Skill reads an Agent's run history, including the question about which run to resume and the report that no run was usable. A resume question offers only runs you may open, identified by date, type and version ([#78](https://github.com/yottayoshida/notion-ai-relay/issues/78)).
 - In a run with no user present, the next step Relay gives for an operation held only because the request did not name it, code aside, is to name it in a later run's request, not a go-ahead no one can give ([#71](https://github.com/yottayoshida/notion-ai-relay/issues/71)).
 - `SKILL.md`'s heading is now the product name, Notion AI Relay, as the README's has been since [#65](https://github.com/yottayoshida/notion-ai-relay/issues/65).

@@ -2,7 +2,7 @@
 
 These synthetic cases test the assistant's decisions from supplied retrieval transcripts. They do not test a real MCP server, prove a service's cursor semantics, or establish compatibility across clients. Production guarantees must come from the actual connection.
 
-The runtime rule is in [Check consistency across pages](../../references/execute-via-mcp.md#check-consistency-across-pages). Do not load this evaluation document or fixture expectations as runtime instructions.
+The runtime rule is in [Check consistency across pages](../../skills/notion-ai-relay/references/execute-via-mcp.md#check-consistency-across-pages). Do not load this evaluation document or fixture expectations as runtime instructions.
 
 ## Cases
 

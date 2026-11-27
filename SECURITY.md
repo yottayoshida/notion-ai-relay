@@ -4,7 +4,7 @@ Notion AI Relay is a set of instructions that an AI assistant reads. Its boundar
 
 ## In scope
 
-- **Getting around the runtime boundaries.** A reproducible input, such as the text of a Notion page, a Skill's instructions, or a recorded run, that makes a model reading the [execution boundaries](SKILL.md#execution-boundaries) as written cross them, or a place where that text itself permits crossing them.
+- **Getting around the runtime boundaries.** A reproducible input, such as the text of a Notion page, a Skill's instructions, or a recorded run, that makes a model reading the [execution boundaries](skills/notion-ai-relay/SKILL.md#execution-boundaries) as written cross them, or a place where that text itself permits crossing them.
 - **Evaluation code that reaches the machine running it.** A defect in `tests/` or `scripts/` that reads, writes, or fetches outside what it states, for example a fixture file reader that returns files other than the frozen Relay files, a download fixture that contacts a real host, or the installation replay writing outside its temporary root. A fixture or scorer that reports PASS while hiding a way around the boundaries also belongs here.
 
 ## Out of scope

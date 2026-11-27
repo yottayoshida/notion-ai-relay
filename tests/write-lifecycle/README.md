@@ -56,7 +56,7 @@ Obtain authorization for model calls. Freeze the Skill revision and hashes, fixt
 
 `stop` and `partial-resume` need a driver that keeps one fixture process for the whole attempt and can write these controls to its input. A client that starts the server itself, with no such driver between them, cannot send them: it owns the server's input. Each `claude -p` call also starts its own fixture process, so a second turn in a new call starts from the case's initial state, without the first turn's effects.
 
-For the other cases in Claude Code, put `SKILL.md` and `references/` in `.claude/skills/notion-ai-relay/` of an otherwise empty directory and run from it. Keep `fixture.json`, which starts `mock_mcp.py` as the only MCP server, named `fixture`, and the trace outside that directory: under `dontAsk` the client allows reads inside its working directory and refuses the rest, so nothing there should reveal the case or the expected results.
+For the other cases in Claude Code, copy `skills/notion-ai-relay/` to `.claude/skills/notion-ai-relay/` of an otherwise empty directory and run from it. Keep `fixture.json`, which starts `mock_mcp.py` as the only MCP server, named `fixture`, and the trace outside that directory: under `dontAsk` the client allows reads inside its working directory and refuses the rest, so nothing there should reveal the case or the expected results.
 
 ```bash
 claude -p "$PROMPT" --setting-sources project --strict-mcp-config --mcp-config /path/outside/fixture.json \
@@ -86,7 +86,7 @@ python3 -m unittest discover -s tests -p test_write_lifecycle.py -v
 
 Tests execute all eight state transitions against the fixture and check valid traces. Deliberately wrong traces exercise effects before each required page read, guessing changed content without a post-conflict read, duplicate creation, premature checkpoint, stop-time verification/rollback, lost collaborator additions, incorrect reports, missing resume evidence, no-op, and incomplete execution. Legitimate post-conflict fetches and full-object lookups remain accepted, as do all eight original valid fixture transitions. A subprocess test checks initialization, inventory, a stored-but-timed-out creation, and out-of-band stop over stdio. These are fixture/scorer tests, **not executed model behavior**.
 
-For the full repository suite, install `requirements-dev.txt` in an isolated environment and run `sh scripts/check.sh`. Keep raw outputs, detailed hashes, usage, and client-specific private adapters outside the distribution; put revision, conditions, per-case results, cost subtotal/limits and reproduction steps in the PR or delivery report. Record any post-run scorer corrections and preserve original judgments; do not call corrected results preregistered.
+For the full repository suite, install `requirements-dev.txt` in an isolated environment and run `sh scripts/check.sh`. Keep raw outputs, detailed hashes, usage, and client-specific private adapters outside the repository; put revision, conditions, per-case results, cost subtotal/limits and reproduction steps in the PR or delivery report. Record any post-run scorer corrections and preserve original judgments; do not call corrected results preregistered.
 
 ## Limits and live-service work
 

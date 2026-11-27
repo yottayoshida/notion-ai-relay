@@ -1,11 +1,12 @@
 # Files
 
-- [SKILL.md](../SKILL.md) defines target selection, configuration retrieval, MCP execution, and result verification.
+- `skills/notion-ai-relay/` is the folder `npx skills add` installs: `SKILL.md`, `references/`, `agents/openai.yaml` and a copy of `LICENSE`. The rest of the repository is not installed. Releases up to 0.1.0, and the commits before the move, kept the Skill at the repository root, so installing one of them copies the whole repository.
+- [SKILL.md](../skills/notion-ai-relay/SKILL.md) defines target selection, configuration retrieval, MCP execution, and result verification.
 - [CHANGELOG.md](../CHANGELOG.md) records each release.
-- [Discover](../references/discover.md) holds the rules for listing Custom Agents, and `SKILL.md` sends an Agent listing there. Its section on retrieval completeness is a test-checked copy of the execution procedure's. Rules for every read, such as rate limits, stay in the execution procedure.
-- [Read Custom Agent settings](../references/read-configuration.md) covers finding an Agent, configuration versions, and resume state.
-- [Read Notion Skills](../references/read-skills.md) covers listing and finding Notion Skills, instruction pages, and supporting resources.
-- [Execute through MCP](../references/execute-via-mcp.md) covers tool mapping and execution checks.
+- [Discover](../skills/notion-ai-relay/references/discover.md) holds the rules for listing Custom Agents, and `SKILL.md` sends an Agent listing there. Its section on retrieval completeness is a test-checked copy of the execution procedure's. Rules for every read, such as rate limits, stay in the execution procedure.
+- [Read Custom Agent settings](../skills/notion-ai-relay/references/read-configuration.md) covers finding an Agent, configuration versions, and resume state.
+- [Read Notion Skills](../skills/notion-ai-relay/references/read-skills.md) covers listing and finding Notion Skills, instruction pages, and supporting resources.
+- [Execute through MCP](../skills/notion-ai-relay/references/execute-via-mcp.md) covers tool mapping and execution checks.
 - [Agent retrieval](agent-retrieval.md) compares ways to read Custom Agent instructions and settings and records test runs. It is reference material, not part of Relay's instructions.
 - [Compatibility and evidence](compatibility.md) is the dated matrix of synthetic checks, historical live records, blockers, and unverified environments.
 - [Installation maintenance](install-maintenance.md) covers finding the installed copy, updates, backups, rollback, and what to send for support.

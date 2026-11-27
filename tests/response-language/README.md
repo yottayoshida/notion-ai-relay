@@ -1,13 +1,13 @@
 # Response-language cases and scoring
 
-`cases.json` contains seven synthetic supplied-snapshot cases for the [response-language rules](../../SKILL.md#response-language). Replies and returned results use the requested response language unless a deliverable requires another language. Destination content is judged separately. Machine-facing formats remain intact; the language of text inside JSON is outside the current rule. These cases do not test client autoload, real MCP calls or actual posting. The two destination cases name `#team-updates` in the request, so a post they describe needs no go-ahead under the [execution boundaries](../../SKILL.md#execution-boundaries); runs recorded before that wording said only that posting to Slack was approved.
+`cases.json` contains seven synthetic supplied-snapshot cases for the [response-language rules](../../skills/notion-ai-relay/SKILL.md#response-language). Replies and returned results use the requested response language unless a deliverable requires another language. Destination content is judged separately. Machine-facing formats remain intact; the language of text inside JSON is outside the current rule. These cases do not test client autoload, real MCP calls or actual posting. The two destination cases name `#team-updates` in the request, so a post they describe needs no go-ahead under the [execution boundaries](../../skills/notion-ai-relay/SKILL.md#execution-boundaries); runs recorded before that wording said only that posting to Slack was approved.
 
 ## Frozen replay
 
 1. Before any model use, obtain authorization and freeze `SKILL.md`, all `references/`, `cases.json`, this scorer, runtime/input digests, model/thinking, attempt/time/turn limits and scoring criteria. Use a fresh conversation for each case; record how the Skill was loaded. Client autoload and supplied loaded text are different evidence.
 2. Give the assistant the loaded runtime instructions and only the case's `request`, not `expected`, this guide, the scorer or semantic judgments. Preserve the exact request and its output-only/block requirements. Do not provide real service tools for these supplied-snapshot cases.
 3. Preserve exact output, revision/digests, client/model/thinking, settlement, limits, errors and usage. Do not automatically retry failures, switch models, or rewrite expectations after observing output. A missing run, timeout or missing Skill load is incomplete.
-4. Run the scorer against the saved UTF-8 output and an independently recorded semantic assessment as below. Keep raw logs, hashes and usage outside the distribution; report scope/results/limits with the change.
+4. Run the scorer against the saved UTF-8 output and an independently recorded semantic assessment as below. Keep raw logs, hashes and usage outside the repository; report scope/results/limits with the change.
 
 ## What the scorer can and cannot determine
 

@@ -1,7 +1,7 @@
 from pathlib import Path, PurePosixPath
 import unittest
 
-from scripts.check_structure import MARKDOWN, local_target, markdown_info, repository_files
+from scripts.check_structure import MARKDOWN, SKILL_DIR, local_target, markdown_info, repository_files
 
 
 REPOSITORY = Path(__file__).resolve().parents[1]
@@ -15,8 +15,10 @@ def must_link(name):
         return False
     if len(path.parts) == 1:
         return name != "README.md"
-    if path.parts[0] in {"references", "docs"} and len(path.parts) == 2:
+    if path.parts[0] == "docs" and len(path.parts) == 2:
         return name != "docs/files.md"
+    if path.parent in {PurePosixPath(SKILL_DIR), PurePosixPath(SKILL_DIR, "references")}:
+        return True
     return path.parts[0] == "tests" and len(path.parts) == 3 and path.name == "README.md"
 
 
