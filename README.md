@@ -19,7 +19,7 @@ What each operation needs: [choosing an environment](docs/compatibility.md#choos
 Install a release with the [skills CLI](https://github.com/vercel-labs/skills) 1.8.0 or later (Node.js 22.20+), naming your clients after `-a`:
 
 ```bash
-npx skills add yottayoshida/notion-ai-relay@v0.1.0 -a claude-code codex
+npx skills add yottayoshida/notion-ai-relay@v0.2.0 -a claude-code codex
 ```
 
 Ask Relay for its version. For updates, manual installs and rollback: [installation maintenance](docs/install-maintenance.md).
