@@ -4,9 +4,12 @@ Notable changes to Notion AI Relay. The format follows [Keep a Changelog](https:
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-27
+
 ### Added
 
 - [Scheduled runs](docs/scheduling.md): how to carry out an Agent's task from your own scheduler with no one present. Under the rules from [#58](https://github.com/yottayoshida/notion-ai-relay/issues/58), such a run makes the writes its saved request names without waiting for a go-ahead, and holds and reports the rest; two security cases check this on a local fixture ([#71](https://github.com/yottayoshida/notion-ai-relay/issues/71)).
+- [Compatibility](docs/compatibility.md) now records native Codex runs against the compatibility fixture, the write-lifecycle cases run in Claude Code, and what has been observed against a real Notion workspace: five read runs in Claude Code on 2026-11-06, and no write and no Codex run ([#64](https://github.com/yottayoshida/notion-ai-relay/issues/64)).
 
 ### Changed
 
@@ -30,5 +33,6 @@ First tagged release. Earlier installs followed `main` and carry no version; for
 - Files a Notion MCP tool returns are downloaded only over `https` from a host name, without following redirects; from a tar archive of at most 100 members only regular files up to 1 MB whose name appears once are taken ([#59](https://github.com/yottayoshida/notion-ai-relay/issues/59)).
 - A release version in `SKILL.md`, which the Skill names when asked which Relay version ran ([#60](https://github.com/yottayoshida/notion-ai-relay/issues/60)).
 
-[Unreleased]: https://github.com/yottayoshida/notion-ai-relay/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/yottayoshida/notion-ai-relay/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/yottayoshida/notion-ai-relay/releases/tag/v0.2.0
 [0.1.0]: https://github.com/yottayoshida/notion-ai-relay/releases/tag/v0.1.0
