@@ -6,9 +6,9 @@ import unittest
 
 from _mcp_fixture import text
 
-from _support import TESTS, case_with_id, cases_of, load, read_trace, run, stdio, write_trace
+from _support import SKILL, TESTS, case_with_id, cases_of, load, read_trace, run, stdio, write_trace
 
-BUNDLE = TESTS.parent
+BUNDLE = SKILL
 mock = load("compatibility", "mock_mcp")
 scorer = load("compatibility", "score")
 calc = load("compatibility", "calculations")

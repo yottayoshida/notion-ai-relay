@@ -1,6 +1,6 @@
 # Reference traversal and delegation cases
 
-`cases.json` contains synthetic paused-run states and expected behavior for [the traversal contract](../../references/execute-via-mcp.md#bound-reference-traversal-and-delegation). These are model behavior cases, not executable enforcement of the Skill. No real Notion workspace, business data, credentials, or writes are needed.
+`cases.json` contains synthetic paused-run states and expected behavior for [the traversal contract](../../skills/notion-ai-relay/references/execute-via-mcp.md#bound-reference-traversal-and-delegation). These are model behavior cases, not executable enforcement of the Skill. No real Notion workspace, business data, credentials, or writes are needed.
 
 ## Replay
 

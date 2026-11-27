@@ -5,12 +5,12 @@ This guide concerns the **Relay files on disk**, not the version of an Agent's i
 ## Update the usual way
 
 1. List the releases: `git ls-remote --tags https://github.com/yottayoshida/notion-ai-relay` (or the [releases page](https://github.com/yottayoshida/notion-ai-relay/releases)). `npx skills check` does not report a newer release for a copy pinned to a tag.
-2. Install the newest tag with the scope and client options you used before, for example `npx skills add yottayoshida/notion-ai-relay@<tag>`, adding `-g` for a global copy; skills CLI 1.8.0 or later reads a version tag such as `@v1.2.3` as a pin. If `npx skills list --json` marks the copy `modified`, or you changed its files, back it up first as in [section 2](#2-inspect-and-back-up-before-changing-anything).
+2. Install the newest tag with the scope and client options you used before, for example `npx skills add yottayoshida/notion-ai-relay@<tag> -a claude-code`, adding `-g` for a global copy. Run from inside an assistant without `-a`, the CLI chooses the clients itself. Skills CLI 1.8.0 or later reads a version tag such as `@v1.2.3` as a pin. If `npx skills list --json` marks the copy `modified`, or you changed its files, back it up first as in [section 2](#2-inspect-and-back-up-before-changing-anything).
 3. Start a new session and ask Relay which version it is; [section 5](#5-confirm-reload-and-diagnose-without-secrets) shows which files it loaded.
 
 ## Install without the skills CLI
 
-For manual installation, put this repository in your client's Skill directory as a folder named `notion-ai-relay`, the `name` in `SKILL.md`, for example with `git clone --branch <release tag> https://github.com/yottayoshida/notion-ai-relay.git`. A GitHub zip extracts to a folder named after the repository and the tag or branch; rename it, because a client may name the Skill after its folder. Keep `SKILL.md` and `references/` together. `agents/openai.yaml` contains optional Codex display metadata.
+For manual installation, put the folder that holds `SKILL.md` in your client's Skill directory as a folder named `notion-ai-relay`, the `name` in `SKILL.md`, because a client may name the Skill after its folder. In a revision that has `skills/notion-ai-relay/SKILL.md`, that folder is the Skill and nothing else in the repository needs to be installed; in older revisions, 0.1.0 among them, it is the repository itself. Take it from a GitHub zip ([section 4](#zip-or-manual-copy)) or link it from a clone kept outside Skill directories ([section 4](#dedicated-git-clone)). Keep `SKILL.md` and `references/` together. `agents/openai.yaml` contains optional Codex display metadata.
 
 ## 1. Locate the copy the client actually loads
 
@@ -39,7 +39,7 @@ For manual installs, find the folder through the client's inventory/configured S
 | Dedicated Git clone | Commands below | HEAD identifies the checkout; a dirty checkout is that revision **plus local changes**. |
 | ZIP or manual copy | Saved full commit/download URL and comparison with a pinned snapshot | A branch-named ZIP or copied folder without provenance has **unknown revision** until checked. Matching files establishes content equivalence, not unique commit identity. |
 
-Only run these Git commands after confirming Relay's directory itself is the clone root; otherwise Git may report the containing project's HEAD:
+Only run these Git commands after confirming that the resolved directory is the `skills/notion-ai-relay` folder of a dedicated clone, or the clone itself for a revision without that folder, and that `--show-toplevel` prints that clone; otherwise Git may report the containing project's HEAD:
 
 ```bash
 git -C "$skill" rev-parse --show-toplevel
@@ -53,7 +53,7 @@ To check a claimed commit independently, download/extract its archive as in sect
 diff -ru --exclude=.git "$snapshot" "$skill"
 ```
 
-Here `snapshot` is the extracted `notion-ai-relay-<full-commit>` directory. Exit 0 means equal files; exit 1 means differences to inspect. Installers may omit files such as `metadata.json` or Git internals; do not dismiss changes in `SKILL.md`, `references/`, or `agents/`. An old or absent CLI lock cannot reconstruct a lost commit. Record `unknown` rather than inventing a version. `metadata.version` in `SKILL.md` names the release only for a copy installed from that release's tag; a copy of `main` carries the version of the last release before it. The YAML `name` and Notion configuration versions are not Relay revision identifiers.
+Here `snapshot` is the folder holding `SKILL.md` in the extracted `notion-ai-relay-<full-commit>` directory, chosen as in section 4. Exit 0 means equal files; exit 1 means differences to inspect. Installers may omit files such as `metadata.json` or Git internals; do not dismiss changes in `SKILL.md`, `references/`, or `agents/`. An old or absent CLI lock cannot reconstruct a lost commit. Record `unknown` rather than inventing a version. `metadata.version` in `SKILL.md` names the release only for a copy installed from that release's tag; a copy of `main` carries the version of the last release before it. The YAML `name` and Notion configuration versions are not Relay revision identifiers.
 
 ## 2. Inspect and back up before changing anything
 
@@ -69,7 +69,7 @@ cp -RL "$skill" "$backup/notion-ai-relay"
 if test -f skills-lock.json; then cp skills-lock.json "$backup/skills-lock.json"; fi
 ```
 
-`cp -RL` saves the contents, including symlink targets, rather than just a link. Also record the original link target, installed path, scope, installer version, and full commit if known. Do not put these notes or backups containing local instructions in a public repository. Keep a dedicated clone's `.git` backup private too. Do not use `reset --hard`, `clean`, or a blanket all-skills update to resolve local edits. Reapply only reviewed local changes after an update; they make the result a modified revision.
+`cp -RL` saves the contents, including symlink targets, rather than just a link. Also record the original link target, installed path, scope, installer version, and full commit if known. Do not put these notes or backups containing local instructions in a public repository. For a dedicated clone, `$skill` may be its `skills/notion-ai-relay` folder, so back up the clone itself too, including `.git`, and keep that backup private. Do not use `reset --hard`, `clean`, or a blanket all-skills update to resolve local edits. Reapply only reviewed local changes after an update; they make the result a modified revision.
 
 ## 3. skills CLI: explicit, scoped replacement
 
@@ -94,14 +94,16 @@ If the network is unavailable, keep the current installation or restore the save
 
 ### Dedicated Git clone
 
-After the backup, ensure `git status --porcelain` is empty, including untracked files. If not, stop and preserve/reconcile the changes; do not force a checkout. For a clean clone rooted at `$skill`:
+After the backup, ensure `git status --porcelain` is empty, including untracked files. If not, stop and preserve/reconcile the changes; do not force a checkout. For a clean clone at `$clone`:
 
 ```bash
-git -C "$skill" fetch origin
-git -C "$skill" switch --detach "$target"
-git -C "$skill" rev-parse HEAD
-git -C "$skill" status --short
+git -C "$clone" fetch origin
+git -C "$clone" switch --detach "$target"
+git -C "$clone" rev-parse HEAD
+git -C "$clone" status --short
 ```
+
+In a revision that has `skills/notion-ai-relay/`, the Skill is that folder, so keep the clone outside Skill directories and make the client's `notion-ai-relay` a symlink to it, as the skills CLI does for Claude Code; a copy of the folder cannot be updated with git. A clone of an older revision, 0.1.0 among them, is often the Skill folder itself. Switching it to a revision with `skills/notion-ai-relay/` moves `SKILL.md` one level down, and the client may stop finding Relay: before switching, take the backup in section 2, move the clone out of the Skill directory and put the symlink in its place. Switching back to a revision without that folder needs the link to point at the clone itself. Confirm afterwards that the resolved `$skill` holds `SKILL.md`.
 
 A detached checkout is intentional: updates will not silently follow a moving branch. Roll back by repeating with the recorded previous full commit. Confirm the remote is the expected repository before fetching. A manual copy inside a larger Git project is **not** a dedicated clone; use the snapshot method instead.
 
@@ -115,7 +117,8 @@ mkdir "$staging"
 curl -fL "https://github.com/yottayoshida/notion-ai-relay/archive/${target}.zip" \
   -o "$staging/relay.zip"
 unzip -q "$staging/relay.zip" -d "$staging"
-snapshot="$staging/notion-ai-relay-$target"
+snapshot="$staging/notion-ai-relay-$target/skills/notion-ai-relay"
+test -f "$snapshot/SKILL.md" || snapshot="$staging/notion-ai-relay-$target"
 test -f "$snapshot/SKILL.md" && test -d "$snapshot/references"
 ```
 
@@ -136,4 +139,4 @@ For support, provide only client name/version, model identifier, Relay version a
 
 ## Validation and limits
 
-See [isolated maintenance checks](../tests/install-maintenance/README.md) for reproducible update/rollback tests and the exact tested revisions. These tests exercise installation files, not a client's Skill discovery or Notion connection. No client reload or live MCP compatibility is claimed by this guide.
+See [isolated maintenance checks](../tests/install-maintenance/README.md) for reproducible update/rollback tests and the exact tested revisions. These tests exercise installation files, not a client's Skill discovery or Notion connection. Both tested revisions predate the move to `skills/notion-ai-relay/`: the manual steps for that folder, and moving a clone across the move, are not covered. No client reload or live MCP compatibility is claimed by this guide.

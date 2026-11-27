@@ -2,7 +2,7 @@
 
 Have your AI assistant do the work of a Notion Custom Agent or Notion Skill, from its current instructions.
 
-Notion AI Relay (Relay) is an independent, unofficial Agent Skill that tells your assistant to read those instructions through MCP and do the work itself, instead of starting the Agent or an AI session in Notion. Notion charges a Custom Agent's work to its creator's Select credits, then to the workspace's if an owner allows it; using Notion's API or connected apps without running an Agent uses none ([Notion's pricing](https://www.notion.com/help/custom-agent-pricing)), though your assistant's usage applies. For Custom Agents and Notion Skills alike, Relay also tells your assistant to name the page and version it used, dry-run on request, and ask before writes, messages, other connections, local files or commands you did not name ([execution boundaries](SKILL.md#execution-boundaries)).
+Notion AI Relay (Relay) is an independent, unofficial Agent Skill that tells your assistant to read those instructions through MCP and do the work itself, instead of starting the Agent or an AI session in Notion. Notion charges a Custom Agent's work to its creator's Select credits, then to the workspace's if an owner allows it; using Notion's API or connected apps without running an Agent uses none ([Notion's pricing](https://www.notion.com/help/custom-agent-pricing)), though your assistant's usage applies. For Custom Agents and Notion Skills alike, Relay also tells your assistant to name the page and version it used, dry-run on request, and ask before writes, messages, other connections, local files or commands you did not name ([execution boundaries](skills/notion-ai-relay/SKILL.md#execution-boundaries)).
 
 ## Requirements
 
@@ -16,17 +16,17 @@ What each operation needs: [choosing an environment](docs/compatibility.md#choos
 
 ## Install
 
-Install a release with the [skills CLI](https://github.com/vercel-labs/skills) 1.8.0 or later (Node.js 22.20+):
+Install a release with the [skills CLI](https://github.com/vercel-labs/skills) 1.8.0 or later (Node.js 22.20+), naming your clients after `-a`:
 
 ```bash
-npx skills add yottayoshida/notion-ai-relay@v0.1.0
+npx skills add yottayoshida/notion-ai-relay@v0.1.0 -a claude-code codex
 ```
 
-Ask Relay for its version, exact for a release-tag install. For newer releases, updates, manual installs and rollback, see [installation maintenance](docs/install-maintenance.md).
+Ask Relay for its version. For updates, manual installs and rollback: [installation maintenance](docs/install-maintenance.md).
 
 ## Use
 
-Once Relay is loaded, give the target and this run's input. You need not write in English ([response-language rules](SKILL.md#response-language)).
+Once Relay is loaded, give the target and this run's input. You need not write in English ([response-language rules](skills/notion-ai-relay/SKILL.md#response-language)).
 
 For a Custom Agent:
 

@@ -1,6 +1,6 @@
 # Duplicate-prevention evaluation cases
 
-These cases evaluate the decisions made by an assistant loading `SKILL.md` and `references/`. They use synthetic MCP histories, not real service calls. They do not establish a server's atomicity or end-to-end client compatibility. Run the same histories against the two instruction revisions being compared; record the model, settings, source hashes, decisions, and failures outside the distributed Skill.
+These cases evaluate the decisions made by an assistant loading `SKILL.md` and `references/`. They use synthetic MCP histories, not real service calls. They do not establish a server's atomicity or end-to-end client compatibility. Run the same histories against the two instruction revisions being compared; record the model, settings, source hashes, decisions, and failures outside the repository.
 
 Unless stated otherwise, the source procedure explicitly requires at most one creation for each business key, input period, and destination across all concurrent runs and delegates. The user's request names each creation and send and its destination. The tool capabilities in each case's `history` are fixture assumptions, not claims about hosted Notion MCP. A readback verifies an effect but cannot prevent a competing creation.
 

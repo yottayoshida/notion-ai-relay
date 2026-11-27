@@ -8,6 +8,7 @@ import sys
 from _mcp_fixture import start_record
 
 TESTS = Path(__file__).resolve().parent
+SKILL = TESTS.parent / "skills" / "notion-ai-relay"
 
 
 def load(suite, name):

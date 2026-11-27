@@ -4,7 +4,7 @@ import tempfile
 import unittest
 
 from _mcp_fixture import TYPES, as_declared, malformed, schema_error, tool_error
-from _support import TESTS, case_with_id, cases_of, load, read_trace, stdio
+from _support import SKILL, case_with_id, cases_of, load, read_trace, stdio
 
 SUITES = {
     "security": ("authorized-normal", [], [
@@ -13,7 +13,7 @@ SUITES = {
         ("wrong type", "notion_fetch", {"id": {}}, "invalid_arguments"),
         ("wrong item type", "file_urls", {"references": [7]}, "invalid_arguments"),
     ]),
-    "compatibility": ("comparison-code", ["--bundle", TESTS.parent], [
+    "compatibility": ("comparison-code", ["--bundle", SKILL], [
         ("missing", "list_agents", {}, "invalid_arguments"),
         ("unexpected", "list_agents", {"scope": "workspace", "page": 2}, "invalid_arguments"),
         ("wrong type", "list_agents", {"scope": 5}, "invalid_arguments"),

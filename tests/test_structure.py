@@ -11,22 +11,22 @@ import warnings
 
 import yaml
 
-from scripts.check_structure import (MARKDOWN, check_eval_cases, frontmatter, load_yaml, local_target, markdown_info,
-                                    stage, validate)
+from _support import SKILL
+from scripts.check_structure import (MARKDOWN, SKILL_DIR, check_eval_cases, frontmatter, load_yaml, local_target,
+                                    markdown_info, repository_files, stage, validate, validate_repository)
 
 
 REPOSITORY = Path(__file__).resolve().parents[1]
-REQUIRED = ("SKILL.md", "README.md", "LICENSE", "agents/openai.yaml", "references/discover.md",
-            "references/read-configuration.md", "references/read-skills.md", "references/execute-via-mcp.md",
-            "docs/agent-retrieval.md")
+REQUIRED = ("SKILL.md", "LICENSE", "agents/openai.yaml", "references/discover.md",
+            "references/read-configuration.md", "references/read-skills.md", "references/execute-via-mcp.md")
 
 
 DISCOVER = "references/discover.md"
 COPIED = ("## Check retrieval completeness", "references/execute-via-mcp.md")
 
 
-def read_repository(relative):
-    return (REPOSITORY / relative).read_text(encoding="utf-8")
+def read_skill(relative):
+    return (SKILL / relative).read_text(encoding="utf-8")
 
 
 def section(text, heading):
@@ -44,8 +44,8 @@ def section(text, heading):
 
 
 def link_targets(source, text):
-    targets = (local_target(REPOSITORY, REPOSITORY / source, url) for url in markdown_info(text)[1])
-    return {target.relative_to(REPOSITORY).as_posix() for target in targets if target is not None}
+    targets = (local_target(SKILL, SKILL / source, url) for url in markdown_info(text)[1])
+    return {target.relative_to(SKILL).as_posix() for target in targets if target is not None}
 
 
 def skill_table(skill):
@@ -75,10 +75,15 @@ def release_versions(skill, readme, changelog):
 def one_release(found):
     return all(found.values()) and len(set().union(*found.values())) == 1
 
-def run_check_structure(*arguments, cwd=None):
+def run_check_structure(*arguments, cwd=None, repository=REPOSITORY):
     # Not strict, for the same reason as _support.run.
-    return subprocess.run([sys.executable, str(REPOSITORY / "scripts/check_structure.py"), *map(str, arguments)],
+    return subprocess.run([sys.executable, str(repository / "scripts/check_structure.py"), *map(str, arguments)],
                           capture_output=True, encoding="utf-8", errors="backslashreplace", cwd=cwd)
+
+
+def append_line(path, text):
+    with path.open("a", encoding="utf-8") as stream:
+        stream.write("\n" + text + "\n")
 
 
 MINIMAL_CODEX = """interface:
@@ -101,20 +106,32 @@ def minimal_skill(path, body):
     return path
 
 
-def staged(path):
+def staged(path, source=SKILL):
     path.mkdir(parents=True)
-    stage(REPOSITORY, path)
+    stage(source, path)
     return path
 
 
-def checkout(staged_copy, path):
+def add_clutter(folder):
+    (folder / ".venv/lib").mkdir(parents=True)
+    (folder / ".venv/lib/port.yaml").write_text("- a list, not a mapping\n", encoding="utf-8")
+    (folder / ".claude").mkdir()
+    (folder / ".claude/notes.md").write_text("[draft](missing.md)\n", encoding="utf-8")
+
+
+def dedicated_clone(path):
+    staged(path, REPOSITORY)
+    subprocess.run(["git", "-C", str(path), "init", "-q"], check=True)
+    add_clutter(path / SKILL_DIR)
+    return path / SKILL_DIR
+
+
+def clone_whose_top_is_the_skill(staged_copy, path):
     path.parent.mkdir(parents=True, exist_ok=True)
     staged_copy.rename(path)
+    (path / ".gitignore").write_text(".venv/\n.claude/\n", encoding="utf-8")
     subprocess.run(["git", "-C", str(path), "init", "-q"], check=True)
-    (path / ".venv/lib").mkdir(parents=True)
-    (path / ".venv/lib/port.yaml").write_text("- a list, not a mapping\n", encoding="utf-8")
-    (path / ".claude").mkdir()
-    (path / ".claude/notes.md").write_text("[draft](missing.md)\n", encoding="utf-8")
+    add_clutter(path)
     return path
 
 
@@ -125,16 +142,15 @@ class StructureTests(unittest.TestCase):
         self.root = staged(Path(self.temp.name) / "notion-ai-relay")
 
     def skill(self, metadata, body=""):
-        _, original_body = frontmatter((REPOSITORY / "SKILL.md").read_text(encoding="utf-8"))
+        _, original_body = frontmatter(read_skill("SKILL.md"))
         (self.root / "SKILL.md").write_text("---\n" + metadata + "\n---\n" + original_body + "\n" + body, encoding="utf-8")
 
     def append_link(self, link):
-        with (self.root / "SKILL.md").open("a", encoding="utf-8") as stream:
-            stream.write("\n" + link + "\n")
+        append_line(self.root / "SKILL.md", link)
 
     def test_current_distribution(self):
         markdowns, yamls, links = validate(self.root)
-        self.assertGreaterEqual(markdowns, 6)
+        self.assertGreaterEqual(markdowns, 5)
         self.assertGreaterEqual(yamls, 1)
         self.assertGreater(links, 0)
 
@@ -206,17 +222,17 @@ class StructureTests(unittest.TestCase):
                 with self.assertRaises(ValueError) as caught:
                     validate(self.root)
                 self.assertEqual(str(caught.exception), f"missing required file: {relative}")
-                shutil.copy2(REPOSITORY / relative, self.root / relative)
+                shutil.copy2(SKILL / relative, self.root / relative)
 
     def test_validate_counts_local_links_only(self):
         with tempfile.TemporaryDirectory() as directory:
             root = minimal_skill(Path(directory) / "notion-ai-relay",
-                                 "[local](README.md)\n[license](LICENSE)\n[external](https://example.invalid/x)\n[mail](mailto:a@example.invalid)\n"
+                                 "[local](references/discover.md)\n[license](LICENSE)\n[external](https://example.invalid/x)\n[mail](mailto:a@example.invalid)\n"
                                  "[relative to protocol](//example.invalid/x)\n<a href>no target</a>\n")
-            self.assertEqual(validate(root), (7, 1, 2))
+            self.assertEqual(validate(root), (5, 1, 2))
             result = run_check_structure("--skill-dir", root)
             self.assertEqual((result.returncode, result.stdout),
-                             (0, "PASS: 7 Markdown files, 1 YAML files, 2 local references; structure only\n"), result.stderr)
+                             (0, "PASS: 5 Markdown files, 1 YAML files, 2 local references; structure only\n"), result.stderr)
 
     def test_valid_boundary_lengths_and_optional_fields(self):
         self.skill("name: notion-ai-relay\ndescription: " + "x" * 1024
@@ -225,7 +241,7 @@ class StructureTests(unittest.TestCase):
         validate(self.root)
 
     def test_valid_name_boundaries_and_unicode(self):
-        config = (REPOSITORY / "agents/openai.yaml").read_text(encoding="utf-8")
+        config = read_skill("agents/openai.yaml")
         for name in ("a", "a" * 64, "中文", "café"):
             with self.subTest(name=name):
                 renamed = self.root.with_name(name)
@@ -236,20 +252,24 @@ class StructureTests(unittest.TestCase):
                 validate(self.root)
 
     def test_every_read_or_parse_failure_names_its_file(self):
-        for relative, content, message in [
-            (".github/broken.yml", b"a: [", None),
-            (".github/list.yml", b"- a", "expected a YAML mapping"),
-            (".github/duplicate.yml", b"a: 1\na: 2", "duplicate YAML key: a"),
-            (".github/latin1.yml", b"a: \xff", None),
-            ("docs/latin1.md", b"\xff", None),
-            ("evals/discovery/cases.json", b"{", None),
+        repository = staged(Path(self.temp.name) / "repository", REPOSITORY)
+        for root, check, relative, content, message in [
+            (self.root, validate, "agents/broken.yml", b"a: [", None),
+            (self.root, validate, "agents/list.yml", b"- a", "expected a YAML mapping"),
+            (self.root, validate, "agents/duplicate.yml", b"a: 1\na: 2", "duplicate YAML key: a"),
+            (self.root, validate, "agents/latin1.yml", b"a: \xff", None),
+            (self.root, validate, "references/latin1.md", b"\xff", None),
+            (repository, validate_repository, ".github/broken.yml", b"a: [", None),
+            (repository, validate_repository, ".github/list.yml", b"- a", "expected a YAML mapping"),
+            (repository, validate_repository, "docs/latin1.md", b"\xff", None),
+            (repository, validate_repository, "evals/discovery/cases.json", b"{", None),
         ]:
             with self.subTest(relative=relative):
-                path = self.root / relative
+                path = root / relative
                 original = path.read_bytes() if path.exists() else None
                 path.write_bytes(content)
                 with self.assertRaises(ValueError) as caught:
-                    validate(self.root)
+                    check(root)
                 self.assertTrue(str(caught.exception).startswith(relative + ": "), caught.exception)
                 if message:
                     self.assertEqual(str(caught.exception), f"{relative}: {message}")
@@ -301,8 +321,8 @@ class StructureTests(unittest.TestCase):
     def test_valid_html_links_directory_links_and_html_in_code_pass(self):
         (self.root / "assets").mkdir()
         (self.root / "assets/icon.png").write_bytes(b"png")
-        self.skill("name: notion-ai-relay\ndescription: test", """[evals](evals/)
-[tests](tests)
+        self.skill("name: notion-ai-relay\ndescription: test", """[references](references/)
+[agents](agents)
 <a href="references/read-skills.md#read-instructions-and-supporting-resources">ok</a>
 <img src="assets/icon.png" alt="Relay icon">
 <a href="https://example.invalid/not-checked">external</a>
@@ -323,8 +343,8 @@ class StructureTests(unittest.TestCase):
                     validate(self.root)
 
     def test_a_directory_with_an_anchor_cannot_be_validated(self):
-        self.append_link("[evals](evals/#cases)")
-        with self.assertRaisesRegex(ValueError, "cannot validate anchor in non-Markdown file: evals/#cases"):
+        self.append_link("[references](references/#cases)")
+        with self.assertRaisesRegex(ValueError, "cannot validate anchor in non-Markdown file: references/#cases"):
             validate(self.root)
 
     def test_valid_anchor_variants_and_external_links(self):
@@ -388,7 +408,7 @@ class StructureTests(unittest.TestCase):
 
     def test_icon_must_be_a_file_not_a_directory(self):
         with (self.root / "agents/openai.yaml").open("a", encoding="utf-8") as stream:
-            stream.write('  icon_small: "./evals"\n')
+            stream.write('  icon_small: "./references"\n')
         with self.assertRaises(ValueError) as caught:
             validate(self.root)
         self.assertEqual(str(caught.exception), "agents/openai.yaml: openai.yaml icon_small must reference a local asset")
@@ -413,7 +433,7 @@ class StructureTests(unittest.TestCase):
             validate(self.root)
 
     def test_codex_default_prompt_only_asks_for_the_list(self):
-        interface = load_yaml((REPOSITORY / "agents/openai.yaml").read_text(encoding="utf-8"))["interface"]
+        interface = load_yaml(read_skill("agents/openai.yaml"))["interface"]
         self.assertEqual(interface["default_prompt"],
                          "$notion-ai-relay List the Notion Custom Agents and Notion Skills I can access.")
 
@@ -463,20 +483,30 @@ class StructureTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("PASS", result.stdout)
 
-    def test_cli_skill_dir_checks_only_what_a_checkout_would_install(self):
-        root = checkout(self.root, Path(self.temp.name) / "checkout" / "notion-ai-relay")
-        for arguments, cwd in [((".",), root), (("../notion-ai-relay",), root)]:
+    def test_cli_skill_dir_checks_only_what_a_clone_would_install(self):
+        skill = dedicated_clone(Path(self.temp.name) / "clone")
+        for arguments, cwd in [((SKILL_DIR,), skill.parents[1]), ((".",), skill), (("../notion-ai-relay",), skill)]:
             with self.subTest(arguments=arguments):
                 result = run_check_structure("--skill-dir", *arguments, cwd=cwd)
                 self.assertEqual(result.returncode, 0, result.stderr)
-        renamed = root.with_name("notion-ai-relay-main")
-        root.rename(renamed)
+        renamed = skill.with_name("notion-ai-relay-main")
+        skill.rename(renamed)
         result = run_check_structure("--skill-dir", ".", cwd=renamed)
         self.assertEqual(result.returncode, 1)
         self.assertIn("does not match folder 'notion-ai-relay-main'", result.stderr)
+        renamed.rename(skill)
+        shutil.rmtree(skill.parents[1] / ".git")
+        result = run_check_structure("--skill-dir", skill)
+        self.assertEqual(result.returncode, 1, "outside git, the clutter is checked too")
+        self.assertIn(".venv/lib/port.yaml", result.stderr)
+
+    def test_cli_skill_dir_checks_a_clone_whose_top_is_the_skill_folder(self):
+        root = clone_whose_top_is_the_skill(self.root, Path(self.temp.name) / "old-clone" / "notion-ai-relay")
+        result = run_check_structure("--skill-dir", ".", cwd=root)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_cli_skill_dir_through_a_symlink_keeps_the_installed_name(self):
-        real = checkout(self.root, Path(self.temp.name) / "real-checkout")
+        real = clone_whose_top_is_the_skill(self.root, Path(self.temp.name) / "real-checkout")
         link = Path(self.temp.name) / "linked" / "notion-ai-relay"
         link.parent.mkdir()
         os.symlink(real, link, target_is_directory=True)
@@ -496,10 +526,7 @@ class StructureTests(unittest.TestCase):
         result = run_check_structure("--skill-dir", skill)
         self.assertIn("missing required file", result.stderr)
 
-    def test_cli_staging_success_and_installed_fixture_failure(self):
-        result = run_check_structure()
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("structure only", result.stdout)
+    def test_cli_fails_on_a_broken_link_in_an_installed_copy(self):
         self.append_link("[broken](references/missing.md)")
         result = run_check_structure("--skill-dir", self.root)
         self.assertEqual(result.returncode, 1)
@@ -547,15 +574,78 @@ class EvalCaseTests(unittest.TestCase):
             (folder / "cases.json").write_text('[{"id": "a", "expected": false}, {"id": "b", "expected_count": 0}]', encoding="utf-8")
             self.assertEqual(check_eval_cases(Path(directory)), 1)
 
-    def test_validate_rejects_a_distribution_with_a_bad_eval_case(self):
+    def test_the_repository_check_rejects_a_bad_eval_case(self):
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory) / "notion-ai-relay"
-            root.mkdir()
-            stage(REPOSITORY, root)
-            validate(root)
+            root = staged(Path(directory) / "repository", REPOSITORY)
+            validate_repository(root)
             (root / "evals/discovery/cases.json").write_text('[{"id": "a"}]', encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "no expected outcome"):
-                validate(root)
+                validate_repository(root)
+
+
+class DistributionAndRepositoryTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.repository = staged(Path(self.temp.name) / "repository", REPOSITORY)
+
+    def append(self, relative, text):
+        append_line(self.repository / relative, text)
+
+    def test_a_link_out_of_the_skill_folder_breaks_the_distribution_but_not_the_repository(self):
+        self.append(SKILL_DIR / "SKILL.md", "[permissions](../../docs/permissions.md)")
+        validate_repository(self.repository)
+        with self.assertRaises(ValueError) as caught:
+            validate(self.repository / SKILL_DIR)
+        self.assertEqual(str(caught.exception),
+                         "SKILL.md: local reference escapes Skill directory: ../../docs/permissions.md")
+
+    def test_a_broken_link_in_the_docs_fails_the_repository_check(self):
+        validate_repository(self.repository)
+        self.append("docs/permissions.md", "[missing](missing.md)")
+        with self.assertRaises(ValueError) as caught:
+            validate_repository(self.repository)
+        self.assertEqual(str(caught.exception), "docs/permissions.md: missing local reference: missing.md")
+
+    def test_a_link_out_of_the_repository_names_the_repository(self):
+        self.append("README.md", "[outside](../outside.md)")
+        with self.assertRaises(ValueError) as caught:
+            validate_repository(self.repository)
+        self.assertEqual(str(caught.exception), "README.md: local reference escapes repository: ../outside.md")
+
+    def test_the_cli_fails_on_a_broken_link_in_the_docs(self):
+        subprocess.run(["git", "-C", str(self.repository), "init", "-q"], check=True)
+        self.append("docs/permissions.md", "[missing](missing.md)")
+        result = run_check_structure(repository=self.repository)
+        self.assertEqual((result.returncode, result.stderr.strip()),
+                         (1, "FAIL: docs/permissions.md: missing local reference: missing.md"))
+
+    def test_the_cli_fails_on_a_link_out_of_the_skill_folder(self):
+        subprocess.run(["git", "-C", str(self.repository), "init", "-q"], check=True)
+        self.append(SKILL_DIR / "SKILL.md", "[permissions](../../docs/permissions.md)")
+        result = run_check_structure(repository=self.repository)
+        self.assertEqual((result.returncode, result.stderr.strip()),
+                         (1, "FAIL: SKILL.md: local reference escapes Skill directory: ../../docs/permissions.md"))
+
+
+class SkillFolderTests(unittest.TestCase):
+    def test_the_skill_folder_holds_exactly_the_required_files(self):
+        self.assertEqual(set(repository_files(SKILL)), set(REQUIRED))
+
+    def test_the_skill_folder_ships_the_repository_license_word_for_word(self):
+        self.assertEqual((SKILL / "LICENSE").read_bytes(), (REPOSITORY / "LICENSE").read_bytes())
+
+    def test_the_fixtures_serve_the_folder_the_structure_check_validates(self):
+        self.assertEqual(SKILL, REPOSITORY / SKILL_DIR)
+
+    def test_the_cli_checks_the_distribution_and_every_document_in_the_repository(self):
+        def markdowns(root):
+            return [name for name in repository_files(root) if name.endswith(".md") and (root / name).is_file()]
+        result = run_check_structure()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertRegex(result.stdout, rf"^PASS: distribution {len(markdowns(SKILL))} Markdown files, \d+ YAML files, "
+                                        rf"\d+ local references; repository {len(markdowns(REPOSITORY))} Markdown files, "
+                                        rf"\d+ YAML files, \d+ local references; structure only\n$")
 
 
 class SuiteWarningTests(unittest.TestCase):
@@ -577,7 +667,7 @@ def session_tools_named_by_execution_boundaries(skill):
 class ReadmeSettingsTests(unittest.TestCase):
     def setUp(self):
         self.readme = (REPOSITORY / "README.md").read_text(encoding="utf-8")
-        skill = (REPOSITORY / "SKILL.md").read_text(encoding="utf-8")
+        skill = read_skill("SKILL.md")
         self.expected = {"mcp__*__" + name for name in session_tools_named_by_execution_boundaries(skill)}
 
     def test_readme_settings_deny_every_session_tool_the_execution_boundaries_name(self):
@@ -596,10 +686,10 @@ class ReadmeSettingsTests(unittest.TestCase):
 
 class ListingRulesTests(unittest.TestCase):
     def setUp(self):
-        self.skill, self.discover = read_repository("SKILL.md"), read_repository(DISCOVER)
+        self.skill, self.discover = read_skill("SKILL.md"), read_skill(DISCOVER)
 
     def test_the_skill_table_names_every_reference_file(self):
-        files = {f"references/{path.name}" for path in (REPOSITORY / "references").glob("*.md")}
+        files = {f"references/{path.name}" for path in (SKILL / "references").glob("*.md")}
         self.assertEqual(set().union(*skill_table(self.skill).values()), files)
 
     def test_a_reference_file_missing_from_the_skill_table_fails(self):
@@ -624,24 +714,24 @@ class ListingRulesTests(unittest.TestCase):
 
     def test_discover_copies_the_retrieval_completeness_section_word_for_word(self):
         heading, source = COPIED
-        self.assertEqual(section(self.discover, heading), section(read_repository(source), heading),
+        self.assertEqual(section(self.discover, heading), section(read_skill(source), heading),
                          f"{DISCOVER} copies this section of {source}; change both together")
 
     def test_a_copy_that_differs_from_its_original_fails(self):
         heading, source = COPIED
-        original = section(read_repository(source), heading)
+        original = section(read_skill(source), heading)
         self.assertIn("### Check consistency across pages", original)
         changed = self.discover.replace("keep reading until", "read until", 1)
         self.assertNotEqual(changed, self.discover)
         self.assertNotEqual(section(changed, heading), original)
-        grown = read_repository(source).replace(original, original + "\n\nA new paragraph.")
+        grown = read_skill(source).replace(original, original + "\n\nA new paragraph.")
         self.assertNotEqual(section(self.discover, heading), section(grown, heading))
 
 
 class ReleaseVersionTests(unittest.TestCase):
     def setUp(self):
-        self.skill, self.readme, self.changelog = ((REPOSITORY / name).read_text(encoding="utf-8")
-                                                   for name in ("SKILL.md", "README.md", "CHANGELOG.md"))
+        self.skill = read_skill("SKILL.md")
+        self.readme, self.changelog = ((REPOSITORY / name).read_text(encoding="utf-8") for name in ("README.md", "CHANGELOG.md"))
 
     def test_skill_readme_and_changelog_name_one_release(self):
         found = release_versions(self.skill, self.readme, self.changelog)

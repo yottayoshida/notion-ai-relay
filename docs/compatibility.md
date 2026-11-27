@@ -15,7 +15,7 @@ Choose a client and connection by the capabilities your task actually needs; an 
 - **historical record**: earlier live observation, with its original date/client/constraints; not rerun against current source.
 - **Repeat runs**: scenarios run several times are in [Repeat runs](#repeat-runs-2026-11-26).
 
-Fixture authorization is synthetic reads/calculation and dry run only, with no real credentials, production data, external mutations or persisted run-state changes. Client-specific private adapters and raw logs are not part of the distribution. The [replay protocol](../tests/compatibility/README.md) defines the public server, tools, cases, scoring and native-client minimum. Each case ID below is the `--case` argument to that protocol.
+Fixture authorization is synthetic reads/calculation and dry run only, with no real credentials, production data, external mutations or persisted run-state changes. Client-specific private adapters and raw logs are not part of the repository. The [replay protocol](../tests/compatibility/README.md) defines the public server, tools, cases, scoring and native-client minimum. Each case ID below is the `--case` argument to that protocol.
 
 ## Finite fixture runs
 
@@ -173,7 +173,7 @@ These runs used the wording before this branch was rebased onto `main` at `003ef
 
 ### Release version (2026-11-24)
 
-Claude Code passes a Skill's text to the model without its frontmatter, so `metadata.version` alone does not reach the model; the release is also named in [Return the result](../SKILL.md#5-return-the-result). Asked "Which version of Notion AI Relay is this?" for a support request, with the four Skill files served through a read-only MCP tool (Claude Code 2.1.331, `claude-sonnet-5-5`):
+Claude Code passes a Skill's text to the model without its frontmatter, so `metadata.version` alone does not reach the model; the release is also named in [Return the result](../skills/notion-ai-relay/SKILL.md#5-return-the-result). Asked "Which version of Notion AI Relay is this?" for a support request, with the four Skill files served through a read-only MCP tool (Claude Code 2.1.331, `claude-sonnet-5-5`):
 
 | Skill text | Result |
 |---|---|
